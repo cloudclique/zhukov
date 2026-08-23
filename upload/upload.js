@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const authWarning = document.getElementById('auth-warning');
     const uploadSection = document.getElementById('upload-section');
-    
+
     const dropZone = document.getElementById('drop-zone');
     const imageInput = document.getElementById('image-input');
     const previewContainer = document.getElementById('preview-container');
@@ -34,10 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const tagsRef = doc(db, 'metadata', 'tags');
             const tagsSnap = await getDoc(tagsRef);
-            
+
             if (tagsSnap.exists()) {
                 const data = tagsSnap.data();
-                
+
                 if (data.categories) {
                     data.categories.forEach(cat => {
                         if (cat !== 'Single Shots') {
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }
-                
+
                 if (data.models) {
                     data.models.forEach(model => {
                         const opt = document.createElement('option');
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const tagsRef = doc(db, 'metadata', 'tags');
             const updates = {};
-            
+
             if (category && category !== 'Single Shots') {
                 updates.categories = arrayUnion(category);
             }
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const userRef = doc(db, 'users', user.uid);
                 const userSnap = await getDoc(userRef);
-                
+
                 if (userSnap.exists() && userSnap.data().role === 'admin') {
                     authWarning.classList.add('hidden');
                     uploadSection.classList.remove('hidden');
@@ -178,14 +178,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleFiles = (files) => {
         const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-        
+
         if (validFiles.length === 0) {
             statusMsg.innerHTML = '<span class="error">Please select valid image files.</span>';
             return;
         }
 
         selectedFiles = [...selectedFiles, ...validFiles];
-        
+
         // Render thumbnails
         previewContainer.innerHTML = '';
         dropZone.querySelector('p').style.display = 'none';
@@ -210,9 +210,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dropZone.addEventListener('click', (e) => {
         // Prevent click if clicking on thumbnails
-        if(e.target.tagName !== 'IMG') imageInput.click();
+        if (e.target.tagName !== 'IMG') imageInput.click();
     });
-    
+
     imageInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) handleFiles(e.target.files);
     });
@@ -238,18 +238,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = new Date().toISOString();
 
         uploadBtn.disabled = true;
-        
+
         try {
             const uploadedUrls = [];
-            const workerUrl = 'https://zhukov.dener4826.workers.dev';
+            const workerUrl = 'https://long-sky-4aa4.dener4826.workers.dev';
 
             // Process and Upload Sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
                 statusMsg.innerHTML = `<span style="color: #60a5fa;">Processing & Uploading ${i + 1} of ${selectedFiles.length}...</span>`;
-                
+
                 // 1. Process Image to WebP
                 const webpBlob = await processImage(selectedFiles[i]);
-                
+
                 // 2. Upload to ImgBB via Worker
                 const formData = new FormData();
                 formData.append('image', webpBlob, `image_${i}.webp`);
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const uploadResult = await uploadRes.json();
 
                 if (!uploadRes.ok || !uploadResult.success) {
-                    throw new Error(uploadResult.error || `Failed to upload image ${i+1}`);
+                    throw new Error(uploadResult.error || `Failed to upload image ${i + 1}`);
                 }
 
                 uploadedUrls.push(uploadResult.data.url);
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Success!
             statusMsg.innerHTML = '<span class="success">All photos successfully uploaded and saved!</span>';
-            
+
             // Reset form
             setTimeout(() => {
                 selectedFiles = [];
