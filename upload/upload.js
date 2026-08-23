@@ -281,7 +281,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             } else {
-                const photoSetRef = doc(db, 'photo_sets', category);
+                // Sanitize category to create a valid Firestore document ID (no slashes allowed)
+                const docId = category.replace(/[\/\\]/g, '-');
+                const photoSetRef = doc(db, 'photo_sets', docId);
                 await setDoc(photoSetRef, {
                     categoryName: category,
                     modelName,

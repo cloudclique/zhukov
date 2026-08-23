@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 
 // Initialize Firebase Auth
@@ -11,10 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
     
-    // Gallery & Filter UI
-    const categoryFilter = document.getElementById('category-filter');
-    const modelFilter = document.getElementById('model-filter');
-    const gallery = document.getElementById('gallery');
+    // Gallery & Sort UI
+    const sortSelect = document.getElementById('sort-select');
+    const sortOrderBtn = document.getElementById('sort-order-btn');
+    const categoriesContainer = document.getElementById('categories-container');
     const noResults = document.getElementById('no-results');
     
     const lightbox = document.getElementById('lightbox');
@@ -22,16 +22,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeBtn = document.querySelector('.close');
 
     // Data store
-    let allPhotos = [];
+    let categoriesData = [];
+    let isAdmin = false;
 
     // --- Firebase Authentication Logic ---
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
+        const uploadLink = document.getElementById('upload-nav-link');
         if (user) {
             loginBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'admin') {
+                    isAdmin = true;
+                    if (uploadLink) uploadLink.classList.remove('hidden');
+                    renderGallery();
+                }
+            } catch (error) {
+                console.error("Auth check error:", error);
+            }
         } else {
             loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
+            if (uploadLink) uploadLink.classList.add('hidden');
+            isAdmin = false;
+            renderGallery();
         }
     });
 
@@ -60,73 +75,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Fetch Data ---
-    const loadFilters = async () => {
-        try {
-            const tagsSnap = await getDoc(doc(db, 'metadata', 'tags'));
-            if (tagsSnap.exists()) {
-                const data = tagsSnap.data();
-                
-                // Categories
-                if (data.categories) {
-                    // Start with 'Single Shots'
-                    const singleOpt = document.createElement('option');
-                    singleOpt.value = 'Single Shots';
-                    singleOpt.innerText = 'Single Shots';
-                    categoryFilter.appendChild(singleOpt);
-
-                    data.categories.forEach(cat => {
-                        if (cat !== 'Single Shots') {
-                            const opt = document.createElement('option');
-                            opt.value = cat;
-                            opt.innerText = cat;
-                            categoryFilter.appendChild(opt);
-                        }
-                    });
-                }
-                
-                // Models
-                if (data.models) {
-                    data.models.forEach(model => {
-                        const opt = document.createElement('option');
-                        opt.value = model;
-                        opt.innerText = model;
-                        modelFilter.appendChild(opt);
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("Error loading filters:", error);
-        }
-    };
-
     const loadPhotos = async () => {
         try {
-            allPhotos = [];
-
-            // Fetch Single Shots
+            categoriesData = [];
+            
+            // 1. Fetch Single Shots
             const singleSnap = await getDocs(collection(db, 'single_shots'));
+            const singleUrls = [];
+            const singleItems = [];
+            let latestSingleDate = '1970-01-01T00:00:00.000Z';
+            
             singleSnap.forEach(doc => {
                 const data = doc.data();
-                allPhotos.push({
-                    url: data.url,
-                    category: 'Single Shots',
-                    model: data.modelName || 'Unknown',
-                    theme: data.theme || ''
-                });
+                singleItems.push(data);
+                if (data.date && data.date > latestSingleDate) {
+                    latestSingleDate = data.date;
+                }
             });
+            
+            // Sort newest to oldest
+            singleItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            singleItems.forEach(item => singleUrls.push(item.url));
 
-            // Fetch Photo Sets
+            if (singleUrls.length > 0) {
+                categoriesData.push({
+                    categoryId: 'single-shots',
+                    categoryName: 'Single Shots',
+                    modelName: 'Mixed',
+                    theme: 'Mixed',
+                    date: latestSingleDate,
+                    urls: singleUrls
+                });
+            }
+
+            // 2. Fetch Photo Sets
             const setsSnap = await getDocs(collection(db, 'photo_sets'));
             setsSnap.forEach(doc => {
                 const data = doc.data();
-                if (data.urls && Array.isArray(data.urls)) {
-                    data.urls.forEach(url => {
-                        allPhotos.push({
-                            url: url,
-                            category: data.categoryName,
-                            model: data.modelName || 'Unknown',
-                            theme: data.theme || ''
-                        });
+                if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+                    categoriesData.push({
+                        categoryId: doc.id,
+                        categoryName: data.categoryName || 'Unknown Category',
+                        modelName: data.modelName || 'Unknown',
+                        theme: data.theme || 'None',
+                        date: data.date || '1970-01-01T00:00:00.000Z',
+                        urls: [...data.urls].reverse() // Show newest to oldest
                     });
                 }
             });
@@ -137,57 +130,172 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // --- Admin Deletion Logic ---
+    const deletePhoto = async (categoryId, photoUrl) => {
+        if (!confirm("Are you sure you want to delete this photo?")) return;
+        try {
+            if (categoryId === 'single-shots') {
+                const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
+                const snap = await getDocs(q);
+                snap.forEach(async (d) => {
+                    await deleteDoc(doc(db, 'single_shots', d.id));
+                });
+            } else {
+                await updateDoc(doc(db, 'photo_sets', categoryId), {
+                    urls: arrayRemove(photoUrl)
+                });
+            }
+            // Reload data
+            await loadPhotos();
+        } catch (error) {
+            console.error("Error deleting photo:", error);
+            alert("Error deleting photo.");
+        }
+    };
+
+    const deleteCategory = async (categoryId) => {
+        if (!confirm("Are you sure you want to delete this ENTIRE set?")) return;
+        try {
+            await deleteDoc(doc(db, 'photo_sets', categoryId));
+            await loadPhotos();
+        } catch (error) {
+            console.error("Error deleting category:", error);
+            alert("Error deleting category.");
+        }
+    };
+
     // --- Render Gallery ---
     const renderGallery = () => {
-        const selectedCat = categoryFilter.value;
-        const selectedModel = modelFilter.value;
+        const sortBy = sortSelect.value;
+        const sortOrder = sortOrderBtn.getAttribute('data-order'); // 'asc' or 'desc'
 
-        // Clear existing gallery
-        gallery.innerHTML = '';
+        categoriesContainer.innerHTML = '';
         noResults.style.display = 'none';
 
-        // Filter photos
-        const filteredPhotos = allPhotos.filter(photo => {
-            const catMatch = selectedCat === 'all' || photo.category === selectedCat;
-            const modelMatch = selectedModel === 'all' || photo.model === selectedModel;
-            return catMatch && modelMatch;
-        });
-
-        if (filteredPhotos.length === 0) {
+        if (categoriesData.length === 0) {
             noResults.style.display = 'block';
             return;
         }
 
-        // Render matched photos
-        filteredPhotos.forEach((photo, index) => {
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            item.style.animationDelay = `${index * 0.05}s`;
+        // Sort categories
+        categoriesData.sort((a, b) => {
+            let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+            let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
 
-            const img = document.createElement('img');
-            img.src = photo.url;
-            img.alt = `${photo.category} - ${photo.model}`;
-            img.loading = 'lazy';
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
 
-            item.appendChild(img);
-            gallery.appendChild(item);
+        // Render each category
+        categoriesData.forEach(cat => {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'category-row';
 
-            // Click to view
-            item.addEventListener('click', () => {
-                lightbox.style.display = 'flex';
-                setTimeout(() => {
-                    lightbox.classList.add('show');
-                    lightboxImg.src = img.src;
-                }, 10);
+            // Header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'category-header';
+            
+            const title = document.createElement('h2');
+            title.className = 'category-title';
+            title.innerText = cat.categoryName;
+
+            const meta = document.createElement('div');
+            meta.className = 'category-meta';
+            const displayDate = cat.date !== '1970-01-01T00:00:00.000Z' ? new Date(cat.date).toLocaleDateString() : '';
+            meta.innerText = `${cat.modelName} | ${cat.theme} ${displayDate ? '| ' + displayDate : ''}`;
+
+            headerDiv.appendChild(title);
+            headerDiv.appendChild(meta);
+            
+            // Delete Category Button
+            if (isAdmin && cat.categoryId !== 'single-shots') {
+                const delCatBtn = document.createElement('button');
+                delCatBtn.className = 'delete-category-btn';
+                delCatBtn.innerText = 'Delete Set';
+                delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
+                headerDiv.appendChild(delCatBtn);
+            }
+            
+            rowDiv.appendChild(headerDiv);
+
+            // Images Container
+            const scrollRow = document.createElement('div');
+            scrollRow.className = 'scrollable-row';
+
+            const limit = 15; // Load enough to fill wide screens
+            const imagesToShow = cat.urls.slice(0, limit);
+            const hasMore = cat.urls.length > 5; // Show fade if there are many images
+
+            const createImgElem = (url) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'img-container';
+                
+                const img = document.createElement('img');
+                img.className = 'row-img';
+                img.src = url;
+                img.loading = 'lazy';
+                img.addEventListener('click', () => {
+                    lightbox.style.display = 'flex';
+                    setTimeout(() => {
+                        lightbox.classList.add('show');
+                        lightboxImg.src = img.src;
+                    }, 10);
+                });
+                
+                wrapper.appendChild(img);
+                
+                // Delete Photo Button
+                if (isAdmin) {
+                    const delPhotoBtn = document.createElement('button');
+                    delPhotoBtn.className = 'delete-photo-btn';
+                    delPhotoBtn.innerHTML = '&times;';
+                    delPhotoBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deletePhoto(cat.categoryId, url);
+                    });
+                    wrapper.appendChild(delPhotoBtn);
+                }
+                
+                return wrapper;
+            };
+
+            imagesToShow.forEach(url => {
+                scrollRow.appendChild(createImgElem(url));
             });
+
+            if (hasMore) {
+                const fadeBtn = document.createElement('div');
+                fadeBtn.className = 'fade-overlay';
+                fadeBtn.innerHTML = `<span class="fade-btn-text">See All &rarr;</span>`;
+                
+                fadeBtn.addEventListener('click', () => {
+                    window.location.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                });
+                
+                scrollRow.appendChild(fadeBtn);
+            }
+
+            rowDiv.appendChild(scrollRow);
+            categoriesContainer.appendChild(rowDiv);
         });
     };
 
-    // --- Event Listeners for Filters ---
-    categoryFilter.addEventListener('change', renderGallery);
-    modelFilter.addEventListener('change', renderGallery);
+    // --- Event Listeners for Sort ---
+    sortSelect.addEventListener('change', renderGallery);
+    
+    sortOrderBtn.addEventListener('click', () => {
+        const currentOrder = sortOrderBtn.getAttribute('data-order');
+        if (currentOrder === 'asc') {
+            sortOrderBtn.setAttribute('data-order', 'desc');
+            sortOrderBtn.innerText = 'Z-A ↑';
+        } else {
+            sortOrderBtn.setAttribute('data-order', 'asc');
+            sortOrderBtn.innerText = 'A-Z ↓';
+        }
+        renderGallery();
+    });
 
     // Initial Load
-    await loadFilters();
     await loadPhotos();
 });

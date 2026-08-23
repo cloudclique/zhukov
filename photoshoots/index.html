@@ -7,14 +7,15 @@
     <link rel="stylesheet" href="/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        .filter-bar {
+        .sort-bar {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 1rem;
             margin: 2rem 0;
             padding: 0 1rem;
         }
-        .filter-select {
+        .sort-select, .sort-btn {
             padding: 0.8rem 1.5rem;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -22,16 +23,139 @@
             border-radius: 4px;
             font-family: inherit;
             font-size: 1rem;
-            min-width: 200px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .filter-select:focus {
+        .sort-select:focus, .sort-btn:hover {
             outline: none;
             border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1);
         }
-        .filter-select option {
+        .sort-select option {
             background: #1a1a1a;
             color: #fff;
+        }
+        
+        /* Category Rows */
+        .category-row {
+            margin-bottom: 3rem;
+            padding: 0 2rem;
+        }
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 0.5rem;
+        }
+        .category-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .category-meta {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        .scrollable-row {
+            display: flex;
+            gap: 1rem;
+            overflow: hidden; /* Prevent scrolling */
+            padding-bottom: 0;
+            position: relative;
+        }
+        .scrollable-row.expanded-grid {
+            flex-wrap: wrap;
+            overflow: visible;
+        }
+        .row-img {
+            height: 250px;
+            width: auto;
+            max-width: 90vw;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .row-img:hover {
+            transform: scale(1.02);
+        }
+        
+        .fade-overlay {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 200px;
+            background: linear-gradient(to right, transparent, #0f172a 70%);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 2rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .fade-btn-text {
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .fade-overlay:hover .fade-btn-text {
+            transform: translateX(-5px);
+        }
+        .more-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        /* Admin Delete Buttons */
+        .img-container {
+            position: relative;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .delete-photo-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        .delete-photo-btn:hover {
+            background: rgba(255, 0, 0, 1);
+            transform: scale(1.1);
+        }
+        .delete-category-btn {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff4d4d;
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 4px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
+        .delete-category-btn:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.5);
         }
     </style>
 </head>
@@ -47,6 +171,7 @@
                 <a href="/photoshoots/" class="active">Photoshoots</a>
                 <a href="/about/">About Me</a>
                 <a href="/contact/">Contact</a>
+                <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
             </nav>
             <div class="header-actions">
                 <button id="login-btn-header" class="login-btn-header hidden">Login</button>
@@ -56,21 +181,20 @@
     </header>
     
     <main id="app-content">
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-            <select id="category-filter" class="filter-select">
-                <option value="all">All Categories</option>
-                <!-- Dynamically populated -->
+        <!-- Sort Bar -->
+        <div class="sort-bar">
+            <select id="sort-select" class="sort-select">
+                <option value="category">Sort by Category</option>
+                <option value="date">Sort by Date</option>
+                <option value="model">Sort by Model</option>
+                <option value="theme">Sort by Theme</option>
             </select>
-            <select id="model-filter" class="filter-select">
-                <option value="all">All Models</option>
-                <!-- Dynamically populated -->
-            </select>
+            <button id="sort-order-btn" class="sort-btn" data-order="asc">A-Z ↓</button>
         </div>
 
-        <!-- Gallery -->
-        <div class="gallery" id="gallery">
-            <!-- Images will be injected here by JS -->
+        <!-- Gallery Categories -->
+        <div id="categories-container">
+            <!-- Categories will be injected here by JS -->
         </div>
         
         <div id="no-results" style="text-align: center; padding: 4rem; display: none;">
