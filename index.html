@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stanislav | Portfolio</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <h1>Portfolio</h1>
+                <p>A collection of my recent work</p>
+            </div>
+            <nav class="header-nav">
+                <a href="/" class="active">Home</a>
+                <a href="/photoshoots/">Photoshoots</a>
+                <a href="/about/">About Me</a>
+                <a href="/contact/">Contact</a>
+            </nav>
+            <div class="header-actions">
+                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
+                <button id="logout-btn" class="logout-btn hidden">Logout</button>
+            </div>
+        </div>
+    </header>
+    
+    <main id="app-content">
+        <div class="gallery" id="gallery">
+            <!-- Images will be injected here by JS -->
+        </div>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+    </div>
+
+    <script type="module" src="/script.js"></script>
+</body>
+</html>
