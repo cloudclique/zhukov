@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanislav | Portfolio</title>
+    <title>ZHUKOV.s</title>
     <link rel="stylesheet" href="/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <div>
-                <h1>Portfolio</h1>
-                <p>A collection of my recent work</p>
-            </div>
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
             <nav class="header-nav">
                 <a href="/" class="active">Home</a>
                 <a href="/photoshoots/">Photoshoots</a>
@@ -23,20 +24,115 @@
             <div class="header-actions">
                 <button id="login-btn-header" class="login-btn-header hidden">Login</button>
                 <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
             </div>
         </div>
     </header>
     
     <main id="app-content">
-        <div class="gallery" id="gallery">
-            <!-- Images will be injected here by JS -->
-        </div>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-text">
+                <h2>Capturing moments <br>that last a lifetime.</h2>
+                <p>I am a professional photographer specializing in portrait, fashion, and conceptual photography. My mission is to tell your story through stunning visual art.</p>
+                <div class="hero-buttons">
+                    <a href="/photoshoots/" class="btn-primary">View Photoshoots</a>
+                    <a href="/contact/" class="btn-secondary">Book a Session</a>
+                </div>
+            </div>
+            <div class="hero-image-placeholder">
+                <div class="placeholder-box">
+                    <span>[Hero Image Placeholder]</span>
+                </div>
+            </div>
+        </section>
+
+
+
+        <!-- About Snippet -->
+        <section class="home-about">
+            <div class="home-about-img">
+                <div class="placeholder-box square">
+                    <span>[Profile Image Placeholder]</span>
+                </div>
+            </div>
+            <div class="home-about-text">
+                <h3>Hi, I'm Stanislav</h3>
+                <p>Based in your city, I've spent the last decade perfecting the craft of visual storytelling. Whether we're shooting in a studio or on location, my goal is to make you feel comfortable and look your absolute best.</p>
+                <a href="/about/" class="text-link">Read my full story &rarr;</a>
+            </div>
+        </section>
+        
+        <!-- Services/Focus -->
+        <section class="home-services">
+            <div class="service-card">
+                <h4>Portraiture</h4>
+                <p>Professional headshots, personal branding, and creative portraits tailored to your unique personality.</p>
+            </div>
+            <div class="service-card">
+                <h4>Fashion & Editorial</h4>
+                <p>High-end fashion shoots with a focus on lighting, mood, and striking compositions.</p>
+            </div>
+            <div class="service-card">
+                <h4>Events & Lifestyle</h4>
+                <p>Documentary-style coverage of your most important moments, capturing genuine emotion.</p>
+            </div>
+        </section>
+
+        <!-- Gallery / Recent Work -->
+        <section class="home-gallery">
+            <h3 class="section-title">Recent Work</h3>
+            <p class="section-subtitle">A quick glance at my latest projects.</p>
+            <div class="gallery" id="gallery">
+                <!-- Images will be injected here by JS -->
+            </div>
+            <div class="view-all-container">
+                <a href="/photoshoots/" class="btn-outline">Explore Full Gallery</a>
+            </div>
+
+            <!-- Scroll cue — teases the overscroll cloth effect -->
+            <div id="scroll-cue" class="scroll-cue" aria-hidden="true">
+                <div class="scroll-cue-line">
+                    <div class="scroll-cue-drop"></div>
+                </div>
+                <svg class="scroll-cue-chevrons" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L10 9L19 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M1 6L10 14L19 6" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+                </svg>
+            </div>
+        </section>
     </main>
+
+    <!-- Cloth overscroll portal to Photoshoots -->
+    <div id="overscroll-portal" class="overscroll-portal" aria-hidden="true">
+        <canvas id="overscroll-canvas" class="overscroll-canvas"></canvas>
+        <div id="overscroll-label" class="overscroll-label-floating">
+            <span class="overscroll-arrow-icon">↑</span>
+            <span class="overscroll-label-text">Photoshoots</span>
+        </div>
+    </div>
 
     <!-- Lightbox Modal -->
     <div id="lightbox" class="lightbox">
         <span class="close">&times;</span>
         <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+    </div>
+
+    <!-- Admin Image Picker Popup -->
+    <div id="picker-overlay" class="picker-overlay" aria-hidden="true">
+        <div class="picker-header">
+            <span class="picker-title">Choose an image — hold for 2 seconds to select</span>
+            <button class="picker-close-btn" id="picker-close-btn">&times;</button>
+        </div>
+        <div class="picker-body" id="picker-body">
+            <!-- Sets will be injected by JS -->
+        </div>
     </div>
 
     <script type="module" src="/script.js"></script>

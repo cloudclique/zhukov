@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanislav | About Me</title>
+    <title>ZHUKOV.s | About</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="about.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <div>
-                <h1>About Me</h1>
-                <p>Discover my journey and passion for photography</p>
-            </div>
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
             <nav class="header-nav">
                 <a href="/">Home</a>
                 <a href="/photoshoots/">Photoshoots</a>
@@ -23,14 +25,21 @@
             <div class="header-actions">
                 <button id="login-btn-header" class="login-btn-header hidden">Login</button>
                 <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
             </div>
         </div>
     </header>
     
     <main id="app-content">
-        <div style="max-width: 800px; margin: 0 auto; line-height: 1.8;">
+        <div class="about-container">
             <h2>Hi, I'm Stanislav</h2>
-            <p style="color: #94a3b8; margin-top: 1rem;">
+            <p class="about-text">
                 I am a passionate photographer dedicated to capturing the beauty of everyday moments. With a keen eye for detail and a love for visual storytelling, I strive to create stunning imagery that resonates with my audience. Welcome to my portfolio!
             </p>
         </div>

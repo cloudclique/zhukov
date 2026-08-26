@@ -1,21 +1,18 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "./firebase-config.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Static list of images found in the pictures directory.
-const images = [
-    'PRN00237.jpg',
-    '_DSC0006.jpg',
-    '_DSC0192.jpg',
-    '_DSC0205.jpg',
-    '_DSC0245-3.jpg',
-    '_DSC0393.jpg'
+// Static fallback images (used if a slot has no Firestore URL yet)
+const fallbackImages = [
+    '/pictures/PRN00237.jpg',
+    '/pictures/_DSC0006.jpg',
+    '/pictures/_DSC0192.jpg',
+    '/pictures/_DSC0393.jpg'
 ];
-const basePath = '/pictures/';
 
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
@@ -28,69 +25,402 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImg = document.getElementById('lightbox-img');
     const closeBtn = document.querySelector('.close');
 
-    // Generate gallery items (only happens once)
-    let galleryGenerated = false;
-    const generateGallery = async () => {
-        if (galleryGenerated || !gallery) return;
-        
-        let allImages = [];
+    // --- Admin state ---
+    let currentIsAdmin = false;
 
-        // 1. Add static images
-        images.forEach(imageName => {
-            allImages.push(`${basePath}${imageName}`);
-        });
+    // --- Gallery Slots ---
+    // Slot layout: landscape | portrait / portrait | landscape
+    const SLOT_COUNT = 4;
+    let gallerySlots = []; // Array of { url, aspectRatio }
 
-        // 2. Fetch dynamic images from Firestore
+    const loadGallerySlots = async () => {
+        if (!gallery) return;
+        gallery.innerHTML = '';
+        gallerySlots = [];
+
+        // Try loading curated slots from Firestore
         try {
-            const photosSnapshot = await getDocs(collection(db, 'photos'));
-            photosSnapshot.forEach(doc => {
-                const photoData = doc.data();
-                if (photoData.url) {
-                    allImages.push(photoData.url);
-                }
-            });
-        } catch (error) {
-            console.error("Error fetching dynamic photos:", error);
+            const settingsDoc = await getDoc(doc(db, 'settings', 'home_gallery'));
+            if (settingsDoc.exists() && settingsDoc.data().slots) {
+                gallerySlots = settingsDoc.data().slots;
+            }
+        } catch (e) {
+            console.warn('Could not load home_gallery settings:', e);
         }
 
-        // 3. Render all images
-        allImages.forEach((imgUrl, index) => {
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            item.style.animationDelay = `${index * 0.1}s`;
+        // Fill any missing slots with fallbacks
+        for (let i = 0; i < SLOT_COUNT; i++) {
+            if (!gallerySlots[i]) {
+                gallerySlots[i] = { url: fallbackImages[i] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+            }
+        }
 
-            const img = document.createElement('img');
-            img.src = imgUrl;
-            img.alt = `Portfolio Image ${index + 1}`;
-            img.loading = 'lazy';
-
-            item.appendChild(img);
-            gallery.appendChild(item);
-
-            // Lightbox logic
-            item.addEventListener('click', () => {
-                if (!lightbox) return;
-                lightbox.style.display = 'flex';
-                setTimeout(() => {
-                    lightbox.classList.add('show');
-                    lightboxImg.src = img.src;
-                }, 10);
-            });
-        });
-        galleryGenerated = true;
+        renderGallerySlots();
     };
 
-    // Always generate the gallery so it's visible without login
-    generateGallery();
+    const renderGallerySlots = () => {
+        if (!gallery) return;
+        gallery.innerHTML = '';
 
-    // Lightbox close logic
+        gallerySlots.forEach((slot, index) => {
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            item.style.animationDelay = `${index * 0.12}s`;
+            if (!slot.url) item.classList.add('empty-slot');
+
+            if (slot.url) {
+                const img = document.createElement('img');
+                img.src = slot.url;
+                img.alt = `Featured Image ${index + 1}`;
+                img.loading = 'lazy';
+                item.appendChild(img);
+
+                // Lightbox on click (only if not admin — admin gets edit button)
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.slot-edit-btn')) return;
+                    openLightbox(img);
+                });
+
+                attachTiltEffect(item);
+            } else {
+                // Empty slot icon
+                const icon = document.createElement('span');
+                icon.style.cssText = 'font-size:2rem;color:rgba(148,163,184,0.3);';
+                icon.textContent = '+';
+                item.appendChild(icon);
+            }
+
+            // Admin edit button
+            if (currentIsAdmin) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'slot-edit-btn';
+                editBtn.title = 'Change image';
+                editBtn.innerHTML = '✏️';
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openPicker(index);
+                });
+                item.appendChild(editBtn);
+            }
+
+            gallery.appendChild(item);
+        });
+    };
+
+    // --- Image Picker Popup ---
+    const pickerOverlay = document.getElementById('picker-overlay');
+    const pickerBody = document.getElementById('picker-body');
+    const pickerCloseBtn = document.getElementById('picker-close-btn');
+    let activeSlotIndex = -1;
+    let pickerLoaded = false;
+
+    const openPicker = async (slotIndex) => {
+        if (!pickerOverlay) return;
+        activeSlotIndex = slotIndex;
+        pickerOverlay.style.display = 'flex';
+        requestAnimationFrame(() => pickerOverlay.classList.add('show'));
+        document.body.style.overflow = 'hidden';
+
+        if (!pickerLoaded) {
+            await loadPickerContent();
+            pickerLoaded = true;
+        }
+    };
+
+    const closePicker = () => {
+        if (!pickerOverlay) return;
+        pickerOverlay.classList.remove('show');
+        setTimeout(() => {
+            pickerOverlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }, 350);
+        activeSlotIndex = -1;
+    };
+
+    if (pickerCloseBtn) pickerCloseBtn.addEventListener('click', closePicker);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && pickerOverlay && pickerOverlay.classList.contains('show')) closePicker();
+    });
+
+    const loadPickerContent = async () => {
+        if (!pickerBody) return;
+        pickerBody.innerHTML = '<div style="color:#64748b;font-family:Inter,sans-serif;padding:2rem;">Loading sets…</div>';
+
+        try {
+            const setsSnap = await getDocs(collection(db, 'photo_sets'));
+            pickerBody.innerHTML = '';
+
+            if (setsSnap.empty) {
+                pickerBody.innerHTML = '<div style="color:#64748b;font-family:Inter,sans-serif;">No photoshoots found.</div>';
+                return;
+            }
+
+            setsSnap.forEach(setDoc => {
+                const data = setDoc.data();
+                const urls = data.urls || [];
+                if (!urls.length) return;
+
+                const setDiv = document.createElement('div');
+                setDiv.className = 'picker-set';
+
+                const titleEl = document.createElement('div');
+                titleEl.className = 'picker-set-title';
+                titleEl.innerHTML = `<span class="toggle-icon">▶</span>${data.categoryName || 'Untitled Set'} <span style="color:#475569;font-weight:400;font-size:0.8rem;">${urls.length} photos</span>`;
+
+                const imagesDiv = document.createElement('div');
+                imagesDiv.className = 'picker-set-images';
+
+                // Toggle expand/collapse
+                titleEl.addEventListener('click', () => {
+                    titleEl.classList.toggle('expanded');
+                    imagesDiv.classList.toggle('show');
+                });
+
+                // Build thumbnails
+                urls.forEach(url => {
+                    const wrap = createPickerThumb(url);
+                    imagesDiv.appendChild(wrap);
+                });
+
+                setDiv.appendChild(titleEl);
+                setDiv.appendChild(imagesDiv);
+                pickerBody.appendChild(setDiv);
+            });
+
+            // Also add single shots section
+            const singleSnap = await getDocs(collection(db, 'single_shots'));
+            if (!singleSnap.empty) {
+                const setDiv = document.createElement('div');
+                setDiv.className = 'picker-set';
+                const titleEl = document.createElement('div');
+                titleEl.className = 'picker-set-title';
+                titleEl.innerHTML = `<span class="toggle-icon">▶</span>Single Shots`;
+                const imagesDiv = document.createElement('div');
+                imagesDiv.className = 'picker-set-images';
+                titleEl.addEventListener('click', () => {
+                    titleEl.classList.toggle('expanded');
+                    imagesDiv.classList.toggle('show');
+                });
+                singleSnap.forEach(d => {
+                    if (d.data().url) imagesDiv.appendChild(createPickerThumb(d.data().url));
+                });
+                setDiv.appendChild(titleEl);
+                setDiv.appendChild(imagesDiv);
+                pickerBody.appendChild(setDiv);
+            }
+
+        } catch (err) {
+            console.error('Failed to load picker content:', err);
+            pickerBody.innerHTML = '<div style="color:#f87171;font-family:Inter,sans-serif;">Error loading images.</div>';
+        }
+    };
+
+    const createPickerThumb = (url) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'picker-img-wrap';
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.loading = 'lazy';
+
+        // Hold ring overlay
+        const ring = document.createElement('div');
+        ring.className = 'hold-ring';
+        ring.innerHTML = `
+            <div class="hold-overlay"></div>
+            <svg viewBox="0 0 48 48">
+                <circle class="ring-bg" cx="24" cy="24" r="22"/>
+                <circle class="ring-fill" cx="24" cy="24" r="22"/>
+            </svg>`;
+
+        wrap.appendChild(img);
+        wrap.appendChild(ring);
+
+        // Long-press logic (mouse + touch)
+        let holdTimer = null;
+        let holdStarted = false;
+
+        const startHold = (e) => {
+            e.preventDefault();
+            holdStarted = true;
+            ring.classList.add('active');
+            // Re-trigger animation by cloning
+            const newRing = ring.cloneNode(true);
+            wrap.replaceChild(newRing, ring);
+            newRing.classList.add('active');
+
+            holdTimer = setTimeout(async () => {
+                if (!holdStarted) return;
+                await selectImage(url);
+                newRing.classList.remove('active');
+            }, 2000);
+        };
+
+        const cancelHold = () => {
+            holdStarted = false;
+            clearTimeout(holdTimer);
+            // Remove active from any ring inside wrap
+            const r = wrap.querySelector('.hold-ring');
+            if (r) r.classList.remove('active');
+        };
+
+        wrap.addEventListener('mousedown', startHold);
+        wrap.addEventListener('mouseup', cancelHold);
+        wrap.addEventListener('mouseleave', cancelHold);
+        wrap.addEventListener('touchstart', startHold, { passive: false });
+        wrap.addEventListener('touchend', cancelHold);
+        wrap.addEventListener('touchcancel', cancelHold);
+        // Prevent context menu on long-press mobile
+        wrap.addEventListener('contextmenu', e => e.preventDefault());
+
+        return wrap;
+    };
+
+    const selectImage = async (url) => {
+        if (activeSlotIndex < 0) return;
+        try {
+            gallerySlots[activeSlotIndex].url = url;
+            // Save to Firestore
+            const settingsRef = doc(db, 'settings', 'home_gallery');
+            const snap = await getDoc(settingsRef);
+            if (snap.exists()) {
+                await updateDoc(settingsRef, { slots: gallerySlots });
+            } else {
+                await setDoc(settingsRef, { slots: gallerySlots });
+            }
+            renderGallerySlots();
+            closePicker();
+        } catch (err) {
+            console.error('Failed to save gallery slot:', err);
+            alert('Error saving image. Please try again.');
+        }
+    };
+
+    // Always load the gallery (reads from Firestore or uses fallback)
+    loadGallerySlots();
+
+
+    // --- 3D Tilt Effect Helper ---
+    const attachTiltEffect = (element) => {
+        element.classList.add('tilt-card');
+        
+        const onMouseMove = (e) => {
+            const rect = element.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const deltaX = (x - centerX) / centerX;
+            const deltaY = (y - centerY) / centerY;
+            
+            // Scale tilt inversely with element size — big images tilt less
+            const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
+            const rotateX = (-deltaY * maxTilt).toFixed(2);
+            const rotateY = (deltaX * maxTilt).toFixed(2);
+            
+            element.classList.add('is-tilting');
+            element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+        };
+        
+        const onMouseLeave = () => {
+            element.classList.remove('is-tilting');
+            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+        };
+        
+        element.addEventListener('mousemove', onMouseMove);
+        element.addEventListener('mouseleave', onMouseLeave);
+    };
+
+    // --- Shared Element FLIP Lightbox Logic ---
+    let activeOriginImg = null;
+
+    const openLightbox = (imgElement) => {
+        if (!lightbox || !lightboxImg) return;
+        activeOriginImg = imgElement;
+        
+        // Temporarily reset styles to measure target layout
+        lightboxImg.style.transition = 'none';
+        lightboxImg.style.transform = 'none';
+        lightboxImg.style.borderRadius = '';
+        lightboxImg.src = imgElement.src;
+        
+        lightbox.style.display = 'flex';
+        lightbox.classList.remove('show');
+        
+        const sourceRect = imgElement.getBoundingClientRect();
+        
+        requestAnimationFrame(() => {
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Invert: Position exactly over the clicked image
+            lightboxImg.style.transformOrigin = 'center center';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
+            
+            // Play: Grow and zoom out to the viewer in center
+            requestAnimationFrame(() => {
+                lightbox.classList.add('show');
+                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
+                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
+                lightboxImg.style.borderRadius = '12px';
+            });
+        });
+    };
+
     const closeLightbox = () => {
         if (!lightbox) return;
-        lightbox.classList.remove('show');
-        setTimeout(() => {
-            lightbox.style.display = 'none';
-            lightboxImg.src = '';
-        }, 300);
+        
+        if (activeOriginImg && activeOriginImg.isConnected) {
+            const sourceRect = activeOriginImg.getBoundingClientRect();
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Animate back to original thumbnail location
+            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
+            
+            lightbox.classList.remove('show');
+            
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                lightboxImg.style.transform = '';
+                lightboxImg.style.transition = '';
+                activeOriginImg = null;
+            }, 400);
+        } else {
+            lightbox.classList.remove('show');
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                activeOriginImg = null;
+            }, 300);
+        }
     };
 
     if (closeBtn) {
@@ -111,21 +441,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Firebase Authentication Logic ---
 
-    // Listen for authentication state changes
-    onAuthStateChanged(auth, (user) => {
+    // Combined auth state: update UI buttons + admin status + gallery
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // User is signed in.
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
+            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
+            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
+            localStorage.setItem('zhukov_logged_in', 'true');
+            try {
+                const userSnap = await getDoc(doc(db, 'users', user.uid));
+                currentIsAdmin = userSnap.exists() && userSnap.data().role === 'admin';
+            } catch { currentIsAdmin = false; }
         } else {
-            // User is signed out.
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
+            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
+            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
+            localStorage.removeItem('zhukov_logged_in');
+            currentIsAdmin = false;
         }
+        renderGallerySlots();
     });
 
     // Login button click handler
     loginBtn.addEventListener('click', () => {
+        localStorage.setItem('zhukov_logged_in', 'true');
         signInWithPopup(auth, provider).then(async (result) => {
             const user = result.user;
             
@@ -158,8 +495,223 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Logout button click handler
     logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('zhukov_logged_in');
         signOut(auth).catch((error) => {
             console.error("Error signing out: ", error);
         });
     });
 });
+
+
+
+// ============================================
+// Cloth Overscroll Portal → Navigate to Photoshoots
+// ============================================
+(function initClothPortal() {
+    const portal   = document.getElementById('overscroll-portal');
+    const canvas   = document.getElementById('overscroll-canvas');
+    const label    = document.getElementById('overscroll-label');
+    const appContent = document.getElementById('app-content');
+    if (!portal || !canvas || !appContent) return;
+
+    const ctx = canvas.getContext('2d');
+
+    // ── Tuning ────────────────────────────────────────────────────────────
+    const CANVAS_H        = 280;   // px headroom (matches CSS height)
+    const TRIGGER_THRESHOLD = 200; // accumulated overscroll to trigger nav
+    const MAX_PULL        = 240;   // max canvas peak height in px
+    const RESISTANCE      = 0.36;  // scrolling spring factor (lower = more pull needed)
+
+    let overscrollAmount = 0;
+    let navigating = false;
+
+    // ── Hi-DPI canvas setup ───────────────────────────────────────────────
+    const resizeCanvas = () => {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = window.innerWidth * dpr;
+        canvas.height = CANVAS_H * dpr;
+        ctx.scale(dpr, dpr);
+    };
+    resizeCanvas();
+    window.addEventListener('resize', () => { resizeCanvas(); drawCloth(overscrollAmount); });
+
+    // ── Draw cloth shape ──────────────────────────────────────────────────
+    const drawCloth = (peakPx) => {
+        const W = window.innerWidth;
+        const H = CANVAS_H;
+        ctx.clearRect(0, 0, W, H);
+        if (peakPx <= 1) return;
+
+        // Tip of the mountain (from top of canvas)
+        const tipY = H - peakPx;
+
+        // ── Mountain path ─────────────────────────────────────────────────
+        // Wide base: anchors at screen left & right edges
+        // Sharp central peak, gentle curved sides (like the sketch)
+        const path = new Path2D();
+        path.moveTo(-20, H + 10);
+        path.bezierCurveTo(
+            W * 0.18, H + 5,       // far left: stays low
+            W * 0.43, tipY + 12,   // sweeps up steeply near center
+            W * 0.5,  tipY         // sharp peak tip
+        );
+        path.bezierCurveTo(
+            W * 0.57, tipY + 12,   // mirror
+            W * 0.82, H + 5,       // far right: stays low
+            W + 20,   H + 10
+        );
+        path.lineTo(W + 20, H + 40);
+        path.lineTo(-20, H + 40);
+        path.closePath();
+
+        // ── Drop shadow above the mountain edge ───────────────────────────
+        ctx.save();
+        ctx.shadowColor   = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur    = 28;
+        ctx.shadowOffsetY = -12;
+
+        // Solid dark fill — matching site bg but slightly lighter for the mountain body
+        const grad = ctx.createLinearGradient(W / 2, tipY, W / 2, H);
+        grad.addColorStop(0,   'rgba(22, 32, 52, 0.97)');   // slightly lighter than bg at peak
+        grad.addColorStop(0.35,'rgba(17, 25, 42, 0.97)');
+        grad.addColorStop(1,   'rgba(15, 23, 42, 0.97)');   // exact site bg at base
+        ctx.fillStyle = grad;
+        ctx.fill(path);
+        ctx.restore();
+
+        // ── Thin crease line along the mountain silhouette ────────────────
+        ctx.beginPath();
+        ctx.moveTo(-20, H + 10);
+        ctx.bezierCurveTo(W * 0.18, H + 5, W * 0.43, tipY + 12, W * 0.5, tipY);
+        ctx.bezierCurveTo(W * 0.57, tipY + 12, W * 0.82, H + 5, W + 20, H + 10);
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.5)';
+        ctx.lineWidth   = 1;
+        ctx.stroke();
+
+        // ── Inner depth crease (second cloth fold from sketch) ────────────
+        const tipY2 = H - peakPx * 0.82;
+        ctx.beginPath();
+        ctx.moveTo(W * 0.04, H + 8);
+        ctx.bezierCurveTo(W * 0.22, H + 3, W * 0.44, tipY2 + 10, W * 0.5, tipY2);
+        ctx.bezierCurveTo(W * 0.56, tipY2 + 10, W * 0.78, H + 3, W * 0.96, H + 8);
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+        ctx.lineWidth   = 0.8;
+        ctx.stroke();
+
+        // ── Label: arrow + text BELOW the peak tip (inside mountain) ─────
+        const progress = Math.min(1, peakPx / TRIGGER_THRESHOLD);
+        // Place label 30px below the tip (inside the mountain body)
+        const labelBottom = peakPx - 34;
+        if (label) {
+            label.style.bottom  = Math.max(2, labelBottom) + 'px';
+            label.style.opacity = Math.max(0, (progress - 0.2) / 0.8).toFixed(3);
+        }
+    };
+
+
+    // ── Page warp (content slides up slightly as cloth pulls) ────────────
+    const applyWarp = (peakPx) => {
+        const warp = peakPx * 0.18;
+        appContent.style.transition = 'none';
+        appContent.style.transform  = `translateY(${-warp.toFixed(1)}px)`;
+    };
+
+    const releasePull = () => {
+        // Animate overscrollAmount back to 0 smoothly
+        if (overscrollAmount <= 0) return;
+        const startVal = overscrollAmount;
+        const startTime = performance.now();
+        const SPRING_DUR = 550; // ms
+
+        const spring = (now) => {
+            const t = Math.min(1, (now - startTime) / SPRING_DUR);
+            // Ease out cubic
+            const ease = 1 - Math.pow(1 - t, 3);
+            overscrollAmount = startVal * (1 - ease);
+            drawCloth(overscrollAmount);
+            label.style.opacity = '0';
+            appContent.style.transition = 'none';
+            appContent.style.transform  = `translateY(${-(overscrollAmount * 0.18).toFixed(1)}px)`;
+            if (t < 1 && !navigating) requestAnimationFrame(spring);
+            else if (t >= 1) {
+                overscrollAmount = 0;
+                appContent.style.transform = 'translateY(0)';
+            }
+        };
+        requestAnimationFrame(spring);
+    };
+
+    const triggerNavigation = () => {
+        navigating = true;
+        // Stretch peak to max quickly, then fade out and navigate
+        const startVal = overscrollAmount;
+        const startTime = performance.now();
+        const SNAP_DUR  = 220;
+        const snap = (now) => {
+            const t = Math.min(1, (now - startTime) / SNAP_DUR);
+            const ease = 1 - Math.pow(1 - t, 2);
+            const cur = startVal + (MAX_PULL - startVal) * ease;
+            drawCloth(cur);
+            appContent.style.transform = `translateY(${-(cur * 0.18).toFixed(1)}px)`;
+            if (t < 1) { requestAnimationFrame(snap); return; }
+            // Then slide current page up & navigate (photoshoots will slide in from below)
+            setTimeout(() => {
+                sessionStorage.setItem('zhukov_overscroll_nav', '1');
+                document.documentElement.style.transition = 'transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease';
+                document.documentElement.style.transform = 'translateY(-40px)';
+                document.documentElement.style.opacity = '0';
+                setTimeout(() => { window.location.href = '/photoshoots/'; }, 360);
+            }, 80);
+        };
+        requestAnimationFrame(snap);
+    };
+
+    // ── Core pull accumulator ─────────────────────────────────────────────
+    const isAtBottom = () =>
+        (window.innerHeight + window.scrollY) >= document.body.scrollHeight - 2;
+
+    const pull = (rawDelta) => {
+        if (navigating) return;
+        if (!isAtBottom()) { if (overscrollAmount > 0) releasePull(); return; }
+
+        overscrollAmount = Math.min(MAX_PULL, overscrollAmount + rawDelta * RESISTANCE);
+        if (overscrollAmount < 0) overscrollAmount = 0;
+
+        drawCloth(overscrollAmount);
+        applyWarp(overscrollAmount);
+
+        if (overscrollAmount >= TRIGGER_THRESHOLD) triggerNavigation();
+    };
+
+    // ── Wheel / trackpad ──────────────────────────────────────────────────
+    let wheelTimer = null;
+    window.addEventListener('wheel', (e) => {
+        if (navigating) return;
+        clearTimeout(wheelTimer);
+        if (isAtBottom() && e.deltaY > 0) {
+            pull(e.deltaY);
+        } else if (overscrollAmount > 0) {
+            releasePull();
+        }
+        wheelTimer = setTimeout(() => { if (!navigating) releasePull(); }, 160);
+    }, { passive: true });
+
+    // ── Touch ─────────────────────────────────────────────────────────────
+    let touchLastY = 0;
+    window.addEventListener('touchstart', (e) => {
+        touchLastY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (navigating) return;
+        const y = e.touches[0].clientY;
+        const delta = touchLastY - y; // positive = scrolling down
+        touchLastY = y;
+        if (isAtBottom() && delta > 0) pull(delta * 2.5);
+        else if (overscrollAmount > 0 && delta < 0) pull(-delta * 0.5);
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+        if (!navigating) releasePull();
+    }, { passive: true });
+})();

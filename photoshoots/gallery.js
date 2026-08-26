@@ -30,8 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, async (user) => {
         const uploadLink = document.getElementById('upload-nav-link');
         if (user) {
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
+            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
+            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
+            localStorage.setItem('zhukov_logged_in', 'true');
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
@@ -43,8 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error("Auth check error:", error);
             }
         } else {
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
+            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
+            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
+            localStorage.removeItem('zhukov_logged_in');
             if (uploadLink) uploadLink.classList.add('hidden');
             isAdmin = false;
             if (categoryId) loadGallery();
@@ -52,21 +54,135 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     loginBtn.addEventListener('click', () => {
+        localStorage.setItem('zhukov_logged_in', 'true');
         signInWithPopup(auth, provider).catch(error => console.error(error));
     });
 
     logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('zhukov_logged_in');
         signOut(auth).catch(error => console.error(error));
     });
 
-    // --- Lightbox Logic ---
+    // --- 3D Tilt Effect Helper ---
+    const attachTiltEffect = (element) => {
+        element.classList.add('tilt-card');
+        
+        const onMouseMove = (e) => {
+            const rect = element.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const deltaX = (x - centerX) / centerX;
+            const deltaY = (y - centerY) / centerY;
+            
+            // Scale tilt inversely with element size — big images tilt less
+            const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
+            const rotateX = (-deltaY * maxTilt).toFixed(2);
+            const rotateY = (deltaX * maxTilt).toFixed(2);
+            
+            element.classList.add('is-tilting');
+            element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+        };
+        
+        const onMouseLeave = () => {
+            element.classList.remove('is-tilting');
+            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+        };
+        
+        element.addEventListener('mousemove', onMouseMove);
+        element.addEventListener('mouseleave', onMouseLeave);
+    };
+
+    // --- Shared Element FLIP Lightbox Logic ---
+    let activeOriginImg = null;
+
+    const openLightbox = (imgElement) => {
+        if (!lightbox || !lightboxImg) return;
+        activeOriginImg = imgElement;
+        
+        // Temporarily reset styles to measure target layout
+        lightboxImg.style.transition = 'none';
+        lightboxImg.style.transform = 'none';
+        lightboxImg.style.borderRadius = '';
+        lightboxImg.src = imgElement.src;
+        
+        lightbox.style.display = 'flex';
+        lightbox.classList.remove('show');
+        
+        const sourceRect = imgElement.getBoundingClientRect();
+        
+        requestAnimationFrame(() => {
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Invert: Position exactly over the clicked image
+            lightboxImg.style.transformOrigin = 'center center';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
+            
+            // Play: Grow and zoom out to the viewer in center
+            requestAnimationFrame(() => {
+                lightbox.classList.add('show');
+                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
+                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
+                lightboxImg.style.borderRadius = '12px';
+            });
+        });
+    };
+
     const closeLightbox = () => {
         if (!lightbox) return;
-        lightbox.classList.remove('show');
-        setTimeout(() => {
-            lightbox.style.display = 'none';
-            lightboxImg.src = '';
-        }, 300);
+        
+        if (activeOriginImg && activeOriginImg.isConnected) {
+            const sourceRect = activeOriginImg.getBoundingClientRect();
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Animate back to original thumbnail location
+            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
+            
+            lightbox.classList.remove('show');
+            
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                lightboxImg.style.transform = '';
+                lightboxImg.style.transition = '';
+                activeOriginImg = null;
+            }, 400);
+        } else {
+            lightbox.classList.remove('show');
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                activeOriginImg = null;
+            }, 300);
+        }
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeLightbox);
@@ -82,10 +198,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        // --- Skeleton Loading State ---
+        loadingState.style.display = 'none';
+        headerContainer.innerHTML = `
+            <div class="skeleton skeleton-title" style="margin-bottom: 0.5rem; width: 300px;"></div>
+            <div class="skeleton skeleton-meta" style="width: 200px;"></div>
+        `;
+        
+        gridContainer.innerHTML = '';
+        // Create 12 skeleton items with varying heights to simulate masonry
+        const spans = [20, 25, 18, 30, 22, 28, 19, 24, 27, 21, 26, 23];
+        spans.forEach(span => {
+            gridContainer.innerHTML += `<div class="masonry-item skeleton" style="grid-row: span ${span}; min-height: ${span * 10}px; border-radius: 12px;"></div>`;
+        });
+
         try {
             let categoryName = "Photoshoot";
             let metaInfo = "";
+            let description = "";
             let urls = [];
+
+            // Helper to escape HTML
+            const escapeHtml = (str) => {
+                if (!str) return '';
+                return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            };
+
+            // Helper to format URLs in description into domain + favicon badges
+            const formatDescription = (rawText) => {
+                if (!rawText) return '';
+                const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+                const parts = rawText.split(urlRegex);
+                return parts.map(part => {
+                    if (part.match(urlRegex)) {
+                        try {
+                            const urlObj = new URL(part);
+                            const domain = urlObj.hostname.replace(/^www\./, '');
+                            const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(urlObj.hostname)}&sz=32`;
+                            return `<a href="${escapeHtml(part)}" target="_blank" rel="noopener noreferrer" class="desc-link"><img src="${faviconUrl}" class="site-icon" alt="" />${domain}</a>`;
+                        } catch (e) {
+                            return `<a href="${escapeHtml(part)}" target="_blank" rel="noopener noreferrer" class="desc-link">${escapeHtml(part)}</a>`;
+                        }
+                    }
+                    return escapeHtml(part);
+                }).join('').replace(/\n/g, '<br>');
+            };
 
             if (categoryId === 'single-shots') {
                 categoryName = "Single Shots";
@@ -106,6 +263,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (setSnap.exists()) {
                     const data = setSnap.data();
                     categoryName = data.categoryName || categoryId;
+                    description = data.description || '';
                     
                     const modelName = data.modelName || 'Unknown';
                     const theme = data.theme || 'None';
@@ -158,25 +316,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     await deleteDoc(doc(db, 'photo_sets', categoryId));
                     window.location.href = '/photoshoots/'; // Redirect back
                 } catch (error) {
-                    console.error("Error deleting category:", error);
-                    alert("Error deleting category.");
+                    console.error("Error deleting photo set:", error);
+                    alert("Error deleting photo set.");
                 }
             };
 
             // --- Render UI ---
             loadingState.style.display = 'none';
             let currentUrls = urls;
+            const formattedDesc = formatDescription(description);
 
             if (isAdmin && categoryId !== 'single-shots') {
                 headerContainer.innerHTML = `
                     <h2 class="gallery-title editable" data-field="categoryName" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
+                    <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
                     <div style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">${currentUrls.length} Photos</div>
                 `;
             } else {
                 headerContainer.innerHTML = `
                     <h2 class="gallery-title">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
+                    ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
                     <div style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">${currentUrls.length} Photos</div>
                 `;
             }
@@ -189,23 +350,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                     el.addEventListener('mouseenter', () => el.style.color = '#60a5fa');
                     el.addEventListener('mouseleave', () => el.style.color = '');
                     
-                    el.addEventListener('dblclick', () => {
-                        if (el.querySelector('input')) return;
+                    el.addEventListener('dblclick', (e) => {
+                        // Prevent opening editor if clicking on an active link badge
+                        if (e.target.closest('a')) return;
+                        if (el.querySelector('input') || el.querySelector('textarea')) return;
                         
-                        const currentText = el.innerText;
                         const fieldName = el.getAttribute('data-field');
+                        const isDescription = fieldName === 'description';
+                        const currentRaw = el.getAttribute('data-raw') !== null ? el.getAttribute('data-raw') : el.innerText;
                         
-                        const input = document.createElement('input');
-                        input.type = fieldName === 'date' ? 'date' : 'text';
-                        if (fieldName !== 'date') input.value = currentText;
+                        let input;
+                        if (isDescription) {
+                            input = document.createElement('textarea');
+                            input.value = currentRaw;
+                            input.rows = 3;
+                            input.placeholder = "Enter description and links (e.g. https://instagram.com/...)";
+                            input.style.width = '100%';
+                            input.style.maxWidth = '600px';
+                            input.style.display = 'block';
+                            input.style.margin = '0 auto';
+                            input.style.resize = 'vertical';
+                        } else {
+                            input = document.createElement('input');
+                            input.type = fieldName === 'date' ? 'date' : 'text';
+                            if (fieldName !== 'date') input.value = currentRaw;
+                        }
                         
-                        input.style.padding = '4px 8px';
+                        input.style.padding = '6px 10px';
                         input.style.fontSize = 'inherit';
                         input.style.fontFamily = 'inherit';
                         input.style.color = '#fff';
                         input.style.background = '#1e293b';
                         input.style.border = '1px solid #60a5fa';
-                        input.style.borderRadius = '4px';
+                        input.style.borderRadius = '6px';
                         input.style.outline = 'none';
                         
                         el.innerHTML = '';
@@ -222,11 +399,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (fieldName === 'date') {
                                 if (newVal) hasChanged = true;
                             } else {
-                                if (newVal && newVal !== currentText) hasChanged = true;
+                                if (newVal !== currentRaw) hasChanged = true;
                             }
                             
                             if (!hasChanged) {
-                                el.innerHTML = currentText;
+                                loadGallery();
                                 return;
                             }
                             
@@ -243,17 +420,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 loadGallery(); // Reload to reflect changes globally
                             } catch (e) {
                                 console.error("Error updating field:", e);
-                                el.innerHTML = currentText;
                                 alert("Failed to update.");
+                                loadGallery();
                             }
                         };
                         
                         input.addEventListener('blur', saveChange);
                         input.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') input.blur();
-                            if (e.key === 'Escape') {
+                            if (e.key === 'Enter' && !isDescription) {
+                                input.blur();
+                            } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && isDescription) {
+                                input.blur();
+                            } else if (e.key === 'Escape') {
                                 input.dataset.saving = "true"; // Prevent blur trigger
-                                el.innerHTML = currentText;
+                                loadGallery();
                             }
                         });
                     });
@@ -320,25 +500,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUrls.forEach((url, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'masonry-item img-container';
-                    // Initially hide it or set a default span so it doesn't break layout while loading
+                    // Initially set a default span so it doesn't break layout while loading
                     wrapper.style.gridRow = `span 20`; // default fallback
                     
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
                     img.src = url;
-                    // Don't lazy load, we want to calculate sizes ASAP for the dense grid
-                    
-                    img.onload = () => {
+
+                    const reveal = () => {
                         calculateSpans(wrapper, img);
+                        const delay = (index * 0.05); // 50ms wave interval
+                        img.style.transitionDelay = `${delay}s`;
+                        requestAnimationFrame(() => {
+                            img.classList.add('is-revealed');
+                        });
+                        setTimeout(() => {
+                            wrapper.classList.add('img-loaded');
+                            img.style.transitionDelay = '';
+                        }, (delay + 0.65) * 1000);
                     };
+
+                    if (img.complete && img.naturalWidth) {
+                        reveal();
+                    } else {
+                        img.addEventListener('load', reveal, { once: true });
+                    }
                     
                     img.addEventListener('click', () => {
-                        lightbox.style.display = 'flex';
-                        setTimeout(() => {
-                            lightbox.classList.add('show');
-                            lightboxImg.src = img.src;
-                        }, 10);
+                        openLightbox(img);
                     });
+
+                    // Attach 3D Magnetic Tilt
+                    attachTiltEffect(wrapper);
 
                     wrapper.appendChild(img);
                     

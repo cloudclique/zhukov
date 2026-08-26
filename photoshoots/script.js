@@ -29,8 +29,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, async (user) => {
         const uploadLink = document.getElementById('upload-nav-link');
         if (user) {
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
+            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
+            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
+            localStorage.setItem('zhukov_logged_in', 'true');
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
@@ -42,8 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error("Auth check error:", error);
             }
         } else {
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
+            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
+            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
+            localStorage.removeItem('zhukov_logged_in');
             if (uploadLink) uploadLink.classList.add('hidden');
             isAdmin = false;
             renderGallery();
@@ -51,21 +53,135 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     loginBtn.addEventListener('click', () => {
+        localStorage.setItem('zhukov_logged_in', 'true');
         signInWithPopup(auth, provider).catch(error => console.error(error));
     });
 
     logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('zhukov_logged_in');
         signOut(auth).catch(error => console.error(error));
     });
 
-    // --- Lightbox Logic ---
+    // --- 3D Tilt Effect Helper ---
+    const attachTiltEffect = (element) => {
+        element.classList.add('tilt-card');
+        
+        const onMouseMove = (e) => {
+            const rect = element.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const deltaX = (x - centerX) / centerX;
+            const deltaY = (y - centerY) / centerY;
+            
+            // Scale tilt inversely with element size — big images tilt less
+            const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
+            const rotateX = (-deltaY * maxTilt).toFixed(2);
+            const rotateY = (deltaX * maxTilt).toFixed(2);
+            
+            element.classList.add('is-tilting');
+            element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+        };
+        
+        const onMouseLeave = () => {
+            element.classList.remove('is-tilting');
+            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+        };
+        
+        element.addEventListener('mousemove', onMouseMove);
+        element.addEventListener('mouseleave', onMouseLeave);
+    };
+
+    // --- Shared Element FLIP Lightbox Logic ---
+    let activeOriginImg = null;
+
+    const openLightbox = (imgElement) => {
+        if (!lightbox || !lightboxImg) return;
+        activeOriginImg = imgElement;
+        
+        // Temporarily reset styles to measure target layout
+        lightboxImg.style.transition = 'none';
+        lightboxImg.style.transform = 'none';
+        lightboxImg.style.borderRadius = '';
+        lightboxImg.src = imgElement.src;
+        
+        lightbox.style.display = 'flex';
+        lightbox.classList.remove('show');
+        
+        const sourceRect = imgElement.getBoundingClientRect();
+        
+        requestAnimationFrame(() => {
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Invert: Position exactly over the clicked image
+            lightboxImg.style.transformOrigin = 'center center';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
+            
+            // Play: Grow and zoom out to the viewer in center
+            requestAnimationFrame(() => {
+                lightbox.classList.add('show');
+                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
+                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
+                lightboxImg.style.borderRadius = '12px';
+            });
+        });
+    };
+
     const closeLightbox = () => {
         if (!lightbox) return;
-        lightbox.classList.remove('show');
-        setTimeout(() => {
-            lightbox.style.display = 'none';
-            lightboxImg.src = '';
-        }, 300);
+        
+        if (activeOriginImg && activeOriginImg.isConnected) {
+            const sourceRect = activeOriginImg.getBoundingClientRect();
+            const targetRect = lightboxImg.getBoundingClientRect();
+            
+            const targetCenterX = targetRect.left + targetRect.width / 2;
+            const targetCenterY = targetRect.top + targetRect.height / 2;
+            
+            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+            
+            const deltaX = sourceCenterX - targetCenterX;
+            const deltaY = sourceCenterY - targetCenterY;
+            const scaleX = sourceRect.width / targetRect.width;
+            const scaleY = sourceRect.height / targetRect.height;
+            
+            // Animate back to original thumbnail location
+            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
+            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
+            
+            lightbox.classList.remove('show');
+            
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                lightboxImg.style.transform = '';
+                lightboxImg.style.transition = '';
+                activeOriginImg = null;
+            }, 400);
+        } else {
+            lightbox.classList.remove('show');
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+                lightboxImg.src = '';
+                activeOriginImg = null;
+            }, 300);
+        }
     };
 
     if (closeBtn) closeBtn.addEventListener('click', closeLightbox);
@@ -76,6 +192,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Fetch Data ---
     const loadPhotos = async () => {
+        // Show skeleton loading state
+        categoriesContainer.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            categoriesContainer.innerHTML += `
+                <div class="category-row">
+                    <div class="category-header">
+                        <div style="width: 100%;">
+                            <div class="skeleton skeleton-text skeleton-title"></div>
+                            <div class="skeleton skeleton-text skeleton-meta"></div>
+                        </div>
+                    </div>
+                    <div class="scrollable-row-wrapper">
+                        <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
+                            <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
+                            <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
+                            <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
+                            <div class="skeleton skeleton-img row-img" style="width: 200px;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        noResults.style.display = 'none';
+
         try {
             categoriesData = [];
             
@@ -115,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
                     categoriesData.push({
                         categoryId: doc.id,
-                        categoryName: data.categoryName || 'Unknown Category',
+                        categoryName: data.categoryName || 'Unknown Photo set',
                         modelName: data.modelName || 'Unknown',
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
@@ -159,8 +299,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             await deleteDoc(doc(db, 'photo_sets', categoryId));
             await loadPhotos();
         } catch (error) {
-            console.error("Error deleting category:", error);
-            alert("Error deleting category.");
+            console.error("Error deleting photo set:", error);
+            alert("Error deleting photo set.");
         }
     };
 
@@ -179,12 +319,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Sort categories
         categoriesData.sort((a, b) => {
-            let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
-            let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+            if (sortBy === 'date') {
+                const dateA = new Date(a.date || 0).getTime();
+                const dateB = new Date(b.date || 0).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            } else {
+                let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+                let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
 
-            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-            return 0;
+                if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+            }
         });
 
         // Render each category
@@ -198,7 +344,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const title = document.createElement('h2');
             title.className = 'category-title';
-            title.innerText = cat.categoryName;
+            const titleLink = document.createElement('a');
+            titleLink.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            titleLink.innerText = cat.categoryName;
+            title.appendChild(titleLink);
 
             const meta = document.createElement('div');
             meta.className = 'category-meta';
@@ -227,22 +376,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             const imagesToShow = cat.urls.slice(0, limit);
             const hasMore = cat.urls.length > 5; // Show fade if there are many images
 
-            const createImgElem = (url) => {
+            const createImgElem = (url, waveIndex) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'img-container';
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.src = url;
-                img.loading = 'lazy';
-                img.addEventListener('click', () => {
-                    lightbox.style.display = 'flex';
+
+                const reveal = () => {
+                    wrapper.classList.add('is-sized');
+                    const delay = waveIndex * 0.08;
+                    img.style.transitionDelay = `${delay}s`;
+                    requestAnimationFrame(() => {
+                        img.classList.add('is-revealed');
+                    });
                     setTimeout(() => {
-                        lightbox.classList.add('show');
-                        lightboxImg.src = img.src;
-                    }, 10);
+                        wrapper.classList.add('img-loaded');
+                        img.style.transitionDelay = '';
+                    }, (delay + 0.65) * 1000);
+                };
+
+                if (img.complete && img.naturalWidth) {
+                    reveal();
+                } else {
+                    img.addEventListener('load', reveal, { once: true });
+                }
+
+                img.addEventListener('click', () => {
+                    openLightbox(img);
                 });
                 
+                // Attach 3D Magnetic Tilt
+                attachTiltEffect(wrapper);
+
                 wrapper.appendChild(img);
                 
                 // Delete Photo Button
@@ -260,9 +427,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return wrapper;
             };
 
-            imagesToShow.forEach(url => {
-                scrollRow.appendChild(createImgElem(url));
+            imagesToShow.forEach((url, i) => {
+                scrollRow.appendChild(createImgElem(url, i));
             });
+
+            const scrollWrapper = document.createElement('div');
+            scrollWrapper.className = 'scrollable-row-wrapper';
+            scrollWrapper.appendChild(scrollRow);
 
             if (hasMore) {
                 const fadeBtn = document.createElement('div');
@@ -273,26 +444,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.location.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
                 });
                 
-                scrollRow.appendChild(fadeBtn);
+                scrollWrapper.appendChild(fadeBtn);
             }
 
-            rowDiv.appendChild(scrollRow);
+            rowDiv.appendChild(scrollWrapper);
             categoriesContainer.appendChild(rowDiv);
         });
     };
 
     // --- Event Listeners for Sort ---
-    sortSelect.addEventListener('change', renderGallery);
+    const updateSortButtonText = () => {
+        const sortBy = sortSelect.value;
+        const currentOrder = sortOrderBtn.getAttribute('data-order');
+        if (sortBy === 'date') {
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'Old-New ↓' : 'New-Old ↑';
+        } else {
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'A-Z ↓' : 'Z-A ↑';
+        }
+    };
+
+    sortSelect.addEventListener('change', () => {
+        updateSortButtonText();
+        renderGallery();
+    });
     
     sortOrderBtn.addEventListener('click', () => {
         const currentOrder = sortOrderBtn.getAttribute('data-order');
         if (currentOrder === 'asc') {
             sortOrderBtn.setAttribute('data-order', 'desc');
-            sortOrderBtn.innerText = 'Z-A ↑';
         } else {
             sortOrderBtn.setAttribute('data-order', 'asc');
-            sortOrderBtn.innerText = 'A-Z ↓';
         }
+        updateSortButtonText();
         renderGallery();
     });
 

@@ -2,76 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanislav | Admin Upload</title>
+    <title>ZHUKOV.s | Upload</title>
     <link rel="stylesheet" href="/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        .upload-container {
-            max-width: 600px;
-            margin: 4rem auto;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .upload-area {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            padding: 3rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .upload-area:hover, .upload-area.dragover {
-            border-color: rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.02);
-        }
-        #image-input {
-            display: none;
-        }
-        .btn {
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 0.8rem 2rem;
-            font-size: 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 600;
-            transition: opacity 0.3s ease;
-        }
-        .btn:hover {
-            opacity: 0.8;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        #preview {
-            max-width: 100%;
-            max-height: 300px;
-            margin-top: 1rem;
-            display: none;
-            border-radius: 4px;
-        }
-        #status-msg {
-            margin-top: 1rem;
-            font-size: 0.9rem;
-        }
-        .error { color: #ff6b6b; }
-        .success { color: #51cf66; }
-    </style>
+    <link rel="stylesheet" href="upload.css">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <div>
-                <h1>Admin Upload</h1>
-                <p>Upload new photos to the gallery</p>
-            </div>
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
             <nav class="header-nav">
                 <a href="/">Home</a>
                 <a href="/photoshoots/">Photoshoots</a>
@@ -79,46 +22,58 @@
                 <a href="/contact/">Contact</a>
             </nav>
             <div class="header-actions">
-                <button id="login-btn-header" class="login-btn-header">Login</button>
+                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
                 <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
             </div>
         </div>
     </header>
     
     <main id="app-content">
-        <div id="auth-warning" style="text-align: center; padding: 4rem;">
+        <div id="auth-warning">
             <h2>Admin Access Required</h2>
-            <p style="color: #94a3b8; margin-top: 1rem;">Please log in with an administrator account to access this page.</p>
+            <p>Please log in with an administrator account to access this page.</p>
         </div>
 
         <div id="upload-section" class="upload-container hidden">
             <h2>Upload a New Photo</h2>
-            <p style="color: #94a3b8; margin-bottom: 2rem;">Select an image to upload directly to ImgBB and save to Firestore.</p>
+            <p class="upload-section-desc">Select an image to upload directly to ImgBB and save to Firestore.</p>
             
             <div class="upload-area" id="drop-zone">
                 <p>Drag & Drop images here or click to browse</p>
                 <input type="file" id="image-input" accept="image/*" multiple>
-                <div id="preview-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem; justify-content: center;"></div>
+                <div id="preview-container"></div>
             </div>
 
-            <div class="input-group" style="margin-bottom: 1rem; text-align: left;">
-                <label for="category-input" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Category / Set Name</label>
-                <input type="text" id="category-input" list="category-list" placeholder="e.g. Single Shots or Summer Collection" style="width: 100%; padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: #fff;">
+            <div class="input-group">
+                <label for="category-input" class="input-label">Photo set Name</label>
+                <input type="text" id="category-input" list="category-list" placeholder="e.g. Single Shots or Summer Collection" class="input-field">
                 <datalist id="category-list">
                     <option value="Single Shots"></option>
                 </datalist>
             </div>
 
-            <div class="input-group" style="margin-bottom: 1rem; text-align: left;">
-                <label for="model-input" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Model Name (Optional)</label>
-                <input type="text" id="model-input" list="model-list" placeholder="e.g. Jane Doe" style="width: 100%; padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: #fff;">
+            <div class="input-group">
+                <label for="model-input" class="input-label">Model Name (Optional)</label>
+                <input type="text" id="model-input" list="model-list" placeholder="e.g. Jane Doe" class="input-field">
                 <datalist id="model-list"></datalist>
             </div>
 
-            <div class="input-group" style="margin-bottom: 2rem; text-align: left;">
-                <label for="theme-input" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Theme (Optional)</label>
-                <input type="text" id="theme-input" list="theme-list" placeholder="e.g. Cyberpunk" style="width: 100%; padding: 0.8rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.5); color: #fff;">
+            <div class="input-group">
+                <label for="theme-input" class="input-label">Theme (Optional)</label>
+                <input type="text" id="theme-input" list="theme-list" placeholder="e.g. Cyberpunk" class="input-field">
                 <datalist id="theme-list"></datalist>
+            </div>
+
+            <div class="input-group last">
+                <label for="desc-input" class="input-label">Description & Links (Optional)</label>
+                <textarea id="desc-input" placeholder="e.g. Studio portrait session with @model. Instagram: https://instagram.com/..." class="input-field" rows="2" style="resize: vertical; font-family: inherit;"></textarea>
             </div>
             
             <button id="upload-btn" class="btn" disabled>Upload Photo</button>

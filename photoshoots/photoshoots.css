@@ -1,0 +1,202 @@
+.sort-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 0 1rem;
+}
+.sort-select, .sort-btn {
+    padding: 0.8rem 1.5rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.sort-select:focus, .sort-btn:hover {
+    outline: none;
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.1);
+}
+.sort-select option {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+/* Category Rows */
+.category-row {
+    margin-bottom: 3rem;
+    padding-left: 2rem;
+    padding-right: 0;
+}
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 0.5rem;
+    padding-right: 2rem;
+}
+.category-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+    color: #ffffff;
+}
+.category-title a {
+    font-family: 'Inter', sans-serif;
+    color: #ffffff;
+    text-decoration: none;
+    display: inline-block;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.category-title a:hover {
+    opacity: 0.8;
+    color: #ffffff;
+    transform: translateX(2px);
+}
+.category-meta {
+    font-size: 0.9rem;
+    color: #94a3b8;
+}
+.scrollable-row-wrapper {
+    position: relative;
+}
+.scrollable-row {
+    display: flex;
+    gap: 1rem;
+    overflow: hidden; /* Prevent scrolling */
+    padding-bottom: 0;
+    -webkit-mask-image: linear-gradient(to right, black 60%, transparent 95%);
+    mask-image: linear-gradient(to right, black 60%, transparent 95%);
+}
+.scrollable-row.expanded-grid {
+    flex-wrap: wrap;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+.scrollable-row .img-container {
+    height: 250px;
+    min-width: 180px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.scrollable-row .img-container.is-sized {
+    min-width: auto;
+}
+.row-img {
+    height: 250px;
+    width: auto;
+    max-width: 90vw;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    display: block;
+}
+.row-img.is-revealed {
+    opacity: 1;
+    transform: scale(1);
+}
+.row-img.is-revealed:hover {
+    filter: brightness(1.08);
+}
+
+.fade-overlay {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 250px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 2rem;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.fade-btn-text {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.fade-overlay:hover .fade-btn-text {
+    transform: translateX(-5px);
+}
+.more-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.5);
+}
+
+/* Admin Delete Buttons */
+.img-container {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.delete-photo-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+.delete-photo-btn:hover {
+    background: rgba(255, 0, 0, 1);
+    transform: scale(1.1);
+}
+.delete-category-btn {
+    background: rgba(255, 0, 0, 0.1);
+    color: #ff4d4d;
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 1rem;
+}
+.delete-category-btn:hover {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: rgba(255, 0, 0, 0.5);
+}
+
+#no-results {
+    text-align: center;
+    padding: 4rem;
+    display: none;
+}
+#no-results p {
+    color: #94a3b8;
+    font-size: 1.2rem;
+}

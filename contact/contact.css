@@ -1,0 +1,26 @@
+.contact-container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.contact-text {
+    color: #94a3b8;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+.contact-button {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--accent-color);
+    color: #0f172a;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.contact-button:hover {
+    background-color: #7dd3fc;
+}

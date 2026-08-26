@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryInput = document.getElementById('category-input');
     const modelInput = document.getElementById('model-input');
     const themeInput = document.getElementById('theme-input');
+    const descInput = document.getElementById('desc-input');
 
     const categoryList = document.getElementById('category-list');
     const modelList = document.getElementById('model-list');
@@ -95,8 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Firebase Authentication & Role Check ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
+            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
+            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
+            localStorage.setItem('zhukov_logged_in', 'true');
 
             try {
                 const userRef = doc(db, 'users', user.uid);
@@ -119,15 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 authWarning.innerHTML = `<p style="color: #ff6b6b;">Error checking permissions.</p>`;
             }
         } else {
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
+            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
+            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
+            localStorage.removeItem('zhukov_logged_in');
             authWarning.classList.remove('hidden');
             uploadSection.classList.add('hidden');
         }
     });
 
-    loginBtn.addEventListener('click', () => signInWithPopup(auth, provider).catch(console.error));
-    logoutBtn.addEventListener('click', () => signOut(auth).catch(console.error));
+    loginBtn.addEventListener('click', () => { localStorage.setItem('zhukov_logged_in', 'true'); signInWithPopup(auth, provider).catch(console.error); });
+    logoutBtn.addEventListener('click', () => { localStorage.removeItem('zhukov_logged_in'); signOut(auth).catch(console.error); });
 
     // --- Image Processing (Resize & WebP) ---
     const processImage = (file) => {
@@ -235,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const category = categoryInput.value.trim() || 'Single Shots';
         const modelName = modelInput.value.trim();
         const theme = themeInput.value.trim();
+        const description = descInput ? descInput.value.trim() : '';
         const date = new Date().toISOString();
 
         uploadBtn.disabled = true;
@@ -275,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const singleShotsRef = collection(db, 'single_shots');
                 for (const url of uploadedUrls) {
                     await addDoc(singleShotsRef, {
-                        url, modelName, theme, date,
+                        url, modelName, theme, description, date,
                         uploadedAt: date,
                         uploadedBy: auth.currentUser.uid
                     });
@@ -284,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Sanitize category to create a valid Firestore document ID (no slashes allowed)
                 const docId = category.replace(/[\/\\]/g, '-');
                 const photoSetRef = doc(db, 'photo_sets', docId);
-                await setDoc(photoSetRef, {
+                const updateData = {
                     categoryName: category,
                     modelName,
                     theme,
@@ -292,7 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     urls: arrayUnion(...uploadedUrls),
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid
-                }, { merge: true });
+                };
+                if (description) {
+                    updateData.description = description;
+                }
+                await setDoc(photoSetRef, updateData, { merge: true });
             }
 
             // 4. Update metadata tags
@@ -312,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryInput.value = '';
                 modelInput.value = '';
                 themeInput.value = '';
+                if (descInput) descInput.value = '';
             }, 3000);
 
         } catch (error) {

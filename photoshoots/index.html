@@ -2,170 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
+    <!-- Slide-from-bottom transition when arriving via overscroll portal -->
+    <script>
+    (function() {
+        if (sessionStorage.getItem('zhukov_overscroll_nav') === '1') {
+            sessionStorage.removeItem('zhukov_overscroll_nav');
+            // Inject initial off-screen state before first paint
+            var s = document.createElement('style');
+            s.id = 'slide-in-init';
+            s.textContent = 'html, body { transform: translateY(60px); opacity: 0 !important; }';
+            document.head.appendChild(s);
+            window.addEventListener('DOMContentLoaded', function() {
+                requestAnimationFrame(function() {
+                    requestAnimationFrame(function() {
+                        s.textContent = 'html, body { transform: translateY(0); opacity: 1 !important; transition: transform 0.72s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease; }';
+                        // Clean up after animation
+                        setTimeout(function() { if (s.parentNode) s.parentNode.removeChild(s); }, 800);
+                    });
+                });
+            });
+        }
+    })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanislav | Photoshoots</title>
+    <title>ZHUKOV.s | Photoshoots</title>
     <link rel="stylesheet" href="/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        .sort-bar {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            margin: 2rem 0;
-            padding: 0 1rem;
-        }
-        .sort-select, .sort-btn {
-            padding: 0.8rem 1.5rem;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #fff;
-            border-radius: 4px;
-            font-family: inherit;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .sort-select:focus, .sort-btn:hover {
-            outline: none;
-            border-color: rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.1);
-        }
-        .sort-select option {
-            background: #1a1a1a;
-            color: #fff;
-        }
-        
-        /* Category Rows */
-        .category-row {
-            margin-bottom: 3rem;
-            padding: 0 2rem;
-        }
-        .category-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 0.5rem;
-        }
-        .category-title {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        .category-meta {
-            font-size: 0.9rem;
-            color: #94a3b8;
-        }
-        .scrollable-row {
-            display: flex;
-            gap: 1rem;
-            overflow: hidden; /* Prevent scrolling */
-            padding-bottom: 0;
-            position: relative;
-        }
-        .scrollable-row.expanded-grid {
-            flex-wrap: wrap;
-            overflow: visible;
-        }
-        .row-img {
-            height: 250px;
-            width: auto;
-            max-width: 90vw;
-            object-fit: cover;
-            border-radius: 8px;
-            flex-shrink: 0;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-        .row-img:hover {
-            transform: scale(1.02);
-        }
-        
-        .fade-overlay {
-            position: absolute;
-            right: 0;
-            top: 0;
-            bottom: 0;
-            width: 200px;
-            background: linear-gradient(to right, transparent, #0f172a 70%);
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 2rem;
-            cursor: pointer;
-            z-index: 10;
-        }
-        
-        .fade-btn-text {
-            color: #fff;
-            font-weight: 600;
-            font-size: 1.1rem;
-            transition: transform 0.3s ease;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .fade-overlay:hover .fade-btn-text {
-            transform: translateX(-5px);
-        }
-        .more-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.5);
-        }
-
-        /* Admin Delete Buttons */
-        .img-container {
-            position: relative;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-        .delete-photo-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(255, 0, 0, 0.7);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        .delete-photo-btn:hover {
-            background: rgba(255, 0, 0, 1);
-            transform: scale(1.1);
-        }
-        .delete-category-btn {
-            background: rgba(255, 0, 0, 0.1);
-            color: #ff4d4d;
-            border: 1px solid rgba(255, 0, 0, 0.3);
-            border-radius: 4px;
-            padding: 0.3rem 0.8rem;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-left: 1rem;
-        }
-        .delete-category-btn:hover {
-            background: rgba(255, 0, 0, 0.2);
-            border-color: rgba(255, 0, 0, 0.5);
-        }
-    </style>
+    <link rel="stylesheet" href="photoshoots.css">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <div>
-                <h1>Photoshoots</h1>
-                <p>Explore my recent photoshoot sessions</p>
-            </div>
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
             <nav class="header-nav">
                 <a href="/">Home</a>
                 <a href="/photoshoots/" class="active">Photoshoots</a>
@@ -176,6 +47,13 @@
             <div class="header-actions">
                 <button id="login-btn-header" class="login-btn-header hidden">Login</button>
                 <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
             </div>
         </div>
     </header>
@@ -184,7 +62,7 @@
         <!-- Sort Bar -->
         <div class="sort-bar">
             <select id="sort-select" class="sort-select">
-                <option value="category">Sort by Category</option>
+                <option value="category">Sort by Photo set</option>
                 <option value="date">Sort by Date</option>
                 <option value="model">Sort by Model</option>
                 <option value="theme">Sort by Theme</option>
@@ -197,8 +75,8 @@
             <!-- Categories will be injected here by JS -->
         </div>
         
-        <div id="no-results" style="text-align: center; padding: 4rem; display: none;">
-            <p style="color: #94a3b8; font-size: 1.2rem;">No photoshoots match your filters.</p>
+        <div id="no-results">
+            <p>No photoshoots match your filters.</p>
         </div>
     </main>
 

@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanislav | Contact</title>
+    <title>ZHUKOV.s | Contact</title>
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="contact.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
         <div class="header-content">
-            <div>
-                <h1>Contact</h1>
-                <p>Get in touch with me</p>
-            </div>
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
             <nav class="header-nav">
                 <a href="/">Home</a>
                 <a href="/photoshoots/">Photoshoots</a>
@@ -23,17 +25,24 @@
             <div class="header-actions">
                 <button id="login-btn-header" class="login-btn-header hidden">Login</button>
                 <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
             </div>
         </div>
     </header>
     
     <main id="app-content">
-        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+        <div class="contact-container">
             <h2>Let's Work Together</h2>
-            <p style="color: #94a3b8; margin-top: 1rem; margin-bottom: 2rem;">
+            <p class="contact-text">
                 I'm currently available for freelance work and collaborations.
             </p>
-            <a href="mailto:contact@example.com" style="display: inline-block; padding: 12px 24px; background: var(--accent-color); color: #0f172a; text-decoration: none; border-radius: 8px; font-weight: 600; transition: background-color 0.3s ease;">Email Me</a>
+            <a href="mailto:contact@example.com" class="contact-button">Email Me</a>
         </div>
     </main>
 
