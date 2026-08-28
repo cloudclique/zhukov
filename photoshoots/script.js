@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
                     isAdmin = true;
                     if (uploadLink) uploadLink.classList.remove('hidden');
+                    const archivedLink = document.getElementById('archived-nav-link');
+                    if (archivedLink) archivedLink.classList.remove('hidden');
                     renderGallery();
                 }
             } catch (error) {
@@ -248,10 +250,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // 2. Fetch Photo Sets
+            // 2. Fetch Photo Sets (exclude archived)
             const setsSnap = await getDocs(collection(db, 'photo_sets'));
             setsSnap.forEach(doc => {
                 const data = doc.data();
+                if (data.archived === true) return; // Hide archived sets from public
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
                     categoriesData.push({
                         categoryId: doc.id,
@@ -301,6 +304,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error("Error deleting photo set:", error);
             alert("Error deleting photo set.");
+        }
+    };
+
+    const archiveCategory = async (categoryId) => {
+        if (!confirm("Archive this photo set? It will be hidden from the public gallery.")) return;
+        try {
+            await updateDoc(doc(db, 'photo_sets', categoryId), { archived: true });
+            await loadPhotos();
+        } catch (error) {
+            console.error("Error archiving photo set:", error);
+            alert("Error archiving photo set.");
         }
     };
 
@@ -357,13 +371,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             headerDiv.appendChild(title);
             headerDiv.appendChild(meta);
             
-            // Delete Category Button
+            // Admin Action Buttons (Archive + Delete)
             if (isAdmin && cat.categoryId !== 'single-shots') {
+                const adminGroup = document.createElement('div');
+                adminGroup.className = 'admin-btn-group';
+
+                const archCatBtn = document.createElement('button');
+                archCatBtn.className = 'archive-category-btn';
+                archCatBtn.innerText = '⬛ Archive';
+                archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
+
                 const delCatBtn = document.createElement('button');
                 delCatBtn.className = 'delete-category-btn';
                 delCatBtn.innerText = 'Delete Set';
                 delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
-                headerDiv.appendChild(delCatBtn);
+
+                adminGroup.appendChild(archCatBtn);
+                adminGroup.appendChild(delCatBtn);
+                headerDiv.appendChild(adminGroup);
             }
             
             rowDiv.appendChild(headerDiv);

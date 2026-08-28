@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZHUKOV.s | Archived Sets</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="photoshoots.css">
+    <style>
+        .archived-page-header {
+            text-align: center;
+            padding: 3rem 2rem 1.5rem;
+        }
+        .archived-page-header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #f59e0b;
+            margin: 0 0 0.5rem;
+            letter-spacing: 0.05em;
+        }
+        .archived-page-header p {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin: 0;
+        }
+        .archived-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .archived-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .archived-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(245, 158, 11, 0.45);
+        }
+        .archived-card-thumb {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            background: rgba(255,255,255,0.05);
+        }
+        .archived-card-body {
+            padding: 1rem 1.25rem;
+        }
+        .archived-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin: 0 0 0.35rem;
+        }
+        .archived-card-meta {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+        .archived-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .archived-empty {
+            text-align: center;
+            padding: 5rem 2rem;
+            color: #475569;
+        }
+        .archived-empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .archived-empty p {
+            font-size: 1.1rem;
+        }
+        .access-denied {
+            text-align: center;
+            padding: 5rem 2rem;
+            color: #94a3b8;
+        }
+        .access-denied h2 {
+            color: #ff4d4d;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
+            <nav class="header-nav">
+                <a href="/">Home</a>
+                <a href="/photoshoots/" class="active">Photoshoots</a>
+                <a href="/about/">About Me</a>
+                <a href="/contact/">Contact</a>
+                <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
+                <a href="/photoshoots/archived.html" id="archived-nav-link" class="hidden">Archived</a>
+            </nav>
+            <div class="header-actions">
+                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
+                <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-content">
+        <div class="archived-page-header">
+            <h1>&#x1F5C4; Archived Sets</h1>
+            <p>Hidden from the public gallery. Unarchive to restore.</p>
+        </div>
+
+        <div id="access-denied" class="access-denied" style="display:none;">
+            <h2>Access Denied</h2>
+            <p>You must be an admin to view this page.</p>
+            <a href="/photoshoots/" style="color:#60a5fa;">&#x2190; Back to Photoshoots</a>
+        </div>
+
+        <div id="loading-msg" style="text-align:center;padding:3rem;color:#64748b;">Checking access...</div>
+
+        <div class="archived-grid" id="archived-grid" style="display:none;"></div>
+
+        <div class="archived-empty" id="archived-empty" style="display:none;">
+            <div class="archived-empty-icon">&#x1F4ED;</div>
+            <p>No archived photo sets.</p>
+        </div>
+    </main>
+
+    <script type="module" src="archived.js"></script>
+</body>
+</html>

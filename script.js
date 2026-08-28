@@ -6,12 +6,20 @@ import { app, db } from "./firebase-config.js";
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Static fallback images (used if a slot has no Firestore URL yet)
+// Static fallback images (curated photography for recent work gallery)
 const fallbackImages = [
-    '/pictures/PRN00237.jpg',
-    '/pictures/_DSC0006.jpg',
-    '/pictures/_DSC0192.jpg',
-    '/pictures/_DSC0393.jpg'
+    'https://i.ibb.co/d4Vrdj32/image-2.webp',
+    'https://i.ibb.co/PsZXrKDf/image-0.webp',
+    'https://i.ibb.co/yByqsxc7/image-5.webp',
+    'https://i.ibb.co/TxT3LCYZ/image-1.webp',
+    'https://i.ibb.co/hx18J6x6/image-8.webp',
+    'https://i.ibb.co/CKCTtpm0/image-2.webp',
+    'https://i.ibb.co/2YvP0Ggx/image-4.webp',
+    'https://i.ibb.co/gZgCv2SK/image-10.webp',
+    'https://i.ibb.co/WvgGq1vd/image-1.webp',
+    'https://i.ibb.co/tPhkGyZ4/image-3.webp',
+    'https://i.ibb.co/0VJ3gLfV/image-3.webp',
+    'https://i.ibb.co/rqgS1mb/image-4.webp'
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIsAdmin = false;
 
     // --- Gallery Slots ---
-    // Slot layout: landscape | portrait / portrait | landscape
-    const SLOT_COUNT = 4;
+    // Horizontal alternating pattern: 8 featured image slots
+    const SLOT_COUNT = 8;
     let gallerySlots = []; // Array of { url, aspectRatio }
 
     const loadGallerySlots = async () => {
@@ -50,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Fill any missing slots with fallbacks
         for (let i = 0; i < SLOT_COUNT; i++) {
-            if (!gallerySlots[i]) {
-                gallerySlots[i] = { url: fallbackImages[i] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+            if (!gallerySlots[i] || !gallerySlots[i].url) {
+                gallerySlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
             }
         }
 

@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
                     isAdmin = true;
                     if (uploadLink) uploadLink.classList.remove('hidden');
+                    const archivedLink = document.getElementById('archived-nav-link');
+                    if (archivedLink) archivedLink.classList.remove('hidden');
                     if (categoryId) loadGallery();
                 }
             } catch (error) {
@@ -262,6 +264,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (setSnap.exists()) {
                     const data = setSnap.data();
+
+                    // Block non-admins from viewing archived sets
+                    if (data.archived === true && !isAdmin) {
+                        loadingState.style.display = 'block';
+                        loadingState.innerText = "This photoshoot is no longer available.";
+                        headerContainer.innerHTML = '';
+                        gridContainer.innerHTML = '';
+                        return;
+                    }
+
                     categoryName = data.categoryName || categoryId;
                     description = data.description || '';
                     
@@ -318,6 +330,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (error) {
                     console.error("Error deleting photo set:", error);
                     alert("Error deleting photo set.");
+                }
+            };
+
+            const archiveCategory = async () => {
+                if (!confirm("Archive this photo set? It will be hidden from the public gallery.")) return;
+                try {
+                    await updateDoc(doc(db, 'photo_sets', categoryId), { archived: true });
+                    window.location.href = '/photoshoots/';
+                } catch (error) {
+                    console.error("Error archiving photo set:", error);
+                    alert("Error archiving photo set.");
                 }
             };
 
@@ -440,13 +463,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
             
-            // Delete Category Button
+            // Admin Action Buttons (Archive + Delete)
             if (isAdmin && categoryId !== 'single-shots') {
+                const adminGroup = document.createElement('div');
+                adminGroup.className = 'admin-btn-group';
+                adminGroup.style.marginTop = '1rem';
+
+                const archCatBtn = document.createElement('button');
+                archCatBtn.className = 'archive-category-btn';
+                archCatBtn.innerText = '⬛ Archive Set';
+                archCatBtn.addEventListener('click', archiveCategory);
+
                 const delCatBtn = document.createElement('button');
                 delCatBtn.className = 'delete-category-btn';
                 delCatBtn.innerText = 'Delete Set';
                 delCatBtn.addEventListener('click', deleteCategory);
-                headerContainer.appendChild(delCatBtn);
+
+                adminGroup.appendChild(archCatBtn);
+                adminGroup.appendChild(delCatBtn);
+                headerContainer.appendChild(adminGroup);
             }
 
             const calculateSpans = (wrapper, img) => {
