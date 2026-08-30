@@ -365,6 +365,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedDOM();
                 break;
             }
+            case 'TRANSFORM_ITEMS': {
+                (action.elements || []).forEach(itemChange => {
+                    const el = (activeBoardData.elements || []).find(e => e.id === itemChange.id);
+                    if (el && itemChange.from) {
+                        el.x = itemChange.from.x;
+                        el.y = itemChange.from.y;
+                        el.width = itemChange.from.width;
+                        el.height = itemChange.from.height;
+                        el.rotation = itemChange.from.rotation;
+                    }
+                });
+                (action.drawings || []).forEach(drawChange => {
+                    const path = (activeBoardData.drawingPaths || []).find(p => p.id === drawChange.id);
+                    if (path && drawChange.fromPoints) {
+                        path.points = drawChange.fromPoints.map(pt => ({ ...pt }));
+                        if (drawChange.fromSize) path.size = drawChange.fromSize;
+                    }
+                });
+                renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateSelectedDOM();
+                break;
+            }
             case 'TRANSFORM_ELEMENT': {
                 const el = (activeBoardData.elements || []).find(e => e.id === action.id);
                 if (el) {
@@ -493,6 +516,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDrawingPaths(activeBoardData.drawingPaths);
                 selectedElementIds = new Set((action.moves || []).map(m => m.id));
                 selectedElementId = Array.from(selectedElementIds)[0] || null;
+                updateSelectedDOM();
+                break;
+            }
+            case 'TRANSFORM_ITEMS': {
+                (action.elements || []).forEach(itemChange => {
+                    const el = (activeBoardData.elements || []).find(e => e.id === itemChange.id);
+                    if (el && itemChange.to) {
+                        el.x = itemChange.to.x;
+                        el.y = itemChange.to.y;
+                        el.width = itemChange.to.width;
+                        el.height = itemChange.to.height;
+                        el.rotation = itemChange.to.rotation;
+                    }
+                });
+                (action.drawings || []).forEach(drawChange => {
+                    const path = (activeBoardData.drawingPaths || []).find(p => p.id === drawChange.id);
+                    if (path && drawChange.toPoints) {
+                        path.points = drawChange.toPoints.map(pt => ({ ...pt }));
+                        if (drawChange.toSize) path.size = drawChange.toSize;
+                    }
+                });
+                renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
                 updateSelectedDOM();
                 break;
             }
@@ -1105,47 +1151,113 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    let viewportAnimId = null;
+    const animateViewportTo = (targetPanX, targetPanY, targetScale) => {
+        if (viewportAnimId) cancelAnimationFrame(viewportAnimId);
+        const startPanX = viewportPanX;
+        const startPanY = viewportPanY;
+        const startScale = viewportScale;
+        const startTime = performance.now();
+        const duration = 280;
+
+        const step = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            const ease = 1 - Math.pow(1 - progress, 3);
+
+            viewportPanX = startPanX + (targetPanX - startPanX) * ease;
+            viewportPanY = startPanY + (targetPanY - startPanY) * ease;
+            viewportScale = startScale + (targetScale - startScale) * ease;
+            updateViewportTransform();
+
+            if (progress < 1) {
+                viewportAnimId = requestAnimationFrame(step);
+            } else {
+                viewportAnimId = null;
+            }
+        };
+
+        viewportAnimId = requestAnimationFrame(step);
+    };
+
     const centerViewport = () => {
         const vpRect = canvasViewport.getBoundingClientRect();
         viewportScale = 1.0;
-        // Center the 6000x6000 world in the middle of the screen
         viewportPanX = (vpRect.width / 2) - 3000;
         viewportPanY = (vpRect.height / 2) - 3000;
         updateViewportTransform();
     };
 
-    // Auto-fit & zoom out to view all existing elements and drawings
-    const fitViewToElements = (elements = [], drawingPaths = []) => {
+    // Auto-fit & zoom to view all existing elements and drawings
+    const fitViewToElements = (elements, drawingPaths, smooth = false) => {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         let count = 0;
 
-        if (elements && elements.length > 0) {
-            elements.forEach(el => {
-                const ex = el.x !== undefined ? el.x : 0;
-                const ey = el.y !== undefined ? el.y : 0;
-                const ew = el.width || 240;
-                const eh = el.height || 200;
-                minX = Math.min(minX, ex);
-                minY = Math.min(minY, ey);
-                maxX = Math.max(maxX, ex + ew);
-                maxY = Math.max(maxY, ey + eh);
-                count++;
+        // Gather all elements (passed array, activeBoardData, or live DOM)
+        let allItems = [];
+        if (Array.isArray(elements) && elements.length > 0) {
+            allItems = elements;
+        } else if (Array.isArray(activeBoardData?.elements) && activeBoardData.elements.length > 0) {
+            allItems = activeBoardData.elements;
+        } else {
+            document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(domEl => {
+                const ex = parseFloat(domEl.style.left) || domEl.offsetLeft || 0;
+                const ey = parseFloat(domEl.style.top) || domEl.offsetTop || 0;
+                const ew = parseFloat(domEl.style.width) || domEl.offsetWidth || 240;
+                const eh = parseFloat(domEl.style.height) || domEl.offsetHeight || 200;
+                allItems.push({ x: ex, y: ey, width: ew, height: eh });
             });
         }
 
-        if (drawingPaths && drawingPaths.length > 0) {
-            drawingPaths.forEach(path => {
-                (path.points || []).forEach(pt => {
-                    minX = Math.min(minX, pt.x);
-                    minY = Math.min(minY, pt.y);
-                    maxX = Math.max(maxX, pt.x);
-                    maxY = Math.max(maxY, pt.y);
+        allItems.forEach(el => {
+            const ex = Number(el.x) || 0;
+            const ey = Number(el.y) || 0;
+            const ew = Number(el.width) || 240;
+            const eh = Number(el.height) || 200;
+            const rot = Number(el.rotation) || 0;
+
+            // Calculate rotated bounding box to prevent corner clipping
+            const rad = rot * (Math.PI / 180);
+            const cos = Math.abs(Math.cos(rad));
+            const sin = Math.abs(Math.sin(rad));
+            const boundW = ew * cos + eh * sin;
+            const boundH = ew * sin + eh * cos;
+            const cx = ex + ew / 2;
+            const cy = ey + eh / 2;
+
+            minX = Math.min(minX, cx - boundW / 2);
+            minY = Math.min(minY, cy - boundH / 2);
+            maxX = Math.max(maxX, cx + boundW / 2);
+            maxY = Math.max(maxY, cy + boundH / 2);
+            count++;
+        });
+
+        // Gather all vector drawings
+        let allDrawings = [];
+        if (Array.isArray(drawingPaths) && drawingPaths.length > 0) {
+            allDrawings = drawingPaths;
+        } else if (Array.isArray(activeBoardData?.drawingPaths) && activeBoardData.drawingPaths.length > 0) {
+            allDrawings = activeBoardData.drawingPaths;
+        }
+
+        allDrawings.forEach(path => {
+            if (path.isEraser) return;
+            const pad = (Number(path.size) || 6) / 2 + 6;
+            (path.points || []).forEach(pt => {
+                const px = Number(pt.x);
+                const py = Number(pt.y);
+                if (isFinite(px) && isFinite(py)) {
+                    minX = Math.min(minX, px - pad);
+                    minY = Math.min(minY, py - pad);
+                    maxX = Math.max(maxX, px + pad);
+                    maxY = Math.max(maxY, py + pad);
                     count++;
-                });
+                }
             });
-        }
+        });
 
-        if (count === 0 || !isFinite(minX) || !isFinite(minY)) {
+        // If moodboard is completely empty
+        if (count === 0 || !isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
             centerViewport();
             return;
         }
@@ -1154,31 +1266,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const vpWidth = Math.max(300, vpRect.width || window.innerWidth);
         const vpHeight = Math.max(300, vpRect.height || window.innerHeight);
 
-        const contentW = Math.max(150, maxX - minX);
-        const contentH = Math.max(150, maxY - minY);
+        const contentW = Math.max(60, maxX - minX);
+        const contentH = Math.max(60, maxY - minY);
 
-        // Generous padding around the content (12% or 80px)
-        const padX = Math.max(80, vpWidth * 0.12);
-        const padY = Math.max(80, vpHeight * 0.12);
+        // Safe margins accounting for top bar, HUD, and bottom toolbar
+        const padX = Math.max(50, vpWidth * 0.08);
+        const padTop = Math.max(60, vpHeight * 0.12);
+        const padBottom = Math.max(80, vpHeight * 0.16);
 
-        const scaleX = (vpWidth - padX * 2) / contentW;
-        const scaleY = (vpHeight - padY * 2) / contentH;
+        const availableW = Math.max(50, vpWidth - padX * 2);
+        const availableH = Math.max(50, vpHeight - padTop - padBottom);
 
-        // Auto zoom out to show everything, but don't overzoom (max 1.0x, min 0.15x)
-        const fitScale = Math.max(0.15, Math.min(1.0, Math.min(scaleX, scaleY)));
+        const scaleX = availableW / contentW;
+        const scaleY = availableH / contentH;
+
+        // Auto zoom: compute the exact scale needed to fit all items (allows zoom down to 0.04x)
+        const targetScale = Math.max(0.04, Math.min(1.0, Math.min(scaleX, scaleY)));
 
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
 
-        viewportScale = fitScale;
-        viewportPanX = (vpWidth / 2) - (centerX * fitScale);
-        viewportPanY = (vpHeight / 2) - (centerY * fitScale);
+        const targetPanX = (vpWidth / 2) - (centerX * targetScale);
+        const targetPanY = ((padTop + (vpHeight - padBottom)) / 2) - (centerY * targetScale);
 
-        updateViewportTransform();
+        if (smooth) {
+            animateViewportTo(targetPanX, targetPanY, targetScale);
+        } else {
+            viewportScale = targetScale;
+            viewportPanX = targetPanX;
+            viewportPanY = targetPanY;
+            updateViewportTransform();
+        }
     };
 
     const zoomAroundPoint = (screenX, screenY, newScale) => {
-        newScale = Math.max(0.2, Math.min(3.5, newScale));
+        newScale = Math.max(0.05, Math.min(4.0, newScale));
         const rect = canvasViewport.getBoundingClientRect();
         const mouseX = screenX - rect.left;
         const mouseY = screenY - rect.top;
@@ -1198,11 +1320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         zoomAroundPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, viewportScale - 0.2);
     });
     hudResetView.addEventListener('click', () => {
-        if (activeBoardData && ((activeBoardData.elements || []).length > 0 || (activeBoardData.drawingPaths || []).length > 0)) {
-            fitViewToElements(activeBoardData.elements, activeBoardData.drawingPaths);
-        } else {
-            centerViewport();
-        }
+        fitViewToElements(undefined, undefined, true);
     });
 
     // Mouse wheel zoom directly with wheel or pinch trackpad
@@ -2172,187 +2290,264 @@ document.addEventListener('DOMContentLoaded', () => {
         queueSaveBoard();
     };
 
-    // Transform (Resize & Rotate) Handling
-    let transformInitialSnapshot = null;
-    let transformInitialPathPoints = null;
-    let transformDrawingCenter = null;
+    // --- Unified Element & Group Transform Handling ---
+    let transformInitialGroupRect = null;
+    let transformAnchorPoint = null;
+    let transformGroupElements = new Map(); // id -> { id, x, y, width, height, rotation, fontSize }
+    let transformGroupDrawings = new Map(); // id -> { id, points: [{x,y}], size, box }
     let transformInitialAngle = 0;
+    let transformGroupCenter = { x: 0, y: 0 };
+    let transformRafId = null;
 
     const startElementTransform = (item, handleType, e) => {
         if (activeTouches.size >= 2) return;
         isTransformingElement = true;
         transformAction = handleType;
+        elementsContainer.classList.add('is-dragging-active');
         const worldPos = screenToWorld(e.clientX, e.clientY);
         dragStartX = worldPos.x;
         dragStartY = worldPos.y;
 
-        if (item.isDrawing) {
-            const path = activeBoardData?.drawingPaths?.find(p => p.id === item.id);
-            if (path && path.points) {
-                transformInitialPathPoints = path.points.map(pt => ({ x: pt.x, y: pt.y }));
-                const box = getPathBoundingBox(path);
-                transformDrawingCenter = { x: box.cx, y: box.cy };
-                transformInitialAngle = Math.atan2(worldPos.y - box.cy, worldPos.x - box.cx);
-            }
-            return;
+        // If the manipulated item is not yet part of selectedElementIds, select it
+        if (!selectedElementIds.has(item.id)) {
+            selectElement(item.id);
         }
 
-        elementInitialRect = {
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-            rotation: item.rotation || 0,
-            aspectRatio: (item.width && item.height) ? (item.width / item.height) : 1
-        };
-        transformInitialSnapshot = {
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-            rotation: item.rotation || 0
-        };
+        transformGroupElements.clear();
+        transformGroupDrawings.clear();
+
+        let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+
+        selectedElementIds.forEach(id => {
+            const el = activeBoardData?.elements?.find(it => it.id === id);
+            if (el) {
+                const w = el.width || 100;
+                const h = el.height || 100;
+                transformGroupElements.set(id, {
+                    id: el.id,
+                    x: el.x,
+                    y: el.y,
+                    width: w,
+                    height: h,
+                    rotation: el.rotation || 0,
+                    fontSize: el.fontSize || 14,
+                    type: el.type,
+                    aspectRatio: w / h
+                });
+                gMinX = Math.min(gMinX, el.x);
+                gMinY = Math.min(gMinY, el.y);
+                gMaxX = Math.max(gMaxX, el.x + w);
+                gMaxY = Math.max(gMaxY, el.y + h);
+            }
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
+            if (path && path.points && path.points.length > 0) {
+                const box = getPathBoundingBox(path);
+                transformGroupDrawings.set(id, {
+                    id: path.id,
+                    points: path.points.map(pt => ({ x: pt.x, y: pt.y })),
+                    size: path.size || 6,
+                    box: box
+                });
+                if (box) {
+                    gMinX = Math.min(gMinX, box.x);
+                    gMinY = Math.min(gMinY, box.y);
+                    gMaxX = Math.max(gMaxX, box.x + box.width);
+                    gMaxY = Math.max(gMaxY, box.y + box.height);
+                }
+            }
+        });
+
+        if (!isFinite(gMinX) || !isFinite(gMinY) || !isFinite(gMaxX) || !isFinite(gMaxY)) {
+            gMinX = item.x || 0;
+            gMinY = item.y || 0;
+            gMaxX = gMinX + (item.width || 100);
+            gMaxY = gMinY + (item.height || 100);
+        }
+
+        const gWidth = Math.max(20, gMaxX - gMinX);
+        const gHeight = Math.max(20, gMaxY - gMinY);
+        transformInitialGroupRect = { minX: gMinX, minY: gMinY, maxX: gMaxX, maxY: gMaxY, width: gWidth, height: gHeight };
+        transformGroupCenter = { x: (gMinX + gMaxX) / 2, y: (gMinY + gMaxY) / 2 };
+        transformInitialAngle = Math.atan2(dragStartY - transformGroupCenter.y, dragStartX - transformGroupCenter.x);
+
+        // Pick anchor point opposite to the dragged handle corner
+        switch (handleType) {
+            case 'se':
+                transformAnchorPoint = { x: gMinX, y: gMinY };
+                break;
+            case 'sw':
+                transformAnchorPoint = { x: gMaxX, y: gMinY };
+                break;
+            case 'ne':
+                transformAnchorPoint = { x: gMinX, y: gMaxY };
+                break;
+            case 'nw':
+                transformAnchorPoint = { x: gMaxX, y: gMaxY };
+                break;
+            default:
+                transformAnchorPoint = { x: transformGroupCenter.x, y: transformGroupCenter.y };
+                break;
+        }
     };
 
     const handleElementTransformMove = (e) => {
-        if (!isTransformingElement || !selectedElementId || !activeBoardData) return;
-
-        // Drawing stroke rotation
-        if (transformInitialPathPoints && transformDrawingCenter) {
-            const worldPos = screenToWorld(e.clientX, e.clientY);
-            const currentAngle = Math.atan2(worldPos.y - transformDrawingCenter.cy, worldPos.x - transformDrawingCenter.cx);
-            const dAngle = currentAngle - transformInitialAngle;
-            const cos = Math.cos(dAngle);
-            const sin = Math.sin(dAngle);
-            const cx = transformDrawingCenter.x;
-            const cy = transformDrawingCenter.y;
-            const path = activeBoardData.drawingPaths.find(p => p.id === selectedElementId);
-            if (path) {
-                path.points = transformInitialPathPoints.map(pt => ({
-                    x: Math.round(cx + (pt.x - cx) * cos - (pt.y - cy) * sin),
-                    y: Math.round(cy + (pt.x - cx) * sin + (pt.y - cy) * cos)
-                }));
-                renderDrawingPaths(activeBoardData.drawingPaths);
-                updateDrawingSelectionBoxes();
-            }
-            return;
-        }
-
-        const item = activeBoardData.elements.find(it => it.id === selectedElementId);
-        if (!item) return;
-
+        if (!isTransformingElement || !activeBoardData) return;
         const worldPos = screenToWorld(e.clientX, e.clientY);
-        const rad = (elementInitialRect.rotation || 0) * (Math.PI / 180);
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
 
-        const globalDx = worldPos.x - dragStartX;
-        const globalDy = worldPos.y - dragStartY;
+        if (transformRafId) cancelAnimationFrame(transformRafId);
+        transformRafId = requestAnimationFrame(() => {
+            if (transformAction === 'rotate') {
+                const currentAngle = Math.atan2(worldPos.y - transformGroupCenter.y, worldPos.x - transformGroupCenter.x);
+                const dTheta = currentAngle - transformInitialAngle;
+                const cos = Math.cos(dTheta);
+                const sin = Math.sin(dTheta);
+                const dDeg = Math.round(dTheta * (180 / Math.PI));
 
-        const localDx = globalDx * cos + globalDy * sin;
-        const localDy = -globalDx * sin + globalDy * cos;
+                const isSingleItem = (transformGroupElements.size === 1 && transformGroupDrawings.size === 0);
+                const isSingleDrawing = (transformGroupElements.size === 0 && transformGroupDrawings.size === 1);
 
-        if (transformAction === 'rotate') {
-            const centerX = elementInitialRect.x + elementInitialRect.width / 2;
-            const centerY = elementInitialRect.y + elementInitialRect.height / 2;
-            const angle = Math.atan2(worldPos.y - centerY, worldPos.x - centerX) * (180 / Math.PI);
-            item.rotation = Math.round(angle + 90);
-        } else {
-            let newW = elementInitialRect.width;
-            let newH = elementInitialRect.height;
-            let localOffsetX = 0;
-            let localOffsetY = 0;
+                // Rotate DOM elements
+                transformGroupElements.forEach((init, id) => {
+                    const el = activeBoardData.elements.find(it => it.id === id);
+                    if (!el) return;
 
-            const isImage = item.type === 'image';
-            const preserveAspect = isImage && !e.shiftKey;
+                    if (isSingleItem) {
+                        el.rotation = (init.rotation + dDeg) % 360;
+                    } else {
+                        const elCenterX = init.x + init.width / 2;
+                        const elCenterY = init.y + init.height / 2;
+                        const rx = transformGroupCenter.x + (elCenterX - transformGroupCenter.x) * cos - (elCenterY - transformGroupCenter.y) * sin;
+                        const ry = transformGroupCenter.y + (elCenterX - transformGroupCenter.x) * sin + (elCenterY - transformGroupCenter.y) * cos;
+                        el.x = Math.round(rx - el.width / 2);
+                        el.y = Math.round(ry - el.height / 2);
+                        el.rotation = (init.rotation + dDeg) % 360;
+                    }
 
-            switch (transformAction) {
-                case 'se':
-                    newW = Math.max(80, elementInitialRect.width + localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height + localDy);
-                    break;
-                case 'sw':
-                    newW = Math.max(80, elementInitialRect.width - localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height + localDy);
-                    localOffsetX = elementInitialRect.width - newW;
-                    break;
-                case 'ne':
-                    newW = Math.max(80, elementInitialRect.width + localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height - localDy);
-                    localOffsetY = elementInitialRect.height - newH;
-                    break;
-                case 'nw':
-                    newW = Math.max(80, elementInitialRect.width - localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height - localDy);
-                    localOffsetX = elementInitialRect.width - newW;
-                    localOffsetY = elementInitialRect.height - newH;
-                    break;
+                    const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
+                    if (domEl) {
+                        domEl.style.left = `${el.x}px`;
+                        domEl.style.top = `${el.y}px`;
+                        domEl.style.transform = `rotate(${el.rotation}deg)`;
+                    }
+                });
+
+                // Rotate Drawing paths
+                transformGroupDrawings.forEach((init, id) => {
+                    const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                    if (!path || !init.points) return;
+                    const center = (isSingleDrawing && init.box) ? { x: init.box.cx, y: init.box.cy } : transformGroupCenter;
+
+                    path.points = init.points.map(pt => ({
+                        x: Math.round(center.x + (pt.x - center.x) * cos - (pt.y - center.y) * sin),
+                        y: Math.round(center.y + (pt.x - center.x) * sin + (pt.y - center.y) * cos)
+                    }));
+                });
+
+                if (transformGroupDrawings.size > 0) {
+                    renderDrawingPaths(activeBoardData.drawingPaths);
+                    updateDrawingSelectionBoxes();
+                }
+            } else {
+                // Proportional Multi-Item / Element Scaling
+                const anchor = transformAnchorPoint || { x: transformInitialGroupRect.minX, y: transformInitialGroupRect.minY };
+
+                let diagX = 1, diagY = 1;
+                if (transformAction === 'nw') { diagX = -1; diagY = -1; }
+                else if (transformAction === 'ne') { diagX = 1; diagY = -1; }
+                else if (transformAction === 'sw') { diagX = -1; diagY = 1; }
+                else if (transformAction === 'se') { diagX = 1; diagY = 1; }
+
+                const dx = (worldPos.x - dragStartX) * diagX;
+                const dy = (worldPos.y - dragStartY) * diagY;
+                const avgDelta = (dx + dy) / 2;
+                const baseDimension = Math.max(50, (transformInitialGroupRect.width + transformInitialGroupRect.height) / 2);
+                const scale = Math.max(0.08, Math.min(12, 1 + avgDelta / baseDimension));
+
+                // Scale DOM elements proportionally relative to group anchor
+                transformGroupElements.forEach((init, id) => {
+                    const el = activeBoardData.elements.find(it => it.id === id);
+                    if (!el) return;
+                    el.width = Math.max(40, Math.round(init.width * scale));
+                    el.height = Math.max(30, Math.round(init.height * scale));
+                    el.x = Math.round(anchor.x + (init.x - anchor.x) * scale);
+                    el.y = Math.round(anchor.y + (init.y - anchor.y) * scale);
+
+                    const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
+                    if (domEl) {
+                        domEl.style.left = `${el.x}px`;
+                        domEl.style.top = `${el.y}px`;
+                        domEl.style.width = `${el.width}px`;
+                        domEl.style.height = `${el.height}px`;
+                    }
+                });
+
+                // Scale Vector Drawing strokes proportionally relative to group anchor
+                transformGroupDrawings.forEach((init, id) => {
+                    const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                    if (!path || !init.points) return;
+                    path.points = init.points.map(pt => ({
+                        x: Math.round(anchor.x + (pt.x - anchor.x) * scale),
+                        y: Math.round(anchor.y + (pt.y - anchor.y) * scale)
+                    }));
+                    path.size = Math.max(1, Math.round((init.size || 6) * scale));
+                });
+
+                if (transformGroupDrawings.size > 0) {
+                    renderDrawingPaths(activeBoardData.drawingPaths);
+                    updateDrawingSelectionBoxes();
+                }
             }
-
-            // Convert local offset back into world coordinates
-            const worldOffsetX = localOffsetX * cos - localOffsetY * sin;
-            const worldOffsetY = localOffsetX * sin + localOffsetY * cos;
-
-            item.x = Math.round(elementInitialRect.x + worldOffsetX);
-            item.y = Math.round(elementInitialRect.y + worldOffsetY);
-            item.width = Math.round(newW);
-            item.height = Math.round(newH);
-        }
-
-        const el = elementsContainer.querySelector(`[data-id="${item.id}"]`);
-        if (el) {
-            el.style.left = `${item.x}px`;
-            el.style.top = `${item.y}px`;
-            el.style.width = `${item.width}px`;
-            el.style.height = `${item.height}px`;
-            el.style.transform = `rotate(${item.rotation || 0}deg)`;
-        }
+        });
     };
 
     const endElementTransform = () => {
+        if (transformRafId) {
+            cancelAnimationFrame(transformRafId);
+            transformRafId = null;
+        }
+        elementsContainer.classList.remove('is-dragging-active');
         if (!isTransformingElement) return;
         isTransformingElement = false;
         transformAction = null;
 
-        if (transformInitialPathPoints) {
-            const path = activeBoardData?.drawingPaths?.find(p => p.id === selectedElementId);
-            if (path) {
-                recordAction({
-                    type: 'TRANSFORM_DRAWING',
-                    id: path.id,
-                    fromPoints: transformInitialPathPoints,
-                    toPoints: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+        const elemChanges = [];
+        transformGroupElements.forEach((init, id) => {
+            const el = activeBoardData?.elements?.find(it => it.id === id);
+            if (el && (el.x !== init.x || el.y !== init.y || el.width !== init.width || el.height !== init.height || el.rotation !== init.rotation)) {
+                elemChanges.push({
+                    id,
+                    from: { x: init.x, y: init.y, width: init.width, height: init.height, rotation: init.rotation },
+                    to: { x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation }
                 });
             }
-            transformInitialPathPoints = null;
-            transformDrawingCenter = null;
-            queueSaveBoard();
-            return;
+        });
+
+        const drawChanges = [];
+        transformGroupDrawings.forEach((init, id) => {
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
+            if (path && init.points) {
+                drawChanges.push({
+                    id,
+                    fromPoints: init.points,
+                    toPoints: path.points.map(pt => ({ ...pt })),
+                    fromSize: init.size,
+                    toSize: path.size
+                });
+            }
+        });
+
+        if (elemChanges.length > 0 || drawChanges.length > 0) {
+            recordAction({
+                type: 'TRANSFORM_ITEMS',
+                elements: elemChanges,
+                drawings: drawChanges
+            });
         }
 
-        const item = activeBoardData && activeBoardData.elements.find(it => it.id === selectedElementId);
-        if (item && transformInitialSnapshot) {
-            const hasChanged = item.x !== transformInitialSnapshot.x ||
-                               item.y !== transformInitialSnapshot.y ||
-                               item.width !== transformInitialSnapshot.width ||
-                               item.height !== transformInitialSnapshot.height ||
-                               (item.rotation || 0) !== transformInitialSnapshot.rotation;
-            if (hasChanged) {
-                recordAction({
-                    type: 'TRANSFORM_ELEMENT',
-                    id: item.id,
-                    from: { ...transformInitialSnapshot },
-                    to: {
-                        x: item.x,
-                        y: item.y,
-                        width: item.width,
-                        height: item.height,
-                        rotation: item.rotation || 0
-                    }
-                });
-            }
-        }
-        transformInitialSnapshot = null;
+        transformGroupElements.clear();
+        transformGroupDrawings.clear();
+        transformInitialGroupRect = null;
+        transformAnchorPoint = null;
         queueSaveBoard();
     };
 
