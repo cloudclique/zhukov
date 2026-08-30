@@ -998,6 +998,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            if (isDraggingElement || isTransformingElement || isDrawingStroke || isPanning || isMarqueeSelecting) {
+                // Do not recreate DOM elements while the user is actively dragging or transforming
+                return;
+            }
+
             activeBoardData = { id: docSnap.id, ...data };
             if (!activeBoardData.elements) activeBoardData.elements = [];
             if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
@@ -1805,15 +1810,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Render interactive selection boxes for selected vector drawing strokes
     const updateDrawingSelectionBoxes = () => {
-        document.querySelectorAll('.board-element-drawing').forEach(el => el.remove());
+        // Remove boxes for drawings that are no longer selected
+        document.querySelectorAll('.board-element-drawing').forEach(el => {
+            if (!selectedElementIds.has(el.dataset.id)) {
+                el.remove();
+            }
+        });
 
         selectedElementIds.forEach(id => {
             const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
-            if (!path || !path.points || path.points.length === 0) return;
+            if (!path || !path.points || path.points.length === 0) {
+                const oldEl = elementsContainer.querySelector(`.board-element-drawing[data-id="${id}"]`);
+                if (oldEl) oldEl.remove();
+                return;
+            }
             const box = getPathBoundingBox(path);
             if (!box) return;
 
-            const el = document.createElement('div');
+            let el = elementsContainer.querySelector(`.board-element-drawing[data-id="${path.id}"]`);
+            if (el) {
+                el.style.left = `${box.x}px`;
+                el.style.top = `${box.y}px`;
+                el.style.width = `${box.width}px`;
+                el.style.height = `${box.height}px`;
+                return;
+            }
+
+            el = document.createElement('div');
             el.className = 'board-element board-element-drawing is-selected';
             el.dataset.id = path.id;
             el.style.left = `${box.x}px`;
@@ -2021,10 +2044,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Multi-Element & Drawing Drag Handling
     let dragItemInitialPositions = new Map();
     let dragPathInitialPoints = new Map();
+    let dragRafId = null;
 
     const startElementDrag = (item, e) => {
         if (activeTouches.size >= 2) return;
         isDraggingElement = true;
+        elementsContainer.classList.add('is-dragging-active');
 
         if (!selectedElementIds.has(item.id)) {
             if (e.shiftKey) {
@@ -2060,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleElementDragMove = (e) => {
         if (activeTouches.size >= 2) {
             isDraggingElement = false;
+            elementsContainer.classList.remove('is-dragging-active');
             return;
         }
         if (!isDraggingElement || (dragItemInitialPositions.size === 0 && dragPathInitialPoints.size === 0) || !activeBoardData) return;
@@ -2067,38 +2093,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const dx = Math.round(worldPos.x - dragStartX);
         const dy = Math.round(worldPos.y - dragStartY);
 
-        // Move DOM elements
-        dragItemInitialPositions.forEach((startPos, id) => {
-            const item = activeBoardData.elements.find(it => it.id === id);
-            if (item) {
-                item.x = startPos.x + dx;
-                item.y = startPos.y + dy;
-                const el = elementsContainer.querySelector(`[data-id="${id}"]`);
-                if (el) {
-                    el.style.left = `${item.x}px`;
-                    el.style.top = `${item.y}px`;
+        if (dragRafId) cancelAnimationFrame(dragRafId);
+        dragRafId = requestAnimationFrame(() => {
+            // Move DOM elements directly
+            dragItemInitialPositions.forEach((startPos, id) => {
+                const item = activeBoardData.elements.find(it => it.id === id);
+                if (item) {
+                    item.x = startPos.x + dx;
+                    item.y = startPos.y + dy;
+                    const el = elementsContainer.querySelector(`[data-id="${id}"]`);
+                    if (el) {
+                        el.style.left = `${item.x}px`;
+                        el.style.top = `${item.y}px`;
+                    }
                 }
+            });
+
+            // Move Drawing Strokes
+            dragPathInitialPoints.forEach((initialPts, id) => {
+                const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                if (path) {
+                    path.points = initialPts.map(pt => ({
+                        x: Math.round(pt.x + dx),
+                        y: Math.round(pt.y + dy)
+                    }));
+                }
+            });
+
+            if (dragPathInitialPoints.size > 0) {
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateDrawingSelectionBoxes();
             }
         });
-
-        // Move Drawing Strokes
-        dragPathInitialPoints.forEach((initialPts, id) => {
-            const path = activeBoardData.drawingPaths.find(p => p.id === id);
-            if (path) {
-                path.points = initialPts.map(pt => ({
-                    x: Math.round(pt.x + dx),
-                    y: Math.round(pt.y + dy)
-                }));
-            }
-        });
-
-        if (dragPathInitialPoints.size > 0) {
-            renderDrawingPaths(activeBoardData.drawingPaths);
-            updateDrawingSelectionBoxes();
-        }
     };
 
     const endElementDrag = () => {
+        if (dragRafId) {
+            cancelAnimationFrame(dragRafId);
+            dragRafId = null;
+        }
+        elementsContainer.classList.remove('is-dragging-active');
         if (!isDraggingElement) return;
         isDraggingElement = false;
         if ((dragItemInitialPositions.size > 0 || dragPathInitialPoints.size > 0) && activeBoardData) {
