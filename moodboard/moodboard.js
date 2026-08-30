@@ -122,6 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputAddCollabEmail = document.getElementById('input-add-collab-email');
     const btnAddCollabEmail = document.getElementById('btn-add-collab-email');
     const collabChipsContainer = document.getElementById('collab-chips-container');
+    const settingViewViaUrl = document.getElementById('setting-view-via-url');
+    const shareLinkBox = document.getElementById('share-link-box');
+    const inputShareUrl = document.getElementById('input-share-url');
+    const btnCopyShareUrl = document.getElementById('btn-copy-share-url');
 
     const modalAddPhoto = document.getElementById('modal-add-photo');
     const pickerPhotosGrid = document.getElementById('picker-photos-grid');
@@ -201,7 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
             authNotice.classList.remove('hidden');
             emptyBoardsNotice.classList.add('hidden');
 
-            exitBoardToDashboard();
+            const urlPath = window.location.pathname;
+            const boardIdFromUrl = urlPath.match(/\/moodboard\/([^/]+)\/?$/)?.[1];
+            if (boardIdFromUrl) {
+                openMoodboard(boardIdFromUrl);
+            } else {
+                exitBoardToDashboard();
+            }
         }
     });
 
@@ -837,6 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Open & Realtime Sync of a Moodboard Canvas ---
     const openMoodboard = (boardId) => {
         activeBoardId = boardId;
+        document.body.classList.add('inside-board');
         dashboardView.style.display = 'none';
         canvasView.style.display = 'flex';
         undoStack = [];
@@ -861,26 +872,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
         unsubscribeBoardSnapshot = onSnapshot(boardRef, (docSnap) => {
             if (!docSnap.exists()) {
-                showToast('Moodboard was deleted.');
+                showToast('Moodboard not found or was deleted.');
                 exitBoardToDashboard();
                 return;
             }
 
-            activeBoardData = { id: docSnap.id, ...docSnap.data() };
+            const data = docSnap.data();
+            const trustedUsers = data.trustedUsers || [];
+            const trustedEmails = (data.trustedEmails || []).map(e => e.toLowerCase());
+            const userEmail = (currentUser?.email || '').toLowerCase();
+            const isCollaborator = currentUser && (trustedUsers.includes(currentUser.uid) || trustedEmails.includes(userEmail));
+            const isCreator = currentUser && (data.creatorUid === currentUser.uid || (data.creatorEmail && data.creatorEmail.toLowerCase() === userEmail));
+            const canEdit = currentIsAdmin || isCreator || isCollaborator;
+            const isPublicView = !canEdit && data.viewViaUrl === true;
+
+            if (!canEdit && !isPublicView) {
+                showToast('This moodboard is private. Please log in with a collaborator account.');
+                exitBoardToDashboard();
+                return;
+            }
+
+            activeBoardData = { id: docSnap.id, ...data };
             if (!activeBoardData.elements) activeBoardData.elements = [];
             if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
             if (!activeBoardData.trustedEmails) activeBoardData.trustedEmails = [];
 
             activeBoardTitle.textContent = activeBoardData.title || 'Untitled Board';
-            activeBoardRoleBadge.textContent = currentIsAdmin ? 'Studio Admin' : 'Collaborator';
-            if (currentIsAdmin) activeBoardRoleBadge.classList.add('admin-badge');
-            else activeBoardRoleBadge.classList.remove('admin-badge');
+
+            if (currentIsAdmin) {
+                activeBoardRoleBadge.textContent = 'Studio Admin';
+                activeBoardRoleBadge.className = 'board-badge admin-badge';
+            } else if (isCreator) {
+                activeBoardRoleBadge.textContent = 'Creator';
+                activeBoardRoleBadge.className = 'board-badge admin-badge';
+            } else if (isCollaborator) {
+                activeBoardRoleBadge.textContent = 'Collaborator';
+                activeBoardRoleBadge.className = 'board-badge';
+            } else {
+                activeBoardRoleBadge.textContent = 'Viewer (Read-Only)';
+                activeBoardRoleBadge.className = 'board-badge';
+            }
+
+            // Adjust UI for Viewer (Read-Only) Mode vs Editor Mode
+            const floatingToolbar = document.querySelector('.floating-toolbar');
+            const undoRedoBtns = document.querySelector('.top-history-btns');
+            if (isPublicView) {
+                if (floatingToolbar) floatingToolbar.style.display = 'none';
+                if (undoRedoBtns) undoRedoBtns.style.display = 'none';
+                if (btnBoardSettings) btnBoardSettings.style.display = 'none';
+                canvasViewport.classList.add('is-viewer-mode');
+            } else {
+                if (floatingToolbar) floatingToolbar.style.display = 'flex';
+                if (undoRedoBtns) undoRedoBtns.style.display = 'flex';
+                if (btnBoardSettings) btnBoardSettings.style.display = '';
+                canvasViewport.classList.remove('is-viewer-mode');
+            }
 
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
         }, (error) => {
             console.error("Realtime sync error:", error);
-            showToast("Sync error or permission issue.");
+            showToast("Access denied or permission issue.");
+            exitBoardToDashboard();
         });
     };
 
@@ -889,6 +942,7 @@ document.addEventListener('DOMContentLoaded', () => {
             unsubscribeBoardSnapshot();
             unsubscribeBoardSnapshot = null;
         }
+        document.body.classList.remove('inside-board');
         activeBoardId = null;
         activeBoardData = null;
         selectedElementId = null;
@@ -975,7 +1029,12 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
         }
 
-        if (activeTouches.size === 2) {
+        if (activeTouches.size >= 2) {
+            // Cancel any marquee selection immediately when 2 fingers touch
+            if (isMarqueeSelecting) {
+                isMarqueeSelecting = false;
+                if (selectionMarquee) selectionMarquee.classList.remove('active');
+            }
             const [t1, t2] = Array.from(activeTouches.values());
             initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
             initialPinchScale = viewportScale;
@@ -985,26 +1044,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
 
     canvasViewport.addEventListener('touchmove', (e) => {
-        if (activeTouches.size === 2 && initialPinchDistance && e.touches.length >= 2) {
-            e.preventDefault();
-            const t1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            const t2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
-            const currentDist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-            const currentCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
-
-            // Two-finger Pan
-            if (lastTouchCenter) {
-                const panDx = currentCenter.x - lastTouchCenter.x;
-                const panDy = currentCenter.y - lastTouchCenter.y;
-                viewportPanX += panDx;
-                viewportPanY += panDy;
+        if (activeTouches.size >= 2) {
+            // Guarantee marquee box is never active during 2-finger gestures
+            if (isMarqueeSelecting) {
+                isMarqueeSelecting = false;
+                if (selectionMarquee) selectionMarquee.classList.remove('active');
             }
-            lastTouchCenter = { ...currentCenter };
+            if (initialPinchDistance && e.touches.length >= 2) {
+                e.preventDefault();
+                const t1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const t2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+                const currentDist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+                const currentCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
 
-            // Two-finger Zoom
-            const scaleFactor = currentDist / initialPinchDistance;
-            const newScale = Math.max(0.2, Math.min(3.5, initialPinchScale * scaleFactor));
-            zoomAroundPoint(currentCenter.x, currentCenter.y, newScale);
+                // Two-finger Pan
+                if (lastTouchCenter) {
+                    const panDx = currentCenter.x - lastTouchCenter.x;
+                    const panDy = currentCenter.y - lastTouchCenter.y;
+                    viewportPanX += panDx;
+                    viewportPanY += panDy;
+                }
+                lastTouchCenter = { ...currentCenter };
+
+                // Two-finger Zoom
+                const scaleFactor = currentDist / initialPinchDistance;
+                const newScale = Math.max(0.2, Math.min(3.5, initialPinchScale * scaleFactor));
+                zoomAroundPoint(currentCenter.x, currentCenter.y, newScale);
+            }
         }
     }, { passive: false });
 
@@ -1339,6 +1405,9 @@ document.addEventListener('DOMContentLoaded', () => {
             panStartY = e.clientY - viewportPanY;
             canvasViewport.classList.add('is-panning');
         } else if (activeTool === 'select' && isBackground && e.button === 0) {
+            if (activeTouches.size >= 2) {
+                return; // Never start marquee if 2 fingers are touching
+            }
             // Start Box / Marquee Area Selection
             isMarqueeSelecting = true;
             const vpRect = canvasViewport.getBoundingClientRect();
@@ -1354,8 +1423,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectionMarquee.style.top = `${marqueeScreenStart.y}px`;
                 selectionMarquee.style.width = '0px';
                 selectionMarquee.style.height = '0px';
-                selectionMarquee.classList.add('active');
+                selectionMarquee.classList.remove('active');
             }
+
+            try {
+                if (canvasViewport.setPointerCapture) {
+                    canvasViewport.setPointerCapture(e.pointerId);
+                }
+            } catch (_) {}
         } else if (activeTool === 'pen' || activeTool === 'eraser') {
             startStroke(e);
         }
@@ -1367,6 +1442,12 @@ document.addEventListener('DOMContentLoaded', () => {
             viewportPanY = e.clientY - panStartY;
             updateViewportTransform();
         } else if (isMarqueeSelecting) {
+            if (activeTouches.size >= 2) {
+                isMarqueeSelecting = false;
+                if (selectionMarquee) selectionMarquee.classList.remove('active');
+                return;
+            }
+
             const vpRect = canvasViewport.getBoundingClientRect();
             const currentScreenX = e.clientX - vpRect.left;
             const currentScreenY = e.clientY - vpRect.top;
@@ -1376,34 +1457,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const width = Math.abs(currentScreenX - marqueeScreenStart.x);
             const height = Math.abs(currentScreenY - marqueeScreenStart.y);
 
-            if (selectionMarquee) {
-                selectionMarquee.style.left = `${left}px`;
-                selectionMarquee.style.top = `${top}px`;
-                selectionMarquee.style.width = `${width}px`;
-                selectionMarquee.style.height = `${height}px`;
-            }
-
-            // World bounding box for intersection test
-            const currentWorld = screenToWorld(e.clientX, e.clientY);
-            const wMinX = Math.min(marqueeWorldStart.x, currentWorld.x);
-            const wMaxX = Math.max(marqueeWorldStart.x, currentWorld.x);
-            const wMinY = Math.min(marqueeWorldStart.y, currentWorld.y);
-            const wMaxY = Math.max(marqueeWorldStart.y, currentWorld.y);
-
-            if (!e.shiftKey) selectedElementIds.clear();
-
-            (activeBoardData?.elements || []).forEach(it => {
-                const itemRight = it.x + (it.width || 100);
-                const itemBottom = it.y + (it.height || 100);
-                // Touches / overlaps the marquee box
-                const touches = it.x < wMaxX && itemRight > wMinX && it.y < wMaxY && itemBottom > wMinY;
-                if (touches) {
-                    selectedElementIds.add(it.id);
+            // Require minimum drag threshold (5px) before showing marquee and selecting items
+            if (width > 5 || height > 5) {
+                if (selectionMarquee) {
+                    selectionMarquee.style.left = `${left}px`;
+                    selectionMarquee.style.top = `${top}px`;
+                    selectionMarquee.style.width = `${width}px`;
+                    selectionMarquee.style.height = `${height}px`;
+                    selectionMarquee.classList.add('active');
                 }
-            });
 
-            selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
-            updateSelectedDOM();
+                // World bounding box for intersection test
+                const currentWorld = screenToWorld(e.clientX, e.clientY);
+                const wMinX = Math.min(marqueeWorldStart.x, currentWorld.x);
+                const wMaxX = Math.max(marqueeWorldStart.x, currentWorld.x);
+                const wMinY = Math.min(marqueeWorldStart.y, currentWorld.y);
+                const wMaxY = Math.max(marqueeWorldStart.y, currentWorld.y);
+
+                if (!e.shiftKey) selectedElementIds.clear();
+
+                (activeBoardData?.elements || []).forEach(it => {
+                    const itemRight = it.x + (it.width || 100);
+                    const itemBottom = it.y + (it.height || 100);
+                    // Touches / overlaps the marquee box
+                    const touches = it.x < wMaxX && itemRight > wMinX && it.y < wMaxY && itemBottom > wMinY;
+                    if (touches) {
+                        selectedElementIds.add(it.id);
+                    }
+                });
+
+                selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
+                updateSelectedDOM();
+            }
         } else if (isDrawingStroke) {
             drawStroke(e);
         } else if (isDraggingElement) {
@@ -1413,7 +1498,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    window.addEventListener('pointerup', (e) => {
+    const handlePointerEnd = (e) => {
+        try {
+            if (e && canvasViewport.releasePointerCapture) {
+                canvasViewport.releasePointerCapture(e.pointerId);
+            }
+        } catch (_) {}
+
         if (isMiddleMousePanning) {
             isMiddleMousePanning = false;
             isPanning = false;
@@ -1435,7 +1526,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isDrawingStroke) endStroke();
         if (isDraggingElement) endElementDrag();
         if (isTransformingElement) endElementTransform();
-    });
+    };
+
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
 
     // --- DOM Elements Rendering & Freeform Transforms ---
     const renderCanvasElements = (elements) => {
@@ -2143,7 +2237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return !!(uidMatch || emailMatch);
     };
 
-    // --- Moodboard Settings Modal (Title, Description & Collaborators) ---
+    // --- Moodboard Settings Modal (Title, Description, Collaborators & View via URL) ---
     if (btnBoardSettings) {
         btnBoardSettings.addEventListener('click', () => {
             if (!activeBoardData) {
@@ -2163,8 +2257,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (collabControls) collabControls.style.display = canEdit ? 'flex' : 'none';
             if (btnSaveBoardSettings) btnSaveBoardSettings.style.display = canEdit ? '' : 'none';
 
+            if (settingViewViaUrl) {
+                settingViewViaUrl.checked = !!activeBoardData.viewViaUrl;
+                settingViewViaUrl.disabled = !canEdit;
+            }
+
+            const shareUrl = activeBoardId && !activeBoardId.startsWith('local_')
+                ? `${window.location.origin}/moodboard/${activeBoardId}/`
+                : `${window.location.origin}/moodboard/`;
+            if (inputShareUrl) inputShareUrl.value = shareUrl;
+            if (shareLinkBox) shareLinkBox.style.display = activeBoardData.viewViaUrl ? 'block' : 'none';
+
             renderCollabChips(canEdit);
             openModal(modalBoardSettings);
+        });
+    }
+
+    if (settingViewViaUrl) {
+        settingViewViaUrl.addEventListener('change', () => {
+            if (shareLinkBox) shareLinkBox.style.display = settingViewViaUrl.checked ? 'block' : 'none';
+        });
+    }
+
+    if (btnCopyShareUrl) {
+        btnCopyShareUrl.addEventListener('click', () => {
+            if (inputShareUrl) {
+                inputShareUrl.select();
+                navigator.clipboard.writeText(inputShareUrl.value);
+                showToast('Moodboard link copied to clipboard!');
+            }
         });
     }
 
@@ -2180,6 +2301,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             activeBoardData.title = newTitle || 'Untitled Board';
             activeBoardData.description = newDesc;
+            activeBoardData.viewViaUrl = settingViewViaUrl ? settingViewViaUrl.checked : false;
             if (activeBoardTitle) activeBoardTitle.textContent = activeBoardData.title;
 
             if (activeBoardId && !activeBoardId.startsWith('local_')) {
@@ -2189,6 +2311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         title: activeBoardData.title,
                         description: activeBoardData.description,
                         trustedEmails: activeBoardData.trustedEmails || [],
+                        viewViaUrl: !!activeBoardData.viewViaUrl,
                         updatedAt: new Date().toISOString()
                     });
                 } catch (err) {

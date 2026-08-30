@@ -303,6 +303,25 @@
                         <!-- Injected collaborator chips -->
                     </div>
                 </div>
+
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 1.4rem 0;">
+
+                <!-- View via URL (Public Read-Only Access) -->
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+                        <input type="checkbox" id="setting-view-via-url" style="width: 18px; height: 18px; accent-color: var(--mb-accent); cursor: pointer;">
+                        <span style="font-weight: 600; color: #fff;">Allow View via URL</span>
+                    </label>
+                    <p style="color: var(--mb-text-muted); font-size: 0.84rem; margin-top: 0.4rem; line-height: 1.4;">
+                        Anyone with the direct link can view this moodboard (Read-Only). It will not appear in anyone's moodboard tab unless they are added as a trusted collaborator.
+                    </p>
+                    <div id="share-link-box" style="display: none; margin-top: 0.8rem;">
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="input-share-url" class="form-input" readonly style="font-size: 0.85rem; background: rgba(0,0,0,0.3); color: var(--mb-accent);">
+                            <button id="btn-copy-share-url" class="mb-btn-secondary" style="white-space: nowrap;">Copy Link</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="mb-btn-secondary modal-close-btn">Cancel</button>
