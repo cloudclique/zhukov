@@ -10,7 +10,7 @@
     --mb-danger: #f43f5e;
     --mb-danger-hover: #e11d48;
     --mb-success: #10b981;
-    --font-heading: 'Instrument Serif', serif;
+    --font-heading: 'Outfit', 'Instrument Serif', serif;
     --font-ui: 'Outfit', sans-serif;
     --font-note: 'Inter', sans-serif;
 }
@@ -18,8 +18,12 @@
 body.moodboard-body {
     background-color: var(--mb-bg);
     overflow: hidden;
+    position: fixed;
+    inset: 0;
     height: 100vh;
     height: 100dvh;
+    height: var(--vvh, 100dvh);
+    max-height: var(--vvh, 100dvh);
     width: 100vw;
     display: flex;
     flex-direction: column;
@@ -50,7 +54,7 @@ body.moodboard-body.inside-board header {
     z-index: 1000;
 }
 
-.canvas-top-bar > * {
+.canvas-top-bar>* {
     pointer-events: auto;
 }
 
@@ -110,7 +114,7 @@ body.moodboard-body.inside-board header {
 .dashboard-view {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.8), #070a12 80%);
+    #background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.8), #070a12 80%);
     z-index: 500;
     display: flex;
     flex-direction: column;
@@ -297,7 +301,7 @@ body.moodboard-body.inside-board header {
     position: relative;
     overflow: hidden;
     background-color: #070a13;
-    background-image: 
+    background-image:
         radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
         radial-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px);
     background-size: 36px 36px, 144px 144px;
@@ -327,7 +331,7 @@ body.moodboard-body.inside-board header {
     will-change: transform;
 }
 
-/* Drawing Canvas Layer */
+/* Drawing Canvas Layer - ALWAYS overlaps DOM elements */
 .drawing-layer {
     position: absolute;
     top: 0;
@@ -335,7 +339,7 @@ body.moodboard-body.inside-board header {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 5;
+    z-index: 25;
 }
 
 .drawing-layer.drawing-active {
@@ -363,7 +367,8 @@ body.moodboard-body.inside-board header {
     border-radius: 12px;
     transition: box-shadow 0.2s, outline 0.2s;
     outline: 2px solid transparent;
-    overflow: visible; /* critical: let handles protrude outside element bounds */
+    overflow: visible;
+    /* critical: let handles protrude outside element bounds */
 }
 
 .board-element.is-selected {
@@ -429,10 +434,29 @@ body.moodboard-body.inside-board header {
     border-color: #ffffff;
 }
 
-.handle-nw { top: -8px; left: -8px; cursor: nwse-resize; }
-.handle-ne { top: -8px; right: -8px; cursor: nesw-resize; }
-.handle-se { bottom: -8px; right: -8px; cursor: nwse-resize; }
-.handle-sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.handle-nw {
+    top: -8px;
+    left: -8px;
+    cursor: nwse-resize;
+}
+
+.handle-ne {
+    top: -8px;
+    right: -8px;
+    cursor: nesw-resize;
+}
+
+.handle-se {
+    bottom: -8px;
+    right: -8px;
+    cursor: nwse-resize;
+}
+
+.handle-sw {
+    bottom: -8px;
+    left: -8px;
+    cursor: nesw-resize;
+}
 
 .handle-rotate {
     /* Position: centered above the top edge */
@@ -539,18 +563,54 @@ body.moodboard-body.inside-board header {
 }
 
 /* Theme presets for notes */
-.note-dark { background: rgba(30, 41, 59, 0.85); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); }
-.note-yellow { background: #fef08a; color: #713f12; border: 1px solid #fde047; }
-.note-pink { background: #fbcfe8; color: #831843; border: 1px solid #f472b6; }
-.note-cyan { background: #bae6fd; color: #0369a1; border: 1px solid #38bdf8; }
-.note-green { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
-.note-purple { background: #e9d5ff; color: #581c87; border: 1px solid #c084fc; }
-.note-clear { background: transparent; color: #f8fafc; border: 1px dashed rgba(255, 255, 255, 0.2); }
+.note-dark {
+    background: rgba(30, 41, 59, 0.85);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+}
+
+.note-yellow {
+    background: #fef08a;
+    color: #713f12;
+    border: 1px solid #fde047;
+}
+
+.note-pink {
+    background: #fbcfe8;
+    color: #831843;
+    border: 1px solid #f472b6;
+}
+
+.note-cyan {
+    background: #bae6fd;
+    color: #0369a1;
+    border: 1px solid #38bdf8;
+}
+
+.note-green {
+    background: #dcfce7;
+    color: #14532d;
+    border: 1px solid #86efac;
+}
+
+.note-purple {
+    background: #e9d5ff;
+    color: #581c87;
+    border: 1px solid #c084fc;
+}
+
+.note-clear {
+    background: transparent;
+    color: #f8fafc;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+}
 
 /* --- Selection Toolbar (Undo / Redo / Delete) --- */
 .selection-toolbar {
     position: absolute;
-    bottom: 7.2rem; /* sits above the main floating toolbar */
+    bottom: 7.2rem;
+    /* sits above the main floating toolbar */
     left: 50%;
     transform: translateX(-50%) translateY(8px);
     background: rgba(15, 23, 42, 0.88);
@@ -730,7 +790,7 @@ body.moodboard-body.inside-board header {
 }
 
 .swatch-transparent {
-    background: repeating-conic-gradient(rgba(255,255,255,0.15) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
+    background: repeating-conic-gradient(rgba(255, 255, 255, 0.15) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px;
     border-style: dashed;
     font-weight: 700;
     font-size: 13px;
@@ -902,6 +962,14 @@ body.moodboard-body.inside-board header {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
     transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+}
+
+.tool-options-drawer.show {
+    display: flex !important;
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0) !important;
+    pointer-events: auto !important;
 }
 
 .tool-options-drawer::-webkit-scrollbar {
@@ -911,44 +979,73 @@ body.moodboard-body.inside-board header {
 @media (max-width: 1024px) {
     .floating-toolbar {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        width: 100vw;
-        max-width: 100vw;
-        transform: none;
-        border-radius: 18px 18px 0 0;
-        border-bottom: none;
-        border-left: none;
-        border-right: none;
-        padding: 0.5rem 0.6rem calc(0.5rem + env(safe-area-inset-bottom, 0px)) 0.6rem;
+        bottom: max(1.2rem, calc(0.8rem + env(safe-area-inset-bottom, 0px)));
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        max-width: calc(100vw - 1.5rem);
+        border-radius: 18px;
+        padding: 0.4rem 0.6rem;
         gap: 0.25rem;
         justify-content: center;
         z-index: 10000;
         background: rgba(15, 23, 42, 0.95);
     }
+
     .tool-btn {
         padding: 0.45rem 0.65rem;
         font-size: 0.85rem;
         gap: 0.35rem;
         border-radius: 11px;
     }
+
     .tool-btn svg {
         width: 18px;
         height: 18px;
     }
+
     .tool-options-drawer {
         position: fixed;
-        bottom: calc(3.8rem + env(safe-area-inset-bottom, 0px));
+        bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
         left: 50%;
         transform: translateX(-50%) translateY(10px);
         max-width: calc(100vw - 1rem);
         padding: 0.45rem 0.75rem;
         z-index: 9999;
     }
-    .tool-options-drawer.show {
-        transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive: Collapse text labels to icons on narrower screens */
+@media (max-width: 900px) {
+    .floating-toolbar .tool-btn span,
+    .selection-toolbar .sel-btn span {
+        display: none !important;
     }
+
+    .floating-toolbar .tool-btn {
+        padding: 0.55rem 0.65rem;
+        gap: 0;
+        justify-content: center;
+    }
+
+    .selection-toolbar .sel-btn {
+        padding: 0.55rem 0.65rem;
+        gap: 0;
+    }
+}
+
+/* Vector Drawing Selection Box */
+.board-element-drawing {
+    border: 1.5px dashed var(--mb-accent);
+    background: rgba(56, 189, 248, 0.04);
+    border-radius: 8px;
+    z-index: 30 !important;
+}
+
+.board-element-drawing.is-selected {
+    outline: 2px solid var(--mb-accent);
+    border: none;
+    box-shadow: 0 0 16px var(--mb-accent-glow);
 }
 
 .color-dot {
@@ -1174,7 +1271,8 @@ body.moodboard-body.inside-board header {
     margin-bottom: 0.5rem;
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-textarea {
     width: 100%;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1187,11 +1285,13 @@ body.moodboard-body.inside-board header {
     transition: border-color 0.2s;
 }
 
-.form-input:focus, .form-textarea:focus {
+.form-input:focus,
+.form-textarea:focus {
     border-color: var(--mb-accent);
 }
 
-.form-input:disabled, .form-textarea:disabled {
+.form-input:disabled,
+.form-textarea:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     background: rgba(255, 255, 255, 0.02);

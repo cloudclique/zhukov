@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhukov Studio | Redirecting...</title>
+    <script>
+        // Single Page App Direct Link Handler for GitHub Pages
+        (function() {
+            var pathname = window.location.pathname;
+            var search = window.location.search;
+            var hash = window.location.hash;
+
+            // Route /moodboard/<boardId>/ to /moodboard/?id=<boardId>
+            var moodboardMatch = pathname.match(/\/moodboard\/([a-zA-Z0-9_-]+)\/?$/);
+            if (moodboardMatch && moodboardMatch[1] && moodboardMatch[1] !== 'index.html') {
+                var boardId = moodboardMatch[1];
+                var newSearch = '?id=' + encodeURIComponent(boardId) + (search ? '&' + search.replace(/^\?/, '') : '');
+                window.location.replace('/moodboard/' + newSearch + hash);
+                return;
+            }
+
+            // Route root path fallback
+            window.location.replace('/' + (search ? search : '') + hash);
+        })();
+    </script>
+</head>
+<body style="background:#070a13; color:#f8fafc; font-family:'Outfit',sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+    <div style="text-align:center;">
+        <h2 style="font-weight:400; font-size:1.4rem; letter-spacing:1px; margin-bottom:0.5rem;">Zhukov Studio</h2>
+        <p style="color:#94a3b8; font-size:0.95rem;">Opening Moodboard...</p>
+    </div>
+</body>
+</html>

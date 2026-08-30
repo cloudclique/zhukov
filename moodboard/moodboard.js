@@ -257,6 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- User-Scoped Action-Based History (Undo / Redo) ---
+    // Sync viewport height with mobile/tablet visual viewport to compensate for browser searchbars and tabs
+    const syncVisualViewportHeight = () => {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--vvh', `${vh}px`);
+    };
+    window.visualViewport?.addEventListener('resize', syncVisualViewportHeight);
+    window.visualViewport?.addEventListener('scroll', syncVisualViewportHeight);
+    window.addEventListener('resize', syncVisualViewportHeight);
+    syncVisualViewportHeight();
+
     const recordAction = (action) => {
         undoStack.push(action);
         if (undoStack.length > MAX_HISTORY) undoStack.shift();
@@ -301,15 +311,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             }
-            case 'MOVE_ELEMENTS': {
+            case 'MOVE_ELEMENTS':
+            case 'MOVE_ITEMS': {
                 (action.moves || []).forEach(m => {
-                    const el = (activeBoardData.elements || []).find(e => e.id === m.id);
-                    if (el) {
-                        el.x = m.from.x;
-                        el.y = m.from.y;
+                    if (m.isDrawing) {
+                        const path = (activeBoardData.drawingPaths || []).find(p => p.id === m.id);
+                        if (path && m.fromPoints) {
+                            path.points = m.fromPoints.map(pt => ({ x: pt.x, y: pt.y }));
+                        }
+                    } else {
+                        const el = (activeBoardData.elements || []).find(e => e.id === m.id);
+                        if (el && m.from) {
+                            el.x = m.from.x;
+                            el.y = m.from.y;
+                        }
                     }
                 });
                 renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
                 selectedElementIds = new Set((action.moves || []).map(m => m.id));
                 selectedElementId = Array.from(selectedElementIds)[0] || null;
                 updateSelectedDOM();
@@ -324,6 +343,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectedDOM();
                 break;
             }
+            case 'DELETE_ITEMS': {
+                if (!activeBoardData.elements) activeBoardData.elements = [];
+                if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
+                if (action.elements) {
+                    activeBoardData.elements.push(...action.elements.map(it => ({ ...it })));
+                }
+                if (action.drawings) {
+                    activeBoardData.drawingPaths.push(...action.drawings.map(p => ({
+                        ...p,
+                        points: p.points.map(pt => ({ ...pt }))
+                    })));
+                }
+                selectedElementIds = new Set([
+                    ...(action.elements || []).map(it => it.id),
+                    ...(action.drawings || []).map(p => p.id)
+                ]);
+                selectedElementId = Array.from(selectedElementIds)[0] || null;
+                renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateSelectedDOM();
+                break;
+            }
             case 'TRANSFORM_ELEMENT': {
                 const el = (activeBoardData.elements || []).find(e => e.id === action.id);
                 if (el) {
@@ -333,6 +374,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.height = action.from.height;
                     el.rotation = action.from.rotation;
                     renderCanvasElements(activeBoardData.elements);
+                    selectElement(action.id);
+                }
+                break;
+            }
+            case 'TRANSFORM_DRAWING': {
+                const path = (activeBoardData.drawingPaths || []).find(p => p.id === action.id);
+                if (path && action.fromPoints) {
+                    path.points = action.fromPoints.map(pt => ({ x: pt.x, y: pt.y }));
+                    renderDrawingPaths(activeBoardData.drawingPaths);
                     selectElement(action.id);
                 }
                 break;
@@ -403,6 +453,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderCanvasElements(activeBoardData.elements);
                 break;
             }
+            case 'DELETE_ITEMS': {
+                const elemIds = new Set((action.elements || []).map(it => it.id));
+                const drawIds = new Set((action.drawings || []).map(p => p.id));
+                activeBoardData.elements = (activeBoardData.elements || []).filter(el => !elemIds.has(el.id));
+                activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => !drawIds.has(p.id));
+                deselectAll();
+                renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                break;
+            }
             case 'MOVE_ELEMENT': {
                 const el = (activeBoardData.elements || []).find(e => e.id === action.id);
                 if (el) {
@@ -413,15 +473,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             }
-            case 'MOVE_ELEMENTS': {
+            case 'MOVE_ELEMENTS':
+            case 'MOVE_ITEMS': {
                 (action.moves || []).forEach(m => {
-                    const el = (activeBoardData.elements || []).find(e => e.id === m.id);
-                    if (el) {
-                        el.x = m.to.x;
-                        el.y = m.to.y;
+                    if (m.isDrawing) {
+                        const path = (activeBoardData.drawingPaths || []).find(p => p.id === m.id);
+                        if (path && m.toPoints) {
+                            path.points = m.toPoints.map(pt => ({ x: pt.x, y: pt.y }));
+                        }
+                    } else {
+                        const el = (activeBoardData.elements || []).find(e => e.id === m.id);
+                        if (el && m.to) {
+                            el.x = m.to.x;
+                            el.y = m.to.y;
+                        }
                     }
                 });
                 renderCanvasElements(activeBoardData.elements);
+                renderDrawingPaths(activeBoardData.drawingPaths);
                 selectedElementIds = new Set((action.moves || []).map(m => m.id));
                 selectedElementId = Array.from(selectedElementIds)[0] || null;
                 updateSelectedDOM();
@@ -436,6 +505,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.height = action.to.height;
                     el.rotation = action.to.rotation;
                     renderCanvasElements(activeBoardData.elements);
+                    selectElement(action.id);
+                }
+                break;
+            }
+            case 'TRANSFORM_DRAWING': {
+                const path = (activeBoardData.drawingPaths || []).find(p => p.id === action.id);
+                if (path && action.toPoints) {
+                    path.points = action.toPoints.map(pt => ({ x: pt.x, y: pt.y }));
+                    renderDrawingPaths(activeBoardData.drawingPaths);
                     selectElement(action.id);
                 }
                 break;
@@ -972,7 +1050,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const exitBoardToDashboard = () => {
+    const exitBoardToDashboard = async () => {
+        if (activeBoardId && activeBoardData) {
+            await cleanAndSaveBoard();
+        }
         if (unsubscribeBoardSnapshot) {
             unsubscribeBoardSnapshot();
             unsubscribeBoardSnapshot = null;
@@ -980,6 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('inside-board');
         activeBoardId = null;
         activeBoardData = null;
+        selectedElementIds.clear();
         selectedElementId = null;
         updateSelectionToolbar();
         canvasView.style.display = 'none';
@@ -1467,6 +1549,46 @@ document.addEventListener('DOMContentLoaded', () => {
         currentStrokePoints = [];
     };
 
+    // Geometry Helpers for Vector Drawing Selection & Transforms
+    function distToSegment(p, v, w) {
+        const l2 = (v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y);
+        if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    function hitTestDrawingPath(worldPos, path) {
+        if (!path || !path.points || path.points.length < 2 || path.isEraser) return false;
+        const threshold = Math.max(10, (path.size || 6) / 2 + 8);
+        for (let i = 0; i < path.points.length - 1; i++) {
+            if (distToSegment(worldPos, path.points[i], path.points[i + 1]) <= threshold) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getPathBoundingBox(path) {
+        if (!path || !path.points || path.points.length === 0) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        path.points.forEach(pt => {
+            minX = Math.min(minX, pt.x);
+            minY = Math.min(minY, pt.y);
+            maxX = Math.max(maxX, pt.x);
+            maxY = Math.max(maxY, pt.y);
+        });
+        const pad = Math.max(6, (path.size || 6) / 2 + 4);
+        return {
+            x: Math.round(minX - pad),
+            y: Math.round(minY - pad),
+            width: Math.max(24, Math.round(maxX - minX + pad * 2)),
+            height: Math.max(24, Math.round(maxY - minY + pad * 2)),
+            cx: (minX + maxX) / 2,
+            cy: (minY + maxY) / 2
+        };
+    }
+
     // Render all saved drawing paths onto canvas
     const renderDrawingPaths = (paths) => {
         if (!drawingCtx) return;
@@ -1526,6 +1648,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTouches.size >= 2) {
                 return; // Never start marquee if 2 fingers are touching
             }
+
+            const worldPos = screenToWorld(e.clientX, e.clientY);
+
+            // Test if clicked directly on a vector drawing stroke
+            const hitPath = (activeBoardData?.drawingPaths || []).slice().reverse().find(p => !p.isEraser && hitTestDrawingPath(worldPos, p));
+            if (hitPath) {
+                if (!selectedElementIds.has(hitPath.id)) {
+                    if (e.shiftKey) {
+                        selectedElementIds.add(hitPath.id);
+                    } else {
+                        deselectAll();
+                        selectedElementIds.add(hitPath.id);
+                    }
+                    selectedElementId = hitPath.id;
+                    updateSelectedDOM();
+                    updateSelectionToolbar();
+                }
+                startElementDrag({ id: hitPath.id, isDrawing: true }, e);
+                return;
+            }
+
             // Start Box / Marquee Area Selection
             isMarqueeSelecting = true;
             const vpRect = canvasViewport.getBoundingClientRect();
@@ -1594,13 +1737,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!e.shiftKey) selectedElementIds.clear();
 
+                // Check DOM elements (photos, notes)
                 (activeBoardData?.elements || []).forEach(it => {
                     const itemRight = it.x + (it.width || 100);
                     const itemBottom = it.y + (it.height || 100);
-                    // Touches / overlaps the marquee box
                     const touches = it.x < wMaxX && itemRight > wMinX && it.y < wMaxY && itemBottom > wMinY;
                     if (touches) {
                         selectedElementIds.add(it.id);
+                    }
+                });
+
+                // Check Vector Drawing strokes
+                (activeBoardData?.drawingPaths || []).forEach(path => {
+                    if (path.isEraser) return;
+                    const box = getPathBoundingBox(path);
+                    if (!box) return;
+                    const touches = box.x < wMaxX && (box.x + box.width) > wMinX && box.y < wMaxY && (box.y + box.height) > wMinY;
+                    if (touches) {
+                        selectedElementIds.add(path.id);
                     }
                 });
 
@@ -1649,6 +1803,55 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('pointerup', handlePointerEnd);
     window.addEventListener('pointercancel', handlePointerEnd);
 
+    // Render interactive selection boxes for selected vector drawing strokes
+    const updateDrawingSelectionBoxes = () => {
+        document.querySelectorAll('.board-element-drawing').forEach(el => el.remove());
+
+        selectedElementIds.forEach(id => {
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
+            if (!path || !path.points || path.points.length === 0) return;
+            const box = getPathBoundingBox(path);
+            if (!box) return;
+
+            const el = document.createElement('div');
+            el.className = 'board-element board-element-drawing is-selected';
+            el.dataset.id = path.id;
+            el.style.left = `${box.x}px`;
+            el.style.top = `${box.y}px`;
+            el.style.width = `${box.width}px`;
+            el.style.height = `${box.height}px`;
+            el.style.zIndex = 30;
+
+            el.innerHTML = `
+                <div class="transform-handle handle-nw" data-handle="nw"></div>
+                <div class="transform-handle handle-ne" data-handle="ne"></div>
+                <div class="transform-handle handle-se" data-handle="se"></div>
+                <div class="transform-handle handle-sw" data-handle="sw"></div>
+                <div class="transform-handle handle-rotate" data-handle="rotate"></div>
+            `;
+
+            el.addEventListener('pointerdown', (e) => {
+                if (activeTool !== 'select') return;
+                if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
+
+                const handle = e.target.closest('.transform-handle');
+                if (handle) {
+                    e.stopPropagation();
+                    startElementTransform({ id: path.id, isDrawing: true, ...box }, handle.dataset.handle, e);
+                    return;
+                }
+
+                e.stopPropagation();
+                if (!selectedElementIds.has(path.id)) {
+                    selectElement(path.id, e.shiftKey);
+                }
+                startElementDrag({ id: path.id, isDrawing: true }, e);
+            });
+
+            elementsContainer.appendChild(el);
+        });
+    };
+
     // --- DOM Elements Rendering & Freeform Transforms ---
     const renderCanvasElements = (elements) => {
         const activeEl = document.activeElement;
@@ -1658,10 +1861,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursorSelectionStart = isEditingText ? activeEl.selectionStart : null;
         const cursorSelectionEnd = isEditingText ? activeEl.selectionEnd : null;
 
-        // If user is currently typing in a note, only update non-focused elements or adjust existing DOM
         elementsContainer.innerHTML = '';
 
-        elements.forEach(item => {
+        (elements || []).forEach(item => {
             const el = document.createElement('div');
             el.className = `board-element ${selectedElementIds.has(item.id) || item.id === selectedElementId ? 'is-selected' : ''}`;
             el.dataset.id = item.id;
@@ -1676,8 +1878,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.type === 'image') {
                 el.classList.add('board-element-image');
                 el.innerHTML = `
-                    <div class="img-inner">
-                        <img src="${escapeHtml(item.content)}" alt="Moodboard image" loading="lazy">
+                    <div class="img-inner" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <img src="${escapeHtml(item.content)}" alt="Moodboard image" style="width:100%; height:100%; object-fit:contain; pointer-events:none; display:block;" loading="lazy">
                     </div>
                     <div class="transform-handle handle-nw" data-handle="nw"></div>
                     <div class="transform-handle handle-ne" data-handle="ne"></div>
@@ -1689,14 +1891,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const preset = item.stylePreset || 'note-dark';
                 el.classList.add('board-element-text');
 
-                // Build inner note-body styles (inherits preset class + custom overrides)
                 const bodyBg = item.customBg || '';
                 const bodyColor = item.customColor || '';
                 const bodyFontSize = item.fontSize ? `${item.fontSize}px` : '';
                 const bodyFontWeight = item.fontBold ? '700' : '';
                 const bodyFontStyle = item.fontItalic ? 'italic' : '';
 
-                // Preset class goes on the inner .note-body, not the outer element
                 const presetClass = (preset !== 'note-custom') ? preset : '';
 
                 el.innerHTML = `
@@ -1711,17 +1911,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="transform-handle handle-rotate" data-handle="rotate"></div>
                 `;
 
-                // Set value via property to prevent HTML injection quirks
                 const textarea = el.querySelector('.editable-text');
                 textarea.value = item.content || '';
 
-                // Propagate font styles to textarea too
                 if (bodyColor) textarea.style.color = bodyColor;
                 if (bodyFontSize) textarea.style.fontSize = bodyFontSize;
                 if (bodyFontWeight) textarea.style.fontWeight = bodyFontWeight;
                 if (bodyFontStyle) textarea.style.fontStyle = bodyFontStyle;
 
-                // Track text changes for undo
                 let initialTextContent = null;
                 textarea.addEventListener('focus', () => {
                     initialTextContent = textarea.value;
@@ -1738,7 +1935,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                // Handle live typing without triggering destructive re-renders
                 textarea.addEventListener('input', () => {
                     item.content = textarea.value;
                     queueSaveBoard();
@@ -1748,14 +1944,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Selection & Drag Initiation
             el.addEventListener('pointerdown', (e) => {
                 if (activeTool !== 'select') return;
-                // If 2 or more touches are present, DO NOT select or drag any note or image
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
                     return;
                 }
                 
                 const handle = e.target.closest('.transform-handle');
                 if (handle) {
-                    // Handle Resize / Rotate
                     e.stopPropagation();
                     startElementTransform(item, handle.dataset.handle, e);
                     return;
@@ -1769,12 +1963,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 e.stopPropagation();
-                selectElement(item.id, e.shiftKey);
+                // If item is not part of existing selection, select it
+                if (!selectedElementIds.has(item.id)) {
+                    selectElement(item.id, e.shiftKey);
+                }
                 startElementDrag(item, e);
             });
 
             elementsContainer.appendChild(el);
         });
+
+        // Also render drawing selection boxes
+        updateDrawingSelectionBoxes();
 
         // Exact cursor and focus restoration
         if (activeEditingId) {
@@ -1789,10 +1989,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSelectedDOM = () => {
-        document.querySelectorAll('.board-element').forEach(el => {
+        document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(el => {
             const isSel = selectedElementIds.has(el.dataset.id) || el.dataset.id === selectedElementId;
             el.classList.toggle('is-selected', isSel);
         });
+        updateDrawingSelectionBoxes();
     };
 
     const selectElement = (id, addToSelection = false) => {
@@ -1817,8 +2018,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const deselectElement = deselectAll;
 
-    // Multi-Element Drag Handling
+    // Multi-Element & Drawing Drag Handling
     let dragItemInitialPositions = new Map();
+    let dragPathInitialPoints = new Map();
+
     const startElementDrag = (item, e) => {
         if (activeTouches.size >= 2) return;
         isDraggingElement = true;
@@ -1840,10 +2043,16 @@ document.addEventListener('DOMContentLoaded', () => {
         dragStartY = worldPos.y;
 
         dragItemInitialPositions.clear();
+        dragPathInitialPoints.clear();
+
         selectedElementIds.forEach(id => {
             const elItem = activeBoardData?.elements.find(it => it.id === id);
             if (elItem) {
                 dragItemInitialPositions.set(id, { x: elItem.x, y: elItem.y });
+            }
+            const pathItem = activeBoardData?.drawingPaths.find(p => p.id === id);
+            if (pathItem && pathItem.points) {
+                dragPathInitialPoints.set(id, pathItem.points.map(pt => ({ x: pt.x, y: pt.y })));
             }
         });
     };
@@ -1853,11 +2062,12 @@ document.addEventListener('DOMContentLoaded', () => {
             isDraggingElement = false;
             return;
         }
-        if (!isDraggingElement || dragItemInitialPositions.size === 0 || !activeBoardData) return;
+        if (!isDraggingElement || (dragItemInitialPositions.size === 0 && dragPathInitialPoints.size === 0) || !activeBoardData) return;
         const worldPos = screenToWorld(e.clientX, e.clientY);
         const dx = Math.round(worldPos.x - dragStartX);
         const dy = Math.round(worldPos.y - dragStartY);
 
+        // Move DOM elements
         dragItemInitialPositions.forEach((startPos, id) => {
             const item = activeBoardData.elements.find(it => it.id === id);
             if (item) {
@@ -1870,42 +2080,89 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+
+        // Move Drawing Strokes
+        dragPathInitialPoints.forEach((initialPts, id) => {
+            const path = activeBoardData.drawingPaths.find(p => p.id === id);
+            if (path) {
+                path.points = initialPts.map(pt => ({
+                    x: Math.round(pt.x + dx),
+                    y: Math.round(pt.y + dy)
+                }));
+            }
+        });
+
+        if (dragPathInitialPoints.size > 0) {
+            renderDrawingPaths(activeBoardData.drawingPaths);
+            updateDrawingSelectionBoxes();
+        }
     };
 
     const endElementDrag = () => {
         if (!isDraggingElement) return;
         isDraggingElement = false;
-        if (dragItemInitialPositions.size > 0 && activeBoardData) {
+        if ((dragItemInitialPositions.size > 0 || dragPathInitialPoints.size > 0) && activeBoardData) {
             const moves = [];
             dragItemInitialPositions.forEach((startPos, id) => {
                 const item = activeBoardData.elements.find(it => it.id === id);
                 if (item && (item.x !== startPos.x || item.y !== startPos.y)) {
                     moves.push({
                         id: id,
+                        isDrawing: false,
                         from: { ...startPos },
                         to: { x: item.x, y: item.y }
                     });
                 }
             });
+            dragPathInitialPoints.forEach((initialPts, id) => {
+                const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                if (path) {
+                    moves.push({
+                        id: id,
+                        isDrawing: true,
+                        fromPoints: initialPts,
+                        toPoints: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+                    });
+                }
+            });
+
             if (moves.length > 0) {
                 recordAction({
-                    type: 'MOVE_ELEMENTS',
+                    type: 'MOVE_ITEMS',
                     moves: moves
                 });
             }
         }
         dragItemInitialPositions.clear();
+        dragPathInitialPoints.clear();
         queueSaveBoard();
     };
 
     // Transform (Resize & Rotate) Handling
     let transformInitialSnapshot = null;
+    let transformInitialPathPoints = null;
+    let transformDrawingCenter = null;
+    let transformInitialAngle = 0;
+
     const startElementTransform = (item, handleType, e) => {
+        if (activeTouches.size >= 2) return;
         isTransformingElement = true;
         transformAction = handleType;
         const worldPos = screenToWorld(e.clientX, e.clientY);
         dragStartX = worldPos.x;
         dragStartY = worldPos.y;
+
+        if (item.isDrawing) {
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === item.id);
+            if (path && path.points) {
+                transformInitialPathPoints = path.points.map(pt => ({ x: pt.x, y: pt.y }));
+                const box = getPathBoundingBox(path);
+                transformDrawingCenter = { x: box.cx, y: box.cy };
+                transformInitialAngle = Math.atan2(worldPos.y - box.cy, worldPos.x - box.cx);
+            }
+            return;
+        }
+
         elementInitialRect = {
             x: item.x,
             y: item.y,
@@ -1925,6 +2182,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleElementTransformMove = (e) => {
         if (!isTransformingElement || !selectedElementId || !activeBoardData) return;
+
+        // Drawing stroke rotation
+        if (transformInitialPathPoints && transformDrawingCenter) {
+            const worldPos = screenToWorld(e.clientX, e.clientY);
+            const currentAngle = Math.atan2(worldPos.y - transformDrawingCenter.cy, worldPos.x - transformDrawingCenter.cx);
+            const dAngle = currentAngle - transformInitialAngle;
+            const cos = Math.cos(dAngle);
+            const sin = Math.sin(dAngle);
+            const cx = transformDrawingCenter.x;
+            const cy = transformDrawingCenter.y;
+            const path = activeBoardData.drawingPaths.find(p => p.id === selectedElementId);
+            if (path) {
+                path.points = transformInitialPathPoints.map(pt => ({
+                    x: Math.round(cx + (pt.x - cx) * cos - (pt.y - cy) * sin),
+                    y: Math.round(cy + (pt.x - cx) * sin + (pt.y - cy) * cos)
+                }));
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateDrawingSelectionBoxes();
+            }
+            return;
+        }
+
         const item = activeBoardData.elements.find(it => it.id === selectedElementId);
         if (!item) return;
 
@@ -1933,11 +2212,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
 
-        // Global translation delta
         const globalDx = worldPos.x - dragStartX;
         const globalDy = worldPos.y - dragStartY;
 
-        // Un-rotate delta into the element's local coordinate system
         const localDx = globalDx * cos + globalDy * sin;
         const localDy = -globalDx * sin + globalDy * cos;
 
@@ -1953,53 +2230,39 @@ document.addEventListener('DOMContentLoaded', () => {
             let localOffsetY = 0;
 
             const isImage = item.type === 'image';
-            const preserveAspect = isImage && !e.shiftKey; // Hold Shift for freeform, default aspect ratio for photos
+            const preserveAspect = isImage && !e.shiftKey;
 
             switch (transformAction) {
                 case 'se':
                     newW = Math.max(80, elementInitialRect.width + localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(50, elementInitialRect.height + localDy);
-                    break;
-                case 'nw':
-                    newW = Math.max(80, elementInitialRect.width - localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(50, elementInitialRect.height - localDy);
-                    localOffsetX = elementInitialRect.width - newW;
-                    localOffsetY = elementInitialRect.height - newH;
-                    break;
-                case 'ne':
-                    newW = Math.max(80, elementInitialRect.width + localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(50, elementInitialRect.height - localDy);
-                    localOffsetY = elementInitialRect.height - newH;
+                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height + localDy);
                     break;
                 case 'sw':
                     newW = Math.max(80, elementInitialRect.width - localDx);
-                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(50, elementInitialRect.height + localDy);
+                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height + localDy);
                     localOffsetX = elementInitialRect.width - newW;
                     break;
-                case 'e':
+                case 'ne':
                     newW = Math.max(80, elementInitialRect.width + localDx);
+                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height - localDy);
+                    localOffsetY = elementInitialRect.height - newH;
                     break;
-                case 'w':
+                case 'nw':
                     newW = Math.max(80, elementInitialRect.width - localDx);
+                    newH = preserveAspect ? (newW / elementInitialRect.aspectRatio) : Math.max(80, elementInitialRect.height - localDy);
                     localOffsetX = elementInitialRect.width - newW;
-                    break;
-                case 's':
-                    newH = Math.max(50, elementInitialRect.height + localDy);
-                    break;
-                case 'n':
-                    newH = Math.max(50, elementInitialRect.height - localDy);
                     localOffsetY = elementInitialRect.height - newH;
                     break;
             }
 
-            // Rotate local offsets back into world coordinates
+            // Convert local offset back into world coordinates
             const worldOffsetX = localOffsetX * cos - localOffsetY * sin;
             const worldOffsetY = localOffsetX * sin + localOffsetY * cos;
 
-            item.width = Math.round(newW);
-            item.height = Math.round(newH);
             item.x = Math.round(elementInitialRect.x + worldOffsetX);
             item.y = Math.round(elementInitialRect.y + worldOffsetY);
+            item.width = Math.round(newW);
+            item.height = Math.round(newH);
         }
 
         const el = elementsContainer.querySelector(`[data-id="${item.id}"]`);
@@ -2016,6 +2279,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isTransformingElement) return;
         isTransformingElement = false;
         transformAction = null;
+
+        if (transformInitialPathPoints) {
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === selectedElementId);
+            if (path) {
+                recordAction({
+                    type: 'TRANSFORM_DRAWING',
+                    id: path.id,
+                    fromPoints: transformInitialPathPoints,
+                    toPoints: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+                });
+            }
+            transformInitialPathPoints = null;
+            transformDrawingCenter = null;
+            queueSaveBoard();
+            return;
+        }
+
         const item = activeBoardData && activeBoardData.elements.find(it => it.id === selectedElementId);
         if (item && transformInitialSnapshot) {
             const hasChanged = item.x !== transformInitialSnapshot.x ||
@@ -2076,7 +2356,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toolAddText.addEventListener('click', addNewTextElement);
 
-
     const deleteSelectedElements = async () => {
         if (!activeBoardData) return;
         if (selectedElementIds.size === 0 && selectedElementId) {
@@ -2084,40 +2363,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (selectedElementIds.size === 0) return;
 
-        const toDelete = (activeBoardData.elements || []).filter(it => selectedElementIds.has(it.id));
-        if (toDelete.length === 0) return;
+        const toDeleteElements = (activeBoardData.elements || []).filter(it => selectedElementIds.has(it.id));
+        const toDeleteDrawings = (activeBoardData.drawingPaths || []).filter(p => selectedElementIds.has(p.id));
 
-        if (toDelete.length === 1) {
-            recordAction({ type: 'DELETE_ELEMENT', element: { ...toDelete[0] } });
-        } else {
-            recordAction({ type: 'DELETE_ELEMENTS', elements: toDelete.map(it => ({ ...it })) });
-        }
+        if (toDeleteElements.length === 0 && toDeleteDrawings.length === 0) return;
+
+        recordAction({
+            type: 'DELETE_ITEMS',
+            elements: toDeleteElements.map(it => ({ ...it })),
+            drawings: toDeleteDrawings.map(p => ({ ...p, points: p.points.map(pt => ({ ...pt })) }))
+        });
 
         activeBoardData.elements = (activeBoardData.elements || []).filter(it => !selectedElementIds.has(it.id));
+        activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => !selectedElementIds.has(p.id));
+
+        const totalDeleted = toDeleteElements.length + toDeleteDrawings.length;
         deselectAll();
         renderCanvasElements(activeBoardData.elements);
+        renderDrawingPaths(activeBoardData.drawingPaths);
         await queueSaveBoard();
-        showToast(`Deleted ${toDelete.length} item${toDelete.length === 1 ? '' : 's'}.`);
+        showToast(`Deleted ${totalDeleted} item${totalDeleted === 1 ? '' : 's'}.`);
     };
 
     const deleteElementById = async (id) => {
         if (!activeBoardData) return;
         const itemToDelete = (activeBoardData.elements || []).find(it => it.id === id);
+        const pathToDelete = (activeBoardData.drawingPaths || []).find(p => p.id === id);
+
         if (itemToDelete) {
             recordAction({ type: 'DELETE_ELEMENT', element: { ...itemToDelete } });
+            activeBoardData.elements = (activeBoardData.elements || []).filter(it => it.id !== id);
+        } else if (pathToDelete) {
+            recordAction({ type: 'DELETE_ITEMS', drawings: [{ ...pathToDelete, points: pathToDelete.points.map(pt => ({ ...pt })) }] });
+            activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => p.id !== id);
         }
-        activeBoardData.elements = (activeBoardData.elements || []).filter(it => it.id !== id);
+
         selectedElementIds.delete(id);
         if (selectedElementId === id) {
             selectedElementId = Array.from(selectedElementIds)[0] || null;
         }
         renderCanvasElements(activeBoardData.elements);
+        renderDrawingPaths(activeBoardData.drawingPaths);
         updateSelectionToolbar();
         await queueSaveBoard();
         showToast('Item deleted.');
     };
 
-    // Add Image Element Helper (Calculates Natural Aspect Ratio & Viewport Scale)
+    // Add Image Element Helper (Calculates Exact Natural Aspect Ratio & Viewport Scale)
     const insertImageElement = (imageUrl) => {
         if (!imageUrl) return;
 
@@ -2127,7 +2419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        // Do NOT use crossOrigin='anonymous' to avoid CORS rejections on external image hosts
         img.onload = () => {
             const naturalW = img.naturalWidth || 800;
             const naturalH = img.naturalHeight || 600;
@@ -2135,7 +2427,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Target size relative to current viewport: ~38% of visible screen height
             const vpRect = canvasViewport.getBoundingClientRect();
-            const targetVisibleHeight = Math.max(280, Math.min(500, (vpRect.height || 600) * 0.42));
+            const targetVisibleHeight = Math.max(260, Math.min(480, (vpRect.height || 600) * 0.42));
             
             // Adjust for current canvas zoom level
             let elementH = targetVisibleHeight / viewportScale;
@@ -2168,11 +2460,10 @@ document.addEventListener('DOMContentLoaded', () => {
             selectElement(newId);
             queueSaveBoard();
             closeModal(modalAddPhoto);
-            showToast('Photo placed onto moodboard.');
+            showToast('Photo placed onto moodboard in original ratio.');
         };
 
         img.onerror = () => {
-            // Fallback if crossOrigin or direct image loading fails
             const centerPos = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
             const newId = 'elem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const newItem = {
@@ -2180,9 +2471,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'image',
                 content: imageUrl,
                 x: Math.round(centerPos.x - 180),
-                y: Math.round(centerPos.y - 240),
+                y: Math.round(centerPos.y - 180),
                 width: 360,
-                height: 480,
+                height: 360,
                 rotation: 0,
                 zIndex: ((activeBoardData.elements && activeBoardData.elements.length) || 0) + 10
             };
@@ -2517,28 +2808,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Firestore Debounced Persistence ---
-    const queueSaveBoard = async () => {
+    // --- Clean Non-Existent/Empty Drawings and Firestore Persistence ---
+    const cleanAndSaveBoard = async () => {
         if (!activeBoardId || !activeBoardData) return;
+        // Clean out any empty strokes (< 2 points) or invalid drawings
+        if (activeBoardData.drawingPaths) {
+            activeBoardData.drawingPaths = activeBoardData.drawingPaths.filter(
+                p => p && p.points && p.points.length >= 2 && !p.isDeleted
+            );
+        }
         if (activeBoardId.startsWith('local_')) {
-            // Persist local board in localStorage as sandbox backup
             localStorage.setItem('zhukov_local_board', JSON.stringify(activeBoardData));
             return;
         }
+        try {
+            const boardRef = doc(db, 'moodboards', activeBoardId);
+            await updateDoc(boardRef, {
+                elements: activeBoardData.elements || [],
+                drawingPaths: activeBoardData.drawingPaths || [],
+                trustedEmails: activeBoardData.trustedEmails || [],
+                updatedAt: new Date().toISOString()
+            });
+        } catch (err) {
+            console.error("Error persisting cleaned moodboard:", err);
+        }
+    };
 
+    window.addEventListener('beforeunload', () => {
+        cleanAndSaveBoard();
+    });
+    window.addEventListener('pagehide', () => {
+        cleanAndSaveBoard();
+    });
+
+    const queueSaveBoard = async () => {
+        if (!activeBoardId || !activeBoardData) return;
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(async () => {
-            try {
-                const boardRef = doc(db, 'moodboards', activeBoardId);
-                await updateDoc(boardRef, {
-                    elements: activeBoardData.elements || [],
-                    drawingPaths: activeBoardData.drawingPaths || [],
-                    trustedEmails: activeBoardData.trustedEmails || [],
-                    updatedAt: new Date().toISOString()
-                });
-            } catch (err) {
-                console.error("Error persisting moodboard:", err);
-            }
+            await cleanAndSaveBoard();
         }, 300);
     };
 
