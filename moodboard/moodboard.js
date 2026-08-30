@@ -1993,8 +1993,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- DOM Elements Rendering & Freeform Transforms ---
-    const renderCanvasElements = (elements) => {
+    // --- DOM Elements Rendering with In-Place Element Recycling (Eliminates Image Flickering) ---
+    const renderCanvasElements = (elements = []) => {
         const activeEl = document.activeElement;
         const isEditingText = activeEl && activeEl.classList.contains('editable-text');
         const activeEditingId = isEditingText && activeEl.closest('.board-element') ? 
@@ -2002,11 +2002,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursorSelectionStart = isEditingText ? activeEl.selectionStart : null;
         const cursorSelectionEnd = isEditingText ? activeEl.selectionEnd : null;
 
-        elementsContainer.innerHTML = '';
+        const currentIds = new Set((elements || []).map(it => it.id));
 
+        // 1. Remove DOM elements that no longer exist
+        elementsContainer.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(domEl => {
+            if (!currentIds.has(domEl.dataset.id)) {
+                domEl.remove();
+            }
+        });
+
+        // 2. Update existing elements or create new ones
         (elements || []).forEach(item => {
-            const el = document.createElement('div');
-            el.className = `board-element ${selectedElementIds.has(item.id) || item.id === selectedElementId ? 'is-selected' : ''}`;
+            let el = elementsContainer.querySelector(`.board-element[data-id="${item.id}"]`);
+            const isSelected = selectedElementIds.has(item.id) || item.id === selectedElementId;
+
+            if (el) {
+                // Update properties in-place without unmounting or resetting <img>
+                el.style.left = `${item.x}px`;
+                el.style.top = `${item.y}px`;
+                el.style.width = `${item.width}px`;
+                el.style.height = `${item.height}px`;
+                el.style.transform = `rotate(${item.rotation || 0}deg)`;
+                el.style.zIndex = item.zIndex || 10;
+                el.classList.toggle('is-selected', isSelected);
+
+                if (item.type === 'text') {
+                    const textarea = el.querySelector('.editable-text');
+                    if (textarea && textarea !== activeEl) {
+                        if (textarea.value !== (item.content || '')) {
+                            textarea.value = item.content || '';
+                        }
+                    }
+                    const noteBody = el.querySelector('.note-body');
+                    if (noteBody) {
+                        const preset = item.stylePreset || 'note-dark';
+                        noteBody.className = `note-body ${preset !== 'note-custom' ? preset : ''}`;
+                        noteBody.style.background = item.customBg || '';
+                        noteBody.style.color = item.customColor || '';
+                        noteBody.style.fontSize = item.fontSize ? `${item.fontSize}px` : '';
+                        noteBody.style.fontWeight = item.fontBold ? '700' : '';
+                        noteBody.style.fontStyle = item.fontItalic ? 'italic' : '';
+                    }
+                } else if (item.type === 'image') {
+                    const img = el.querySelector('img');
+                    if (img && img.getAttribute('src') !== item.content) {
+                        img.src = item.content;
+                    }
+                }
+                return;
+            }
+
+            // Create new DOM element if it does not yet exist
+            el = document.createElement('div');
+            el.className = `board-element ${isSelected ? 'is-selected' : ''}`;
             el.dataset.id = item.id;
             el.style.left = `${item.x}px`;
             el.style.top = `${item.y}px`;
@@ -2015,7 +2063,6 @@ document.addEventListener('DOMContentLoaded', () => {
             el.style.transform = `rotate(${item.rotation || 0}deg)`;
             el.style.zIndex = item.zIndex || 10;
 
-            // Content type render
             if (item.type === 'image') {
                 el.classList.add('board-element-image');
                 el.innerHTML = `
@@ -2037,7 +2084,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const bodyFontSize = item.fontSize ? `${item.fontSize}px` : '';
                 const bodyFontWeight = item.fontBold ? '700' : '';
                 const bodyFontStyle = item.fontItalic ? 'italic' : '';
-
                 const presetClass = (preset !== 'note-custom') ? preset : '';
 
                 el.innerHTML = `
@@ -2104,7 +2150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 e.stopPropagation();
-                // If item is not part of existing selection, select it
                 if (!selectedElementIds.has(item.id)) {
                     selectElement(item.id, e.shiftKey);
                 }
@@ -2129,7 +2174,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    let prevSelectedIdsKey = '';
     const updateSelectedDOM = () => {
+        const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '');
+        if (currentKey === prevSelectedIdsKey) return;
+        prevSelectedIdsKey = currentKey;
+
         document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(el => {
             const isSel = selectedElementIds.has(el.dataset.id) || el.dataset.id === selectedElementId;
             el.classList.toggle('is-selected', isSel);

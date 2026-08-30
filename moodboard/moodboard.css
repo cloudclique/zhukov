@@ -365,9 +365,11 @@ body.moodboard-body.inside-board header {
     touch-action: none;
     user-select: none;
     border-radius: 12px;
-    transition: box-shadow 0.2s, outline 0.2s;
     outline: 2px solid transparent;
     overflow: visible;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
     /* critical: let handles protrude outside element bounds */
 }
 
@@ -380,11 +382,6 @@ body.moodboard-body.inside-board header {
 .elements-container.is-dragging-active .board-element {
     transition: none !important;
     will-change: left, top;
-    pointer-events: none;
-}
-
-.elements-container.is-dragging-active .board-element.is-selected {
-    pointer-events: auto;
 }
 
 /* Viewer (Read-Only) Mode */
@@ -529,6 +526,11 @@ body.moodboard-body.inside-board header {
     object-fit: fill;
     display: block;
     pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
 }
 
 /* Text & Note Element — no overflow:hidden so rotate handle is visible */
