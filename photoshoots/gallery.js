@@ -1,6 +1,7 @@
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
+import { ensureAgeVerification, getAgeVerificationStatus, showAgeGateModal } from "./age-gate.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -80,7 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
             
-            // Scale tilt inversely with element size — big images tilt less
+            // Scale tilt inversely with element size â€” big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
@@ -246,6 +247,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }).join('').replace(/\n/g, '<br>');
             };
 
+            const isAdult = getAgeVerificationStatus() === true;
+
             if (categoryId === 'single-shots') {
                 categoryName = "Single Shots";
                 metaInfo = "Mixed Models | Mixed Themes";
@@ -253,7 +256,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const singleSnap = await getDocs(collection(db, 'single_shots'));
                 const singleItems = [];
                 singleSnap.forEach(doc => {
-                    singleItems.push(doc.data());
+                    const d = doc.data();
+                    if (!isAdult && d.isAdult === true) return; // Hide 18+ items if not adult
+                    singleItems.push(d);
                 });
                 // Sort newest to oldest
                 singleItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
@@ -292,7 +297,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     
                     if (data.urls && Array.isArray(data.urls)) {
-                        urls = [...data.urls].reverse(); // Show newest to oldest
+                        let rawUrls = [...data.urls];
+                        if (!isAdult) {
+                            const adultUrls = data.adultUrls || [];
+                            if (data.isAdult === true && adultUrls.length === 0) {
+                                rawUrls = []; // Entire set is 18+
+                            } else {
+                                rawUrls = rawUrls.filter(u => !adultUrls.includes(u));
+                            }
+                        }
+
+                        // If user is under 18 and set has only adult content
+                        if (!isAdult && rawUrls.length === 0 && (data.isAdult === true || (data.adultUrls && data.adultUrls.length > 0))) {
+                            loadingState.style.display = 'block';
+                            loadingState.innerHTML = `
+                                <div style="text-align:center; padding: 3.5rem 1.5rem; max-width: 480px; margin: 0 auto;">
+                                    <div class="age-gate-badge" style="margin: 0 auto 1.5rem auto;">18+</div>
+                                    <h3 style="font-size: 1.6rem; font-weight: 600; color: #fff; margin-bottom: 0.75rem;">Age-Restricted Content</h3>
+                                    <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem;">This photoshoot contains adult / 18+ content and is hidden for visitors under 18.</p>
+                                    <button id="reverify-age-btn" class="age-btn age-btn-yes" style="max-width: 220px; margin: 0 auto; display: inline-block;">Verify Age (18+)</button>
+                                </div>
+                            `;
+                            headerContainer.innerHTML = '';
+                            gridContainer.innerHTML = '';
+                            setTimeout(() => {
+                                const btn = document.getElementById('reverify-age-btn');
+                                if (btn) {
+                                    btn.addEventListener('click', async () => {
+                                        await showAgeGateModal();
+                                        loadGallery();
+                                    });
+                                }
+                            }, 50);
+                            return;
+                        }
+
+                        urls = rawUrls.reverse(); // Show newest to oldest
                     }
                 } else {
                     loadingState.innerText = "Error: Photoshoot not found.";
@@ -471,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const archCatBtn = document.createElement('button');
                 archCatBtn.className = 'archive-category-btn';
-                archCatBtn.innerText = '⬛ Archive Set';
+                archCatBtn.innerText = 'â¬› Archive Set';
                 archCatBtn.addEventListener('click', archiveCategory);
 
                 const delCatBtn = document.createElement('button');
@@ -657,10 +697,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    // Initial Load
+    // Initial Load - Age gate check first
     if (categoryId) {
+        await ensureAgeVerification();
         loadGallery();
     } else {
         loadingState.innerText = "Error: No photoshoot selected.";
     }
 });
+

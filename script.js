@@ -250,27 +250,28 @@ document.addEventListener('DOMContentLoaded', () => {
         let holdStarted = false;
 
         const startHold = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return;
             e.preventDefault();
             holdStarted = true;
-            ring.classList.add('active');
-            // Re-trigger animation by cloning
-            const newRing = ring.cloneNode(true);
-            wrap.replaceChild(newRing, ring);
-            newRing.classList.add('active');
 
+            // Reset and re-trigger animation cleanly without breaking DOM references
+            ring.classList.remove('active');
+            void ring.offsetWidth;
+            ring.classList.add('active');
+
+            clearTimeout(holdTimer);
             holdTimer = setTimeout(async () => {
                 if (!holdStarted) return;
+                ring.classList.remove('active');
                 await selectImage(url);
-                newRing.classList.remove('active');
             }, 2000);
         };
 
         const cancelHold = () => {
+            if (!holdStarted) return;
             holdStarted = false;
             clearTimeout(holdTimer);
-            // Remove active from any ring inside wrap
-            const r = wrap.querySelector('.hold-ring');
-            if (r) r.classList.remove('active');
+            ring.classList.remove('active');
         };
 
         wrap.addEventListener('mousedown', startHold);
@@ -723,3 +724,4 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!navigating) releasePull();
     }, { passive: true });
 })();
+

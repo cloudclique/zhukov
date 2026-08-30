@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>html,body{background:#0b0f19}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZHUKOV.s | Moodboard Studio</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="moodboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="moodboard-body">
+
+    <!-- Header Navigation (Matches all pages) -->
+    <header>
+        <div class="header-content">
+            <a href="/" class="brand-logo">
+                <h1 class="brand-name">ZHUKOV</h1>
+                <p class="brand-subtitle">studio</p>
+            </a>
+            <nav class="header-nav">
+                <a href="/">Home</a>
+                <a href="/photoshoots/">Photoshoots</a>
+                <a href="/moodboard/" class="active">Moodboard</a>
+                <a href="/about/">About Me</a>
+                <a href="/contact/">Contact</a>
+                <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
+            </nav>
+            <div class="header-actions">
+                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
+                <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                <script>
+                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                    } else {
+                        document.getElementById('login-btn-header').classList.remove('hidden');
+                    }
+                </script>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="moodboard-app-container">
+
+        <!-- ==============================================
+             VIEW 1: Dashboard (List of boards / Create)
+             ============================================== -->
+        <div id="dashboard-view" class="dashboard-view">
+            <div class="dashboard-hero">
+                <h2>Moodboard Studio</h2>
+                <p>Curate visual concepts, arrange photoshoot references, sketch creative ideas, and collaborate seamlessly in real time.</p>
+                
+            <div class="dashboard-controls">
+                    <button id="btn-create-board" class="mb-btn-primary">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span>Create New Moodboard</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Boards Grid -->
+            <div id="boards-grid" class="boards-grid">
+                <!-- Dynamically injected board cards -->
+            </div>
+
+            <!-- Non-logged in state -->
+            <div id="auth-notice" class="auth-notice-card hidden">
+                <h3>Collaborative Studio</h3>
+                <p>Sign in with your Google account to create persistent boards and collaborate with clients or models.</p>
+                <button id="btn-auth-notice-login" class="mb-btn-primary">Sign In with Google</button>
+            </div>
+
+            <!-- Empty boards state for logged in user with 0 boards -->
+            <div id="empty-boards-notice" class="auth-notice-card hidden">
+                <h3>Create Your First Moodboard</h3>
+                <p>You have no saved moodboards yet. Click "Create New Moodboard" above to start designing your concepts.</p>
+            </div>
+        </div>
+
+        <!-- ==============================================
+             VIEW 2: Infinite Canvas Workspace
+             ============================================== -->
+        <div id="canvas-view" class="canvas-view">
+            <!-- In-Canvas Top Bar -->
+            <div class="canvas-top-bar">
+                <div class="board-meta-bar">
+                    <button id="btn-back-to-dashboard" class="icon-btn-small" title="Back to All Boards">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="board-title-display">
+                        <span id="active-board-title">Moodboard Studio</span>
+                        <span id="active-board-role-badge" class="board-badge">Collaborator</span>
+                    </div>
+                </div>
+
+                <div class="canvas-top-actions">
+                    <!-- Undo / Redo always visible -->
+                    <div class="top-history-btns">
+                        <button id="btn-undo-action" class="hud-btn" title="Undo (Ctrl+Z)" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7v6h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button id="btn-redo-action" class="hud-btn" title="Redo (Ctrl+Shift+Z)" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 7v6h-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                    <button id="btn-board-settings" class="mb-btn-secondary" title="Moodboard Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-width="2"/></svg>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Viewport that captures Pan, Zoom, and Drag gestures -->
+            <div id="canvas-viewport" class="canvas-viewport">
+                <!-- Visual Eraser Cursor Ring showing exact border & radius -->
+                <div id="eraser-cursor" class="eraser-cursor-indicator"></div>
+
+                <!-- Visual Box / Marquee Area Selection Box -->
+                <div id="selection-marquee" class="selection-marquee"></div>
+
+                <!-- Transformable 6000x6000 World Container -->
+                <div id="canvas-world" class="canvas-world">
+                    <!-- Layer 1: Vector Drawing Canvas for Pen & Eraser -->
+                    <canvas id="drawing-layer" class="drawing-layer" width="6000" height="6000"></canvas>
+                    
+                    <!-- Layer 2: Interactive DOM Elements (Photos, Text, Sticky Notes) -->
+                    <div id="elements-container" class="elements-container"></div>
+                </div>
+            </div>
+
+            <!-- Floating Selection Toolbar (visible when an element is selected) -->
+            <div id="selection-toolbar" class="selection-toolbar">
+                <button id="btn-style-note" class="sel-btn" title="Style Note" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.477-1.125-.29-.289-.438-.652-.438-1.042a1.8 1.8 0 0 1 1.668-1.8l1.395-.139c3.243-.32 5.704-3.01 5.704-6.218C22 6.5 17.5 2 12 2z" stroke-width="2"/></svg>
+                    <span>Style</span>
+                </button>
+                <div class="tool-separator" id="style-sep" style="display:none"></div>
+                <button id="btn-delete-selected" class="sel-btn sel-btn-danger" title="Delete Selected (Del)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Delete</span>
+                </button>
+            </div>
+
+            <!-- Floating Studio Toolbar -->
+            <div class="floating-toolbar">
+                <!-- Select Tool (Marquee / Box Area Drag) -->
+                <button id="tool-select" class="tool-btn active" title="Select & Box Marquee (V)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3l7 18 3-7 7-3L3 3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Select</span>
+                </button>
+
+                <!-- Move / Pan Tool (Desktop PC only) -->
+                <button id="tool-move" class="tool-btn pc-only-tool" title="Pan Canvas (H) — or hold Middle Mouse / Space">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.83l1.76 1.77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Move</span>
+                </button>
+
+                <!-- Pen / Draw Tool -->
+                <button id="tool-pen" class="tool-btn" title="Freehand Pen (P)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 2l7.586 7.586"/></svg>
+                    <span>Pen</span>
+                </button>
+
+                <!-- Eraser Tool -->
+                <button id="tool-eraser" class="tool-btn" title="Eraser (E)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 20H7L3 16C2 15 2 13 3 12L13 2C14 1 16 1 17 2L22 7C23 8 23 10 22 11L13 20" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 12l-8-8"/></svg>
+                    <span>Eraser</span>
+                </button>
+
+                <div class="tool-separator"></div>
+
+                <!-- Add Text Note Tool -->
+                <button id="tool-add-text" class="tool-btn" title="Add Note or Label (T)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                    <span>Note</span>
+                </button>
+
+                <!-- Add Photo Tool -->
+                <button id="tool-add-photo" class="tool-btn" title="Add Image (Photoshoots, URL or File)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <span>Add Photo</span>
+                </button>
+
+                <div class="tool-separator"></div>
+
+                <!-- Clear Drawing Layer -->
+                <button id="btn-clear-drawing" class="tool-btn" title="Clear all drawings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Clear Ink</span>
+                </button>
+            </div>
+
+            <!-- Tool Options Sub-Drawer (Pen Colors & Brush Sizes) -->
+            <div id="pen-options-drawer" class="tool-options-drawer">
+                <!-- Color Dots -->
+                <div class="color-dot selected" data-color="#38bdf8" style="background: #38bdf8;" title="Neon Cyan"></div>
+                <div class="color-dot" data-color="#f43f5e" style="background: #f43f5e;" title="Crimson Pink"></div>
+                <div class="color-dot" data-color="#fde047" style="background: #fde047;" title="Studio Yellow"></div>
+                <div class="color-dot" data-color="#ffffff" style="background: #ffffff;" title="Pure White"></div>
+                <div class="color-dot" data-color="#10b981" style="background: #10b981;" title="Emerald Green"></div>
+                <div class="color-dot" data-color="#a855f7" style="background: #a855f7;" title="Electric Purple"></div>
+
+                <div class="tool-separator"></div>
+
+                <!-- Brush Sizes -->
+                <button class="size-pill" data-size="3">Fine (3px)</button>
+                <button class="size-pill selected" data-size="6">Medium (6px)</button>
+                <button class="size-pill" data-size="14">Marker (14px)</button>
+                <button class="size-pill" data-size="28">Highlighter (28px)</button>
+            </div>
+
+            <!-- Tool Options Sub-Drawer (Eraser Sizes) -->
+            <div id="eraser-options-drawer" class="tool-options-drawer">
+                <span class="drawer-label" style="font-size: 0.8rem; font-weight: 600; color: var(--mb-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Eraser:</span>
+                <button class="size-pill eraser-size-pill" data-eraser-size="12">12px</button>
+                <button class="size-pill eraser-size-pill selected" data-eraser-size="30">30px</button>
+                <button class="size-pill eraser-size-pill" data-eraser-size="60">60px</button>
+                <button class="size-pill eraser-size-pill" data-eraser-size="100">100px</button>
+                
+                <div class="tool-separator"></div>
+                
+                <input type="range" id="eraser-size-slider" min="6" max="150" value="30" class="style-range" style="width: 85px;" title="Fine-tune Eraser Size">
+                <span id="eraser-size-display" style="font-size: 0.82rem; color: #fff; font-weight: 600; min-width: 42px;">30px</span>
+            </div>
+
+            <!-- HUD Viewport Navigation (Zoom In / Out / Reset View) -->
+            <div class="hud-controls">
+                <button id="hud-zoom-out" class="hud-btn" title="Zoom Out (-)">−</button>
+                <span id="hud-zoom-display" class="hud-zoom-text">100%</span>
+                <button id="hud-zoom-in" class="hud-btn" title="Zoom In (+)">+</button>
+                <div class="tool-separator" style="height: 18px;"></div>
+                <button id="hud-reset-view" class="hud-btn" title="Reset View (Space)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ==============================================
+         MODAL 1: Create New Moodboard (Admin only)
+         ============================================== -->
+    <div id="modal-create-board" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Create New Moodboard</h3>
+                <button class="icon-btn-small modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-board-title">Moodboard Title</label>
+                    <input type="text" id="new-board-title" class="form-input" placeholder="e.g. Cyberpunk Editorial Concept 2026" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-board-desc">Description / Vision (Optional)</label>
+                    <textarea id="new-board-desc" class="form-textarea" rows="3" placeholder="Notes on styling, aesthetic references, lighting direction..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Trusted Collaborators (Emails)</label>
+                    <input type="text" id="new-board-collabs" class="form-input" placeholder="Type user emails separated by commas (e.g. user@gmail.com, model@studio.com)">
+                    <small style="color: var(--mb-text-muted); display: block; margin-top: 0.4rem;">Users with these emails will be able to view and edit this moodboard when logged in.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mb-btn-secondary modal-close-btn">Cancel</button>
+                <button id="btn-submit-create-board" class="mb-btn-primary">Create Moodboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==============================================
+         MODAL 2: Moodboard Settings (Title, Description & Collaborators)
+         ============================================== -->
+    <div id="modal-board-settings" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Moodboard Settings</h3>
+                <button class="icon-btn-small modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="settings-board-title">Moodboard Title</label>
+                    <input type="text" id="settings-board-title" class="form-input" placeholder="e.g. Cyberpunk Editorial Concept 2026">
+                </div>
+                <div class="form-group">
+                    <label for="settings-board-desc">Description / Vision</label>
+                    <textarea id="settings-board-desc" class="form-textarea" rows="2" placeholder="Styling notes, mood direction, aesthetic references..."></textarea>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.12); margin: 1.4rem 0;">
+
+                <div class="form-group">
+                    <label>Trusted Collaborators</label>
+                    <p style="color: var(--mb-text-muted); font-size: 0.88rem; margin-bottom: 0.8rem; line-height: 1.4;">
+                        Users with these emails can view, edit, and contribute to this moodboard when logged in.
+                    </p>
+                    <div id="collab-add-controls" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="email" id="input-add-collab-email" class="form-input" placeholder="collaborator@example.com">
+                        <button id="btn-add-collab-email" class="mb-btn-secondary" style="white-space: nowrap;">Add</button>
+                    </div>
+                    <div id="collab-chips-container" class="collab-chip-list">
+                        <!-- Injected collaborator chips -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mb-btn-secondary modal-close-btn">Cancel</button>
+                <button id="btn-save-board-settings" class="mb-btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==============================================
+         MODAL 3: Photoshoot Library & Image Inserter
+         ============================================== -->
+    <div id="modal-add-photo" class="modal-overlay">
+        <div class="modal-window photoshoot-picker-modal">
+            <div class="modal-header">
+                <h3>Add Image to Moodboard</h3>
+                <button class="icon-btn-small modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Source Tabs -->
+                <div class="picker-tabs">
+                    <button class="picker-tab-btn active" data-tab="photoshoots">From Photoshoots</button>
+                    <button class="picker-tab-btn" data-tab="url">Image URL</button>
+                    <button class="picker-tab-btn" data-tab="upload">Upload / Local File</button>
+                </div>
+
+                <!-- Tab 1: Photoshoots Explorer -->
+                <div id="tab-content-photoshoots" class="tab-pane">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <select id="photoshoot-category-filter" class="form-input" style="max-width: 280px; padding: 0.5rem 0.8rem;">
+                            <option value="all">All Photoshoots</option>
+                            <!-- Dynamically loaded sets -->
+                        </select>
+                        <span id="photoshoot-count-badge" style="color: var(--mb-text-muted); font-size: 0.85rem;"></span>
+                    </div>
+
+                    <div id="picker-photos-grid" class="photos-grid-picker">
+                        <!-- Dynamically populated photoshoot images -->
+                    </div>
+                </div>
+
+                <!-- Tab 2: Direct Image URL -->
+                <div id="tab-content-url" class="tab-pane" style="display: none;">
+                    <div class="form-group">
+                        <label for="input-img-url">Paste Image URL (JPEG, PNG, WebP, GIF)</label>
+                        <input type="url" id="input-img-url" class="form-input" placeholder="https://example.com/photo.jpg">
+                    </div>
+                    <div id="url-preview-box" style="margin-top: 1rem; max-height: 250px; display: none; text-align: center; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,0.3);">
+                        <img id="url-preview-img" style="max-height: 250px; object-fit: contain;">
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button id="btn-insert-url-img" class="mb-btn-primary">Insert Onto Canvas</button>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Local Upload -->
+                <div id="tab-content-upload" class="tab-pane" style="display: none;">
+                    <div class="form-group">
+                        <label>Select image from your device or drop here</label>
+                        <input type="file" id="input-file-local" class="form-input" accept="image/*">
+                    </div>
+                    <small style="color: var(--mb-text-muted); display: block; margin-top: 0.5rem;">Images will be uploaded to ImgBB and placed directly onto your moodboard.</small>
+                    <div id="upload-status-text" style="color: var(--mb-accent); margin-top: 1rem; font-size: 0.9rem; display: none;">Uploading image, please wait...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mb-btn-secondary modal-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="mb-toast" class="mb-toast"></div>
+
+    <!-- Note Style Panel (floating popup when a text note is selected) -->
+    <div id="note-style-panel" class="note-style-panel">
+        <div class="style-panel-header">
+            <span>Note Style</span>
+            <button id="close-style-panel" class="icon-btn-small" title="Close">✕</button>
+        </div>
+        
+        <!-- Background Color -->
+        <div class="style-section">
+            <label class="style-label">Background</label>
+            <div class="style-swatches" id="bg-swatches">
+                <button class="swatch" data-bg="rgba(30,41,59,0.85)" data-preset="note-dark" style="background:#1e293b;" title="Dark Slate"></button>
+                <button class="swatch" data-bg="rgba(254,240,138,1)" data-preset="note-yellow" style="background:#fef08a;" title="Yellow"></button>
+                <button class="swatch" data-bg="rgba(251,207,232,1)" data-preset="note-pink" style="background:#fbcfe8;" title="Pink"></button>
+                <button class="swatch" data-bg="rgba(186,230,253,1)" data-preset="note-cyan" style="background:#bae6fd;" title="Cyan"></button>
+                <button class="swatch" data-bg="rgba(220,252,231,1)" data-preset="note-green" style="background:#dcfce7;" title="Green"></button>
+                <button class="swatch" data-bg="rgba(233,213,255,1)" data-preset="note-purple" style="background:#e9d5ff;" title="Lavender"></button>
+                <button class="swatch swatch-transparent" data-bg="transparent" data-preset="note-clear" title="Transparent">∅</button>
+                <button class="swatch swatch-custom" id="bg-custom-pick" title="Custom color…">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8" stroke-width="2"/></svg>
+                    <input type="color" id="bg-color-input" class="hidden-color-input" value="#1e293b">
+                </button>
+            </div>
+        </div>
+
+        <!-- Font Color -->
+        <div class="style-section">
+            <label class="style-label">Text Color</label>
+            <div class="style-swatches">
+                <button class="swatch" data-font-color="#f8fafc" style="background:#f8fafc;" title="White"></button>
+                <button class="swatch" data-font-color="#0f172a" style="background:#0f172a;" title="Black"></button>
+                <button class="swatch" data-font-color="#713f12" style="background:#713f12;" title="Brown"></button>
+                <button class="swatch" data-font-color="#831843" style="background:#831843;" title="Deep Rose"></button>
+                <button class="swatch" data-font-color="#0369a1" style="background:#0369a1;" title="Ocean Blue"></button>
+                <button class="swatch" data-font-color="#38bdf8" style="background:#38bdf8;" title="Cyan"></button>
+                <button class="swatch swatch-custom" id="font-custom-pick" title="Custom color…">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8" stroke-width="2"/></svg>
+                    <input type="color" id="font-color-input" class="hidden-color-input" value="#f8fafc">
+                </button>
+            </div>
+        </div>
+
+        <!-- Font Size -->
+        <div class="style-section">
+            <label class="style-label">Font Size: <span id="font-size-display">14px</span></label>
+            <input type="range" id="font-size-slider" class="style-range" min="10" max="56" value="14" step="1">
+        </div>
+
+        <!-- Font Weight -->
+        <div class="style-section" style="display:flex; gap:0.5rem; align-items:center; justify-content:space-between;">
+            <label class="style-label" style="margin:0;">Style</label>
+            <div style="display:flex; gap:0.4rem;">
+                <button id="toggle-bold" class="style-toggle-btn" title="Bold"><b>B</b></button>
+                <button id="toggle-italic" class="style-toggle-btn" title="Italic"><i>I</i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Moodboard Studio Script -->
+    <script type="module" src="moodboard.js"></script>
+</body>
+</html>

@@ -1103,3 +1103,123 @@ main {
 body.is-overscrolling {
     overflow: hidden;
 }
+/* ============================================
+   Age Verification Gate Modal (18+)
+   ============================================ */
+.age-gate-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(10, 15, 29, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.age-gate-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.age-gate-card {
+    background: rgba(26, 35, 58, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    transform: scale(0.94) translateY(12px);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.age-gate-overlay.show .age-gate-card {
+    transform: scale(1) translateY(0);
+}
+
+.age-gate-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1.5px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 auto 1.25rem auto;
+    letter-spacing: 0.05em;
+}
+
+.age-gate-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.02em;
+}
+
+.age-gate-desc {
+    color: #94a3b8;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.age-gate-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.age-btn {
+    width: 100%;
+    padding: 0.95rem 1.5rem;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+}
+
+.age-btn-yes {
+    background: var(--accent-color, #38bdf8);
+    color: #0f172a;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+}
+
+.age-btn-yes:hover {
+    background: #7dd3fc;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.45);
+}
+
+.age-btn-no {
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.age-btn-no:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.age-gate-note {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+}

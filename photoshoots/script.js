@@ -1,6 +1,7 @@
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
+import { ensureAgeVerification, getAgeVerificationStatus } from "./age-gate.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
             
-            // Scale tilt inversely with element size — big images tilt less
+            // Scale tilt inversely with element size â€” big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
@@ -220,8 +221,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             categoriesData = [];
+            const isAdult = getAgeVerificationStatus() === true;
             
-            // 1. Fetch Single Shots
+            // 1. Fetch Single Shots (filtered if not 18+)
             const singleSnap = await getDocs(collection(db, 'single_shots'));
             const singleUrls = [];
             const singleItems = [];
@@ -229,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             singleSnap.forEach(doc => {
                 const data = doc.data();
+                if (!isAdult && data.isAdult === true) return; // Hide 18+ single shots for non-adults
                 singleItems.push(data);
                 if (data.date && data.date > latestSingleDate) {
                     latestSingleDate = data.date;
@@ -250,19 +253,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // 2. Fetch Photo Sets (exclude archived)
+            // 2. Fetch Photo Sets (exclude archived and filter 18+)
             const setsSnap = await getDocs(collection(db, 'photo_sets'));
             setsSnap.forEach(doc => {
                 const data = doc.data();
                 if (data.archived === true) return; // Hide archived sets from public
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+                    let visibleUrls = [...data.urls];
+                    
+                    if (!isAdult) {
+                        const adultUrls = data.adultUrls || [];
+                        if (data.isAdult === true && adultUrls.length === 0) {
+                            // Entire set was marked 18+ on upload
+                            return; // Do not show set if it completely consists of 18+ images
+                        }
+                        visibleUrls = visibleUrls.filter(url => !adultUrls.includes(url));
+                        if (visibleUrls.length === 0) {
+                            return; // All images in this set are 18+, hide set completely
+                        }
+                    }
+
                     categoriesData.push({
                         categoryId: doc.id,
                         categoryName: data.categoryName || 'Unknown Photo set',
                         modelName: data.modelName || 'Unknown',
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
-                        urls: [...data.urls].reverse() // Show newest to oldest
+                        urls: visibleUrls.reverse() // Show newest to oldest
                     });
                 }
             });
@@ -378,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const archCatBtn = document.createElement('button');
                 archCatBtn.className = 'archive-category-btn';
-                archCatBtn.innerText = '⬛ Archive';
+                archCatBtn.innerText = 'â¬› Archive';
                 archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
 
                 const delCatBtn = document.createElement('button');
@@ -482,9 +499,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sortBy = sortSelect.value;
         const currentOrder = sortOrderBtn.getAttribute('data-order');
         if (sortBy === 'date') {
-            sortOrderBtn.innerText = currentOrder === 'asc' ? 'Old-New ↓' : 'New-Old ↑';
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'Old-New â†“' : 'New-Old â†‘';
         } else {
-            sortOrderBtn.innerText = currentOrder === 'asc' ? 'A-Z ↓' : 'Z-A ↑';
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'A-Z â†“' : 'Z-A â†‘';
         }
     };
 
@@ -504,6 +521,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderGallery();
     });
 
-    // Initial Load
+    // Initial Load - Age gate check first
+    await ensureAgeVerification();
     await loadPhotos();
 });
+

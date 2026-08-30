@@ -1,4 +1,4 @@
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelInput = document.getElementById('model-input');
     const themeInput = document.getElementById('theme-input');
     const descInput = document.getElementById('desc-input');
+    const adultInput = document.getElementById('adult-input');
 
     const categoryList = document.getElementById('category-list');
     const modelList = document.getElementById('model-list');
@@ -239,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modelName = modelInput.value.trim();
         const theme = themeInput.value.trim();
         const description = descInput ? descInput.value.trim() : '';
+        const isAdult = adultInput ? Boolean(adultInput.checked) : false;
         const date = new Date().toISOString();
 
         uploadBtn.disabled = true;
@@ -280,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const url of uploadedUrls) {
                     await addDoc(singleShotsRef, {
                         url, modelName, theme, description, date,
+                        isAdult: isAdult,
                         uploadedAt: date,
                         uploadedBy: auth.currentUser.uid
                     });
@@ -297,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid
                 };
+                if (isAdult) {
+                    updateData.adultUrls = arrayUnion(...uploadedUrls);
+                    updateData.isAdult = true;
+                }
                 if (description) {
                     updateData.description = description;
                 }
@@ -321,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modelInput.value = '';
                 themeInput.value = '';
                 if (descInput) descInput.value = '';
+                if (adultInput) adultInput.checked = false;
             }, 3000);
 
         } catch (error) {
@@ -331,3 +339,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
