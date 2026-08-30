@@ -164,9 +164,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Helper: Robust board ID extractor from URL (supports ?id=, ?board=, #id, or /moodboard/<id>/)
+    const getBoardIdFromUrl = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramId = urlParams.get('id') || urlParams.get('board');
+        if (paramId) return paramId;
+
+        const hash = window.location.hash.replace(/^#/, '');
+        if (hash) {
+            const hashParams = new URLSearchParams(hash);
+            const hashId = hashParams.get('id') || hashParams.get('board');
+            if (hashId) return hashId;
+            if (!['login', 'signup', 'dashboard'].includes(hash) && hash.length >= 5) return hash;
+        }
+
+        const pathMatches = window.location.pathname.match(/\/moodboard\/([a-zA-Z0-9_-]+)\/?$/);
+        if (pathMatches && pathMatches[1] && pathMatches[1] !== 'index.html' && pathMatches[1] !== 'moodboard') {
+            return pathMatches[1];
+        }
+        return null;
+    };
+
     // --- Auth Management ---
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
+        const targetBoardFromUrl = getBoardIdFromUrl();
+
         if (user) {
             loginBtn.classList.add('hidden');
             logoutBtn.classList.remove('hidden');
@@ -190,7 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             authNotice.classList.add('hidden');
-            loadDashboardBoards();
+
+            if (targetBoardFromUrl && !activeBoardId) {
+                openMoodboard(targetBoardFromUrl);
+            } else if (!activeBoardId) {
+                loadDashboardBoards();
+            }
         } else {
             loginBtn.classList.remove('hidden');
             logoutBtn.classList.add('hidden');
@@ -205,10 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
             authNotice.classList.remove('hidden');
             emptyBoardsNotice.classList.add('hidden');
 
-            const urlPath = window.location.pathname;
-            const boardIdFromUrl = urlPath.match(/\/moodboard\/([^/]+)\/?$/)?.[1];
-            if (boardIdFromUrl) {
-                openMoodboard(boardIdFromUrl);
+            if (targetBoardFromUrl) {
+                openMoodboard(targetBoardFromUrl);
             } else {
                 exitBoardToDashboard();
             }
@@ -856,8 +882,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedElementId = null;
         updateSelectionToolbar();
 
-        // Update URL to reflect this board
-        const newUrl = boardId.startsWith('local_') ? '/moodboard/' : `/moodboard/${boardId}/`;
+        // Update URL with query param ?id= to support all hosting environments
+        const newUrl = boardId.startsWith('local_') ? '/moodboard/' : `/moodboard/?id=${boardId}`;
         history.pushState({ boardId }, '', newUrl);
 
         // Ensure settings button is always available in board view
@@ -865,6 +891,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Center viewport initially
         centerViewport();
+
+        let isFirstLoadForBoard = true;
 
         // Listen for Realtime updates from Firestore
         if (unsubscribeBoardSnapshot) unsubscribeBoardSnapshot();
@@ -884,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCollaborator = currentUser && (trustedUsers.includes(currentUser.uid) || trustedEmails.includes(userEmail));
             const isCreator = currentUser && (data.creatorUid === currentUser.uid || (data.creatorEmail && data.creatorEmail.toLowerCase() === userEmail));
             const canEdit = currentIsAdmin || isCreator || isCollaborator;
-            const isPublicView = !canEdit && data.viewViaUrl === true;
+            const isPublicView = !canEdit && (data.viewViaUrl === true || data.viewViaUrl === 'true');
 
             if (!canEdit && !isPublicView) {
                 showToast('This moodboard is private. Please log in with a collaborator account.');
@@ -930,6 +958,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
+
+            if (isFirstLoadForBoard) {
+                isFirstLoadForBoard = false;
+                setTimeout(() => {
+                    fitViewToElements(activeBoardData.elements, activeBoardData.drawingPaths);
+                }, 60);
+            }
         }, (error) => {
             console.error("Realtime sync error:", error);
             showToast("Access denied or permission issue.");
@@ -992,6 +1027,69 @@ document.addEventListener('DOMContentLoaded', () => {
         updateViewportTransform();
     };
 
+    // Auto-fit & zoom out to view all existing elements and drawings
+    const fitViewToElements = (elements = [], drawingPaths = []) => {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let count = 0;
+
+        if (elements && elements.length > 0) {
+            elements.forEach(el => {
+                const ex = el.x !== undefined ? el.x : 0;
+                const ey = el.y !== undefined ? el.y : 0;
+                const ew = el.width || 240;
+                const eh = el.height || 200;
+                minX = Math.min(minX, ex);
+                minY = Math.min(minY, ey);
+                maxX = Math.max(maxX, ex + ew);
+                maxY = Math.max(maxY, ey + eh);
+                count++;
+            });
+        }
+
+        if (drawingPaths && drawingPaths.length > 0) {
+            drawingPaths.forEach(path => {
+                (path.points || []).forEach(pt => {
+                    minX = Math.min(minX, pt.x);
+                    minY = Math.min(minY, pt.y);
+                    maxX = Math.max(maxX, pt.x);
+                    maxY = Math.max(maxY, pt.y);
+                    count++;
+                });
+            });
+        }
+
+        if (count === 0 || !isFinite(minX) || !isFinite(minY)) {
+            centerViewport();
+            return;
+        }
+
+        const vpRect = canvasViewport.getBoundingClientRect();
+        const vpWidth = Math.max(300, vpRect.width || window.innerWidth);
+        const vpHeight = Math.max(300, vpRect.height || window.innerHeight);
+
+        const contentW = Math.max(150, maxX - minX);
+        const contentH = Math.max(150, maxY - minY);
+
+        // Generous padding around the content (12% or 80px)
+        const padX = Math.max(80, vpWidth * 0.12);
+        const padY = Math.max(80, vpHeight * 0.12);
+
+        const scaleX = (vpWidth - padX * 2) / contentW;
+        const scaleY = (vpHeight - padY * 2) / contentH;
+
+        // Auto zoom out to show everything, but don't overzoom (max 1.0x, min 0.15x)
+        const fitScale = Math.max(0.15, Math.min(1.0, Math.min(scaleX, scaleY)));
+
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        viewportScale = fitScale;
+        viewportPanX = (vpWidth / 2) - (centerX * fitScale);
+        viewportPanY = (vpHeight / 2) - (centerY * fitScale);
+
+        updateViewportTransform();
+    };
+
     const zoomAroundPoint = (screenX, screenY, newScale) => {
         newScale = Math.max(0.2, Math.min(3.5, newScale));
         const rect = canvasViewport.getBoundingClientRect();
@@ -1012,7 +1110,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const rect = canvasViewport.getBoundingClientRect();
         zoomAroundPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, viewportScale - 0.2);
     });
-    hudResetView.addEventListener('click', centerViewport);
+    hudResetView.addEventListener('click', () => {
+        if (activeBoardData && ((activeBoardData.elements || []).length > 0 || (activeBoardData.drawingPaths || []).length > 0)) {
+            fitViewToElements(activeBoardData.elements, activeBoardData.drawingPaths);
+        } else {
+            centerViewport();
+        }
+    });
 
     // Mouse wheel zoom directly with wheel or pinch trackpad
     canvasViewport.addEventListener('wheel', (e) => {
@@ -1023,33 +1127,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
 
     // Touch & Pinch-to-zoom and Two-Finger Pan on Mobile / Tablets
-    canvasViewport.addEventListener('touchstart', (e) => {
+    const handleTouchStartGlobal = (e) => {
         for (let i = 0; i < e.changedTouches.length; i++) {
             const touch = e.changedTouches[i];
             activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
         }
 
         if (activeTouches.size >= 2) {
-            // Cancel any marquee selection immediately when 2 fingers touch
+            // Cancel marquee selection immediately
             if (isMarqueeSelecting) {
                 isMarqueeSelecting = false;
                 if (selectionMarquee) selectionMarquee.classList.remove('active');
             }
+            // Cancel any element drag or transform immediately
+            if (isDraggingElement) isDraggingElement = false;
+            if (isTransformingElement) isTransformingElement = false;
+            if (isDrawingStroke) endStroke();
+
+            // Deselect any selected note or image during 2-finger camera gesture
+            deselectAll();
+
             const [t1, t2] = Array.from(activeTouches.values());
             initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
             initialPinchScale = viewportScale;
             initialPinchCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
             lastTouchCenter = { ...initialPinchCenter };
         }
-    }, { passive: false });
+    };
+
+    canvasViewport.addEventListener('touchstart', handleTouchStartGlobal, { passive: false });
+    window.addEventListener('touchstart', handleTouchStartGlobal, { passive: true });
 
     canvasViewport.addEventListener('touchmove', (e) => {
         if (activeTouches.size >= 2) {
-            // Guarantee marquee box is never active during 2-finger gestures
+            // Guarantee marquee box and element selection are never active during 2-finger gestures
             if (isMarqueeSelecting) {
                 isMarqueeSelecting = false;
                 if (selectionMarquee) selectionMarquee.classList.remove('active');
             }
+            if (isDraggingElement) isDraggingElement = false;
+            if (isTransformingElement) isTransformingElement = false;
+
             if (initialPinchDistance && e.touches.length >= 2) {
                 e.preventDefault();
                 const t1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -1630,6 +1748,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Selection & Drag Initiation
             el.addEventListener('pointerdown', (e) => {
                 if (activeTool !== 'select') return;
+                // If 2 or more touches are present, DO NOT select or drag any note or image
+                if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
+                    return;
+                }
                 
                 const handle = e.target.closest('.transform-handle');
                 if (handle) {
@@ -1640,11 +1762,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (['TEXTAREA', 'BUTTON', 'INPUT'].includes(e.target.tagName)) {
-                    selectElement(item.id, e.shiftKey);
+                    if (activeTouches.size < 2) {
+                        selectElement(item.id, e.shiftKey);
+                    }
                     return;
                 }
 
                 e.stopPropagation();
+                selectElement(item.id, e.shiftKey);
                 startElementDrag(item, e);
             });
 
@@ -1671,6 +1796,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const selectElement = (id, addToSelection = false) => {
+        if (activeTouches.size >= 2) return;
         if (!addToSelection) {
             selectedElementIds.clear();
         }
@@ -1694,6 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Multi-Element Drag Handling
     let dragItemInitialPositions = new Map();
     const startElementDrag = (item, e) => {
+        if (activeTouches.size >= 2) return;
         isDraggingElement = true;
 
         if (!selectedElementIds.has(item.id)) {
@@ -1722,6 +1849,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleElementDragMove = (e) => {
+        if (activeTouches.size >= 2) {
+            isDraggingElement = false;
+            return;
+        }
         if (!isDraggingElement || dragItemInitialPositions.size === 0 || !activeBoardData) return;
         const worldPos = screenToWorld(e.clientX, e.clientY);
         const dx = Math.round(worldPos.x - dragStartX);
@@ -2263,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const shareUrl = activeBoardId && !activeBoardId.startsWith('local_')
-                ? `${window.location.origin}/moodboard/${activeBoardId}/`
+                ? `${window.location.origin}/moodboard/?id=${activeBoardId}`
                 : `${window.location.origin}/moodboard/`;
             if (inputShareUrl) inputShareUrl.value = shareUrl;
             if (shareLinkBox) shareLinkBox.style.display = activeBoardData.viewViaUrl ? 'block' : 'none';
@@ -2423,25 +2554,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- URL-based Board Routing on Page Load ---
-    // Parse /moodboard/<boardId>/ from the URL
-    const urlPath = window.location.pathname;
-    const boardIdFromUrl = urlPath.match(/\/moodboard\/([^/]+)\/?$/)?.[1];
-
-    if (boardIdFromUrl) {
-        // Auto-open this specific board (auth state will handle permission check)
-        // Wait for auth to settle first - openMoodboard called when user is confirmed or after a brief wait
-        const tryOpenBoard = () => {
-            if (currentUser !== undefined) {
-                openMoodboard(boardIdFromUrl);
-            } else {
-                setTimeout(tryOpenBoard, 100);
-            }
-        };
-        // Auth state already fired above; if activeBoardId is null still, open now
-        // The onAuthStateChanged will have fired synchronously if cached
+    const initialBoardId = getBoardIdFromUrl();
+    if (initialBoardId) {
         setTimeout(() => {
-            if (!activeBoardId) openMoodboard(boardIdFromUrl);
-        }, 500);
+            if (!activeBoardId) openMoodboard(initialBoardId);
+        }, 150);
     }
-    // Otherwise: stay on dashboard
 });
