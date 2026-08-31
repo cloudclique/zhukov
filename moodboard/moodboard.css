@@ -35,6 +35,8 @@ body.moodboard-body {
 
 body.moodboard-body header {
     width: 100%;
+    position: relative;
+    z-index: 10000 !important;
 }
 
 body.moodboard-body.inside-board header {
@@ -115,7 +117,7 @@ body.moodboard-body.inside-board header {
     position: absolute;
     inset: 0;
     #background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.8), #070a12 80%);
-    z-index: 500;
+    z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -825,6 +827,117 @@ body.is-viewer-mode .eraser-cursor-indicator {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+/* --- Floating Group Tags Sidebar (Right Side of Canvas) --- */
+.groups-sidebar {
+    position: absolute;
+    top: 4.8rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-width: 230px;
+    max-height: calc(100vh - 12rem);
+    z-index: 100;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: fadeInTags 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInTags {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.groups-sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--mb-text-muted);
+}
+
+.groups-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 14rem);
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.group-tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    color: #e2e8f0;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+}
+
+.group-tag-item:hover {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    transform: translateX(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.2);
+}
+
+.group-tag-item.is-active {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: rgba(56, 189, 248, 0.65);
+    color: #38bdf8;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+.group-tag-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.group-tag-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 130px;
+}
+
+.group-tag-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    padding: 0.1rem 0.42rem;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.group-tag-item.is-active .group-tag-count {
+    background: rgba(56, 189, 248, 0.28);
+    color: #38bdf8;
 }
 
 /* --- Note Style Panel --- */
@@ -1616,4 +1729,385 @@ select.form-input option:hover {
 .mb-toast.show {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
+}
+
+/* ============================================
+   Responsive Design for Mobile & Slim Screens
+   ============================================ */
+@media (max-width: 768px) {
+    /* --- Dashboard View --- */
+    .dashboard-view {
+        padding: 2rem 1.25rem 4rem;
+    }
+
+    .dashboard-hero {
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-hero h2 {
+        font-size: clamp(2.1rem, 6vw, 2.8rem);
+    }
+
+    .dashboard-hero p {
+        font-size: 0.98rem;
+        line-height: 1.55;
+    }
+
+    .dashboard-controls {
+        margin-top: 1.2rem;
+    }
+
+    #btn-create-board {
+        padding: 0.75rem 1.4rem;
+        font-size: 0.95rem;
+    }
+
+    .boards-grid {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+        margin-bottom: 3rem;
+    }
+
+    .board-card {
+        padding: 1.35rem 1.2rem;
+        border-radius: 16px;
+    }
+
+    /* --- Canvas In-Workspace Top Bar --- */
+    .canvas-top-bar {
+        top: 0.75rem;
+        left: 0.75rem;
+        right: 0.75rem;
+    }
+
+    .board-meta-bar {
+        padding: 0.35rem 0.65rem;
+        gap: 0.45rem;
+        border-radius: 12px;
+        max-width: 58vw;
+        min-width: 0;
+    }
+
+    .board-title-display {
+        font-size: 0.95rem;
+        gap: 0.4rem;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    #active-board-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 110px;
+    }
+
+    .board-badge {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.35rem;
+        flex-shrink: 0;
+    }
+
+    .canvas-top-actions {
+        gap: 0.35rem;
+        flex-shrink: 0;
+    }
+
+    #btn-board-settings {
+        padding: 0.4rem 0.55rem;
+        border-radius: 10px;
+    }
+
+    #btn-board-settings span {
+        display: none !important;
+    }
+
+    .top-history-btns {
+        padding: 0.15rem;
+        gap: 0.1rem;
+        border-radius: 8px;
+    }
+
+    .top-history-btns .hud-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* --- HUD Zoom & Reset Controls --- */
+    .hud-controls {
+        top: 3.85rem !important;
+        bottom: auto !important;
+        right: 0.75rem !important;
+        padding: 0.2rem;
+        border-radius: 10px;
+        gap: 0.15rem;
+        background: rgba(15, 23, 42, 0.92);
+    }
+
+    .hud-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .hud-zoom-text {
+        font-size: 0.75rem;
+        min-width: 36px;
+        padding: 0 0.2rem;
+    }
+
+    /* --- Floating Studio Toolbar (Bottom) --- */
+    .floating-toolbar {
+        bottom: max(1rem, calc(0.6rem + env(safe-area-inset-bottom, 0px))) !important;
+        padding: 0.35rem 0.45rem;
+        gap: 0.2rem;
+        border-radius: 16px;
+        max-width: calc(100vw - 1rem);
+    }
+
+    .floating-toolbar .pc-only-tool {
+        display: none !important;
+    }
+
+    .floating-toolbar .tool-btn span {
+        display: none !important;
+    }
+
+    .floating-toolbar .tool-btn {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        border-radius: 10px;
+    }
+
+    .floating-toolbar .tool-btn svg {
+        width: 19px;
+        height: 19px;
+    }
+
+    .tool-separator {
+        height: 20px;
+        margin: 0 0.1rem;
+    }
+
+    /* --- Tool Options Drawer (Pen & Eraser Submenus) --- */
+    .tool-options-drawer {
+        bottom: max(4.5rem, calc(4rem + env(safe-area-inset-bottom, 0px))) !important;
+        padding: 0.4rem 0.6rem;
+        gap: 0.4rem;
+        border-radius: 14px;
+        max-width: calc(100vw - 1rem);
+    }
+
+    .color-dot {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+    }
+
+    .size-pill {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+
+    /* --- Selection Floating Toolbar --- */
+    .selection-toolbar {
+        padding: 0.3rem 0.45rem;
+        border-radius: 12px;
+        gap: 0.3rem;
+    }
+
+    .selection-toolbar .sel-btn {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.8rem;
+    }
+
+    .selection-toolbar .sel-btn span {
+        font-size: 0.8rem;
+    }
+
+    /* --- Note Style Panel --- */
+    .note-style-panel {
+        bottom: max(4.5rem, calc(4rem + env(safe-area-inset-bottom, 0px))) !important;
+        right: 0.75rem !important;
+        left: 0.75rem !important;
+        width: auto !important;
+        max-width: calc(100vw - 1.5rem) !important;
+        max-height: 58vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 1rem;
+        border-radius: 18px;
+        gap: 0.85rem;
+    }
+
+    .swatch {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* --- Modals on Mobile --- */
+    .modal-window {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 88vh;
+        border-radius: 18px;
+    }
+
+    .modal-header {
+        padding: 1rem 1.2rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.2rem;
+    }
+
+    .modal-body {
+        padding: 1rem 1.2rem;
+    }
+
+    .modal-footer {
+        padding: 0.85rem 1.2rem;
+    }
+
+    .photoshoot-picker-modal {
+        max-width: 95vw !important;
+        height: 88vh;
+    }
+
+    .picker-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0.35rem;
+    }
+
+    .picker-tab-btn {
+        padding: 0.45rem 0.75rem;
+        font-size: 0.82rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .photos-grid-picker {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+        max-height: 48vh;
+    }
+
+    .groups-sidebar {
+        top: 3.85rem !important;
+        left: 0.75rem !important;
+        right: auto !important;
+        bottom: auto !important;
+        max-width: min(240px, calc(100vw - 7rem)) !important;
+        max-height: 40vh !important;
+        align-items: flex-start !important;
+    }
+
+    .group-tag-item {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.8rem;
+    }
+
+    .group-tag-name {
+        max-width: 110px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Slim Smartphones */
+    .dashboard-view {
+        padding: 1.5rem 0.85rem 3.5rem;
+    }
+
+    .dashboard-hero h2 {
+        font-size: 2rem;
+    }
+
+    .dashboard-hero p {
+        font-size: 0.9rem;
+    }
+
+    #btn-create-board {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .board-card {
+        padding: 1.15rem 0.95rem;
+        border-radius: 14px;
+    }
+
+    .board-card-title {
+        font-size: 1.15rem;
+    }
+
+    .canvas-top-bar {
+        top: 0.6rem;
+        left: 0.6rem;
+        right: 0.6rem;
+    }
+
+    .board-meta-bar {
+        max-width: 52vw;
+    }
+
+    #active-board-title {
+        max-width: 85px;
+    }
+
+    .floating-toolbar {
+        bottom: max(0.75rem, calc(0.4rem + env(safe-area-inset-bottom, 0px))) !important;
+        padding: 0.3rem 0.35rem;
+        gap: 0.15rem;
+    }
+
+    .floating-toolbar .tool-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+    }
+
+    .floating-toolbar .tool-btn svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    .tool-options-drawer {
+        bottom: max(4.2rem, calc(3.8rem + env(safe-area-inset-bottom, 0px))) !important;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .hud-controls {
+        top: 3.5rem !important;
+        right: 0.6rem !important;
+    }
+
+    .note-style-panel {
+        bottom: max(4.2rem, calc(3.8rem + env(safe-area-inset-bottom, 0px))) !important;
+        padding: 0.85rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .photos-grid-picker {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+
+    .groups-sidebar {
+        top: 3.45rem !important;
+        left: 0.6rem !important;
+        right: auto !important;
+        bottom: auto !important;
+        max-width: min(220px, calc(100vw - 6rem)) !important;
+        max-height: 38vh !important;
+    }
 }

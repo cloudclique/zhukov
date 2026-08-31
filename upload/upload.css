@@ -131,3 +131,18 @@
     margin-top: 0.4rem;
     margin-left: 1.85rem;
 }
+
+@media (max-width: 480px) {
+    .upload-container {
+        margin: 1.5rem 0.75rem;
+        padding: 1.25rem 1rem;
+    }
+
+    .upload-area {
+        padding: 2rem 0.75rem;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}

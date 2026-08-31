@@ -71,6 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const emptyBoardsNotice = document.getElementById('empty-boards-notice');
     const btnAuthNoticeLogin = document.getElementById('btn-auth-notice-login');
     const selectionToolbar = document.getElementById('selection-toolbar');
+    const btnCreateGroup = document.getElementById('btn-create-group');
+    const btnUngroup = document.getElementById('btn-ungroup');
+    const groupSep = document.getElementById('group-sep');
+    const groupsSidebar = document.getElementById('groups-sidebar');
+    const groupsTagsList = document.getElementById('groups-tags-list');
     const btnUndoAction = document.getElementById('btn-undo-action');
     const btnRedoAction = document.getElementById('btn-redo-action');
     const btnDeleteSelected = document.getElementById('btn-delete-selected');
@@ -198,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: '',
                 elements: [],
                 drawingPaths: [],
+                groups: [],
                 trustedEmails: []
             };
         }
@@ -467,6 +473,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDrawingPaths(activeBoardData.drawingPaths);
                 break;
             }
+            case 'CREATE_GROUP': {
+                activeBoardData.groups = (activeBoardData.groups || []).filter(g => g.id !== action.group.id);
+                renderGroupTags();
+                updateSelectionToolbar();
+                break;
+            }
+            case 'UNGROUP': {
+                if (!activeBoardData.groups) activeBoardData.groups = [];
+                (action.groups || []).forEach(g => {
+                    if (!activeBoardData.groups.some(existing => existing.id === g.id)) {
+                        activeBoardData.groups.push({ ...g });
+                    }
+                });
+                renderGroupTags();
+                updateSelectionToolbar();
+                break;
+            }
         }
 
         updateUndoRedoButtons();
@@ -631,6 +654,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDrawingPaths(activeBoardData.drawingPaths);
                 break;
             }
+            case 'CREATE_GROUP': {
+                if (!activeBoardData.groups) activeBoardData.groups = [];
+                if (!activeBoardData.groups.some(g => g.id === action.group.id)) {
+                    activeBoardData.groups.push({ ...action.group });
+                }
+                renderGroupTags();
+                updateSelectionToolbar();
+                break;
+            }
+            case 'UNGROUP': {
+                const unIds = new Set((action.groups || []).map(g => g.id));
+                activeBoardData.groups = (activeBoardData.groups || []).filter(g => !unIds.has(g.id));
+                renderGroupTags();
+                updateSelectionToolbar();
+                break;
+            }
         }
 
         updateUndoRedoButtons();
@@ -662,17 +701,209 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgColorInput = document.getElementById('bg-color-input');
     const fontColorInput = document.getElementById('font-color-input');
 
+    // --- Group Navigation & Zoom To Fit Group ---
+    const zoomToGroup = (group) => {
+        if (!group || !group.elementIds || group.elementIds.length === 0 || !activeBoardData) return;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let count = 0;
+
+        group.elementIds.forEach(id => {
+            const el = (activeBoardData.elements || []).find(it => it.id === id);
+            if (el) {
+                const w = Number(el.width) || 200;
+                const h = Number(el.height) || 150;
+                const rot = (Number(el.rotation) || 0) * (Math.PI / 180);
+                const cos = Math.abs(Math.cos(rot));
+                const sin = Math.abs(Math.sin(rot));
+                const bw = w * cos + h * sin;
+                const bh = w * sin + h * cos;
+                const cx = el.x + w / 2;
+                const cy = el.y + h / 2;
+
+                minX = Math.min(minX, cx - bw / 2);
+                minY = Math.min(minY, cy - bh / 2);
+                maxX = Math.max(maxX, cx + bw / 2);
+                maxY = Math.max(maxY, cy + bh / 2);
+                count++;
+            }
+            const path = (activeBoardData.drawingPaths || []).find(p => p.id === id);
+            if (path && path.points && path.points.length > 0) {
+                const box = getPathBoundingBox(path);
+                if (box) {
+                    minX = Math.min(minX, box.x);
+                    minY = Math.min(minY, box.y);
+                    maxX = Math.max(maxX, box.x + box.width);
+                    maxY = Math.max(maxY, box.y + box.height);
+                    count++;
+                }
+            }
+        });
+
+        if (count === 0 || !isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return;
+
+        const vpRect = canvasViewport.getBoundingClientRect();
+        const vpWidth = Math.max(300, vpRect.width || window.innerWidth);
+        const vpHeight = Math.max(300, vpRect.height || window.innerHeight);
+
+        const contentW = Math.max(60, maxX - minX);
+        const contentH = Math.max(60, maxY - minY);
+
+        // Generous padding around the group
+        const padX = Math.max(80, vpWidth * 0.12);
+        const padTop = Math.max(80, vpHeight * 0.14);
+        const padBottom = Math.max(90, vpHeight * 0.16);
+
+        const availableW = Math.max(50, vpWidth - padX * 2);
+        const availableH = Math.max(50, vpHeight - padTop - padBottom);
+
+        const scaleX = availableW / contentW;
+        const scaleY = availableH / contentH;
+
+        const targetScale = Math.max(0.08, Math.min(2.5, Math.min(scaleX, scaleY)));
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        const targetPanX = (vpWidth / 2) - (centerX * targetScale);
+        const targetPanY = ((padTop + (vpHeight - padBottom)) / 2) - (centerY * targetScale);
+
+        animateViewportTo(targetPanX, targetPanY, targetScale);
+    };
+
+    // Render floating group tags on the right side of the canvas
+    const renderGroupTags = () => {
+        if (!groupsSidebar || !groupsTagsList) return;
+        const groups = (activeBoardData && activeBoardData.groups) || [];
+        if (groups.length === 0 || canvasView.style.display === 'none') {
+            groupsSidebar.style.display = 'none';
+            groupsTagsList.innerHTML = '';
+            return;
+        }
+
+        groupsSidebar.style.display = 'flex';
+        groupsTagsList.innerHTML = '';
+
+        groups.forEach((grp, idx) => {
+            const tag = document.createElement('button');
+            tag.className = 'group-tag-item';
+            tag.dataset.groupId = grp.id;
+            const validCount = (grp.elementIds || []).length;
+            tag.title = `Zoom to ${grp.name || `Group ${idx + 1}`} (${validCount} items)`;
+
+            const isGroupSelected = validCount > 0 && grp.elementIds.every(id => selectedElementIds.has(id));
+            if (isGroupSelected) tag.classList.add('is-active');
+
+            tag.innerHTML = `
+                <span class="group-tag-icon">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+                </span>
+                <span class="group-tag-name">${escapeHtml(grp.name || `Group ${idx + 1}`)}</span>
+                <span class="group-tag-count">${validCount}</span>
+            `;
+
+            tag.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) {
+                    zoomToGroup(grp);
+                    return;
+                }
+                selectedElementIds.clear();
+                (grp.elementIds || []).forEach(id => selectedElementIds.add(id));
+                selectedElementId = grp.elementIds[0] || null;
+                updateSelectedDOM();
+                updateSelectionToolbar();
+                zoomToGroup(grp);
+            });
+
+            groupsTagsList.appendChild(tag);
+        });
+    };
+
+    const createGroupFromSelection = async () => {
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) return;
+        if (selectedElementIds.size <= 1 || !activeBoardData) return;
+
+        let nextNum = 1;
+        const existingNames = new Set((activeBoardData.groups || []).map(g => (g.name || '').trim()));
+        while (existingNames.has(`Group ${nextNum}`)) {
+            nextNum++;
+        }
+        const defaultName = `Group ${nextNum}`;
+        const inputName = prompt('Enter group name (leave empty for default):', defaultName);
+        if (inputName === null) return;
+        const groupName = inputName.trim() || defaultName;
+
+        const newGroup = {
+            id: 'grp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            name: groupName,
+            elementIds: Array.from(selectedElementIds)
+        };
+
+        if (!activeBoardData.groups) activeBoardData.groups = [];
+        activeBoardData.groups.push(newGroup);
+
+        recordAction({ type: 'CREATE_GROUP', group: { ...newGroup } });
+        renderGroupTags();
+        updateSelectionToolbar();
+        await queueSaveBoard();
+        showToast(`Group "${newGroup.name}" created!`);
+    };
+
+    const ungroupSelected = async () => {
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) return;
+        if (!activeBoardData || !activeBoardData.groups || activeBoardData.groups.length === 0) return;
+
+        const matchingGroups = activeBoardData.groups.filter(g =>
+            g.elementIds && g.elementIds.some(id => selectedElementIds.has(id) || id === selectedElementId)
+        );
+        if (matchingGroups.length === 0) return;
+
+        const matchingGroupIds = new Set(matchingGroups.map(g => g.id));
+        const removedGroups = matchingGroups.map(g => ({ ...g }));
+
+        activeBoardData.groups = activeBoardData.groups.filter(g => !matchingGroupIds.has(g.id));
+
+        recordAction({ type: 'UNGROUP', groups: removedGroups });
+        renderGroupTags();
+        updateSelectionToolbar();
+        await queueSaveBoard();
+        showToast('Group dissolved.');
+    };
+
+    if (btnCreateGroup) {
+        btnCreateGroup.addEventListener('click', createGroupFromSelection);
+    }
+    if (btnUngroup) {
+        btnUngroup.addEventListener('click', ungroupSelected);
+    }
+
     const updateSelectionToolbar = () => {
         if (!selectionToolbar) return;
-        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) {
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) {
             selectionToolbar.classList.remove('visible');
             if (noteStylePanel) noteStylePanel.classList.remove('open');
+            renderGroupTags();
             return;
         }
         const count = selectedElementIds.size || (selectedElementId ? 1 : 0);
         if (count > 0) {
             selectionToolbar.classList.add('visible');
-            // Show "Style" button only when a single text note is selected
+
+            // 1. Group Button (visible when multiple objects selected and can edit)
+            const canGroup = selectedElementIds.size > 1;
+            if (btnCreateGroup) btnCreateGroup.style.display = canGroup ? '' : 'none';
+
+            // 2. Ungroup Button (visible when one or more items from a group are selected)
+            const hasGroupedSelected = (activeBoardData?.groups || []).some(g =>
+                g.elementIds && g.elementIds.some(id => selectedElementIds.has(id) || id === selectedElementId)
+            );
+            if (btnUngroup) btnUngroup.style.display = hasGroupedSelected ? '' : 'none';
+
+            if (groupSep) groupSep.style.display = (canGroup || hasGroupedSelected) ? '' : 'none';
+
+            // 3. Show "Style" button only when a single text note is selected
             const isSingle = count === 1;
             const singleId = selectedElementId || Array.from(selectedElementIds)[0];
             const item = (isSingle && activeBoardData) ? activeBoardData.elements.find(it => it.id === singleId) : null;
@@ -683,8 +914,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isText) syncStylePanelToItem(item);
         } else {
             selectionToolbar.classList.remove('visible');
+            if (btnCreateGroup) btnCreateGroup.style.display = 'none';
+            if (btnUngroup) btnUngroup.style.display = 'none';
+            if (groupSep) groupSep.style.display = 'none';
             if (noteStylePanel) noteStylePanel.classList.remove('open');
         }
+        renderGroupTags();
     };
 
     // Sync panel controls to current item styles
@@ -1097,6 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!activeBoardData.elements) activeBoardData.elements = [];
             if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
             activeBoardData.drawingPaths = activeBoardData.drawingPaths.filter(p => !p.isEraser);
+            if (!activeBoardData.groups) activeBoardData.groups = [];
             if (!activeBoardData.trustedEmails) activeBoardData.trustedEmails = [];
 
             if (activeEditingId && currentEditingText !== null) {
@@ -1152,6 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
+            renderGroupTags();
 
             if (isFirstLoadForBoard) {
                 isFirstLoadForBoard = false;
@@ -1181,6 +1418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedElementIds.clear();
         selectedElementId = null;
         updateSelectionToolbar();
+        renderGroupTags();
         canvasView.style.display = 'none';
         dashboardView.style.display = 'flex';
         history.pushState({}, '', '/moodboard/');
@@ -1509,6 +1747,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 return;
             }
+        }
+
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                ungroupSelected();
+            } else {
+                createGroupFromSelection();
+            }
+            return;
         }
 
         if (e.key === 'v' || e.key === 'V') setTool('select');
@@ -2198,6 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     groupSelectionBox.addEventListener('pointerdown', (e) => {
         if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTool !== 'select') return;
+        if (e.button !== 0) return;
         if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
 
         const handle = e.target.closest('.transform-handle');
@@ -2313,6 +2562,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             el.addEventListener('pointerdown', (e) => {
                 if (activeTool !== 'select') return;
+                if (e.button !== 0) return;
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
 
                 const handle = e.target.closest('.transform-handle');
@@ -2497,6 +2747,7 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('pointerdown', (e) => {
                 if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
                 if (activeTool !== 'select') return;
+                if (e.button !== 0) return;
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
                     return;
                 }
@@ -2609,6 +2860,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startElementDrag = (item, e) => {
         if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
+        if (e && e.button !== undefined && e.button !== 0) return;
         isDraggingElement = true;
         elementsContainer.classList.add('is-dragging-active');
 
@@ -2757,6 +3009,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startElementTransform = (item, handleType, e) => {
         if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
+        if (e && e.button !== undefined && e.button !== 0) return;
         isTransformingElement = true;
         transformAction = handleType;
         elementsContainer.classList.add('is-dragging-active');
@@ -3215,10 +3468,19 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBoardData.elements = (activeBoardData.elements || []).filter(it => !selectedElementIds.has(it.id));
         activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => !selectedElementIds.has(p.id));
 
+        // Prune deleted elements from groups and remove empty groups
+        if (activeBoardData.groups) {
+            activeBoardData.groups.forEach(g => {
+                g.elementIds = (g.elementIds || []).filter(id => !selectedElementIds.has(id));
+            });
+            activeBoardData.groups = activeBoardData.groups.filter(g => g.elementIds && g.elementIds.length > 0);
+        }
+
         const totalDeleted = toDeleteElements.length + toDeleteDrawings.length;
         deselectAll();
         renderCanvasElements(activeBoardData.elements);
         renderDrawingPaths(activeBoardData.drawingPaths);
+        renderGroupTags();
         await queueSaveBoard();
         showToast(`Deleted ${totalDeleted} item${totalDeleted === 1 ? '' : 's'}.`);
     };
@@ -3240,8 +3502,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedElementId === id) {
             selectedElementId = Array.from(selectedElementIds)[0] || null;
         }
+
+        if (activeBoardData.groups) {
+            activeBoardData.groups.forEach(g => {
+                g.elementIds = (g.elementIds || []).filter(itemI => itemI !== id);
+            });
+            activeBoardData.groups = activeBoardData.groups.filter(g => g.elementIds && g.elementIds.length > 0);
+        }
+
         renderCanvasElements(activeBoardData.elements);
         renderDrawingPaths(activeBoardData.drawingPaths);
+        renderGroupTags();
         updateSelectionToolbar();
         await queueSaveBoard();
         showToast('Item deleted.');
@@ -3664,6 +3935,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await updateDoc(boardRef, {
                 elements: activeBoardData.elements || [],
                 drawingPaths: activeBoardData.drawingPaths || [],
+                groups: activeBoardData.groups || [],
                 trustedEmails: activeBoardData.trustedEmails || [],
                 updatedAt: new Date().toISOString()
             });

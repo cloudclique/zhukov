@@ -29,25 +29,68 @@
                 <h1 class="brand-name">ZHUKOV</h1>
                 <p class="brand-subtitle">studio</p>
             </a>
-            <nav class="header-nav">
-                <a href="/" class="active">Home</a>
-                <a href="/photoshoots/">Photoshoots</a>
-                <a href="/moodboard/">Moodboard</a>
-                <a href="/about/">About Me</a>
-                <a href="/contact/">Contact</a>
-            </nav>
-            <div class="header-actions">
-                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                <script>
-                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                        document.getElementById('logout-btn').classList.remove('hidden');
-                    } else {
-                        document.getElementById('login-btn-header').classList.remove('hidden');
-                    }
-                </script>
+
+            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
+            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
+            <div class="header-nav-container" id="header-nav-container">
+                <nav class="header-nav">
+                    <a href="/" class="active">Home</a>
+                    <a href="/photoshoots/">Photoshoots</a>
+                    <a href="/moodboard/">Moodboard</a>
+                    <a href="/about/">About Me</a>
+                    <a href="/contact/">Contact</a>
+                </nav>
+                <div class="header-actions">
+                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
+                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                    <script>
+                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                            document.getElementById('logout-btn').classList.remove('hidden');
+                        } else {
+                            document.getElementById('login-btn-header').classList.remove('hidden');
+                        }
+                    </script>
+                </div>
             </div>
         </div>
+        <script>
+            (function() {
+                const btn = document.getElementById('mobile-menu-btn');
+                const nav = document.getElementById('header-nav-container');
+                if (!btn || !nav) return;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = nav.classList.toggle('open');
+                    btn.classList.toggle('active', isOpen);
+                    btn.setAttribute('aria-expanded', isOpen);
+                });
+                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+                    nav.classList.remove('open');
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-expanded', 'false');
+                }));
+                document.addEventListener('click', (e) => {
+                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
+                        nav.classList.remove('open');
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        nav.classList.remove('open');
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            })();
+        </script>
     </header>
 
     <main id="app-content">
@@ -55,7 +98,7 @@
         <section class="hero-section">
             <div class="hero-text">
                 <h2>Capturing moments <br>that last a lifetime.</h2>
-                <p>I am a professional photographer specializing in portrait, fashion, and conceptual photography. My
+                <p>I am a professional photographer specializing in portrait, fashion, and glamour photography. My
                     mission is to tell your story through stunning visual art.</p>
                 <div class="hero-buttons">
                     <a href="/photoshoots/" class="btn-primary">View Photoshoots</a>
@@ -100,8 +143,8 @@
                 <p>High-end fashion shoots with a focus on lighting, mood, and striking compositions.</p>
             </div>
             <div class="service-card">
-                <h4>Events & Lifestyle</h4>
-                <p>Documentary-style coverage of your most important moments, capturing genuine emotion.</p>
+                <h4>Glamour</h4>
+                <p>Sophisticated, alluring photography crafted with elegant lighting, beauty, and captivating confidence.</p>
             </div>
         </section>
 

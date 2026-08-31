@@ -18,26 +18,69 @@
                 <h1 class="brand-name">ZHUKOV</h1>
                 <p class="brand-subtitle">studio</p>
             </a>
-            <nav class="header-nav">
-                <a href="/">Home</a>
-                <a href="/photoshoots/">Photoshoots</a>
-                <a href="/moodboard/" class="active">Moodboard</a>
-                <a href="/about/">About Me</a>
-                <a href="/contact/">Contact</a>
-                <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
-            </nav>
-            <div class="header-actions">
-                <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                <script>
-                    if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                        document.getElementById('logout-btn').classList.remove('hidden');
-                    } else {
-                        document.getElementById('login-btn-header').classList.remove('hidden');
-                    }
-                </script>
+
+            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
+            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
+            <div class="header-nav-container" id="header-nav-container">
+                <nav class="header-nav">
+                    <a href="/">Home</a>
+                    <a href="/photoshoots/">Photoshoots</a>
+                    <a href="/moodboard/" class="active">Moodboard</a>
+                    <a href="/about/">About Me</a>
+                    <a href="/contact/">Contact</a>
+                    <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
+                </nav>
+                <div class="header-actions">
+                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
+                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
+                    <script>
+                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
+                            document.getElementById('logout-btn').classList.remove('hidden');
+                        } else {
+                            document.getElementById('login-btn-header').classList.remove('hidden');
+                        }
+                    </script>
+                </div>
             </div>
         </div>
+        <script>
+            (function() {
+                const btn = document.getElementById('mobile-menu-btn');
+                const nav = document.getElementById('header-nav-container');
+                if (!btn || !nav) return;
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isOpen = nav.classList.toggle('open');
+                    btn.classList.toggle('active', isOpen);
+                    btn.setAttribute('aria-expanded', isOpen);
+                });
+                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+                    nav.classList.remove('open');
+                    btn.classList.remove('active');
+                    btn.setAttribute('aria-expanded', 'false');
+                }));
+                document.addEventListener('click', (e) => {
+                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
+                        nav.classList.remove('open');
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        nav.classList.remove('open');
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            })();
+        </script>
     </header>
 
     <!-- Main App Container -->
@@ -131,6 +174,15 @@
 
             <!-- Floating Selection Toolbar (visible when an element is selected) -->
             <div id="selection-toolbar" class="selection-toolbar">
+                <button id="btn-create-group" class="sel-btn" title="Create Group (Ctrl+G)" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>
+                    <span>Group</span>
+                </button>
+                <button id="btn-ungroup" class="sel-btn" title="Ungroup (Ctrl+Shift+G)" style="display:none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M2 12h20" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/></svg>
+                    <span>Ungroup</span>
+                </button>
+                <div class="tool-separator" id="group-sep" style="display:none"></div>
                 <button id="btn-style-note" class="sel-btn" title="Style Note" style="display:none">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.477-1.125-.29-.289-.438-.652-.438-1.042a1.8 1.8 0 0 1 1.668-1.8l1.395-.139c3.243-.32 5.704-3.01 5.704-6.218C22 6.5 17.5 2 12 2z" stroke-width="2"/></svg>
                     <span>Style</span>
@@ -140,6 +192,15 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     <span>Delete</span>
                 </button>
+            </div>
+
+            <!-- Floating Group Tags List on the Right Side -->
+            <div id="groups-sidebar" class="groups-sidebar" style="display: none;">
+                <div class="groups-sidebar-header">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    <span>Groups</span>
+                </div>
+                <div id="groups-tags-list" class="groups-tags-list"></div>
             </div>
 
             <!-- Floating Studio Toolbar -->

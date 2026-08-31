@@ -237,3 +237,108 @@
     color: #94a3b8;
     font-size: 1.2rem;
 }
+
+/* ============================================
+   Responsive Design for Mobile & Slim Screens
+   ============================================ */
+@media (max-width: 768px) {
+    .sort-bar {
+        margin: 1.5rem 0;
+        gap: 0.75rem;
+    }
+
+    .category-row {
+        margin-bottom: 2.5rem;
+        padding-left: 1.25rem;
+    }
+
+    .category-header {
+        padding-right: 1.25rem;
+    }
+
+    .category-title {
+        font-size: 1.5rem;
+    }
+
+    .scrollable-row .img-container {
+        height: 200px;
+        min-width: 140px;
+    }
+
+    .row-img {
+        height: 200px;
+    }
+
+    .fade-overlay {
+        width: 160px;
+        padding-right: 1.25rem;
+    }
+
+    .fade-btn-text {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sort-bar {
+        flex-wrap: wrap;
+        justify-content: stretch;
+        gap: 0.5rem;
+        margin: 1rem 0;
+        padding: 0 0.5rem;
+    }
+
+    .sort-select, .sort-btn {
+        flex: 1 1 auto;
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    .category-row {
+        margin-bottom: 2rem;
+        padding-left: 0.85rem;
+    }
+
+    .category-header {
+        padding-right: 0.85rem;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .category-title {
+        font-size: 1.25rem;
+    }
+
+    .category-meta {
+        font-size: 0.82rem;
+    }
+
+    .scrollable-row {
+        gap: 0.65rem;
+    }
+
+    .scrollable-row .img-container {
+        height: 165px;
+        min-width: 115px;
+        border-radius: 6px;
+    }
+
+    .row-img {
+        height: 165px;
+        border-radius: 6px;
+    }
+
+    .fade-overlay {
+        width: 110px;
+        padding-right: 0.75rem;
+    }
+
+    .fade-btn-text {
+        font-size: 0.88rem;
+    }
+
+    #no-results {
+        padding: 2.5rem 1rem;
+    }
+}

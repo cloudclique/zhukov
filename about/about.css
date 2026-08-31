@@ -8,3 +8,18 @@
     color: #94a3b8;
     margin-top: 1rem;
 }
+
+@media (max-width: 480px) {
+    .about-container {
+        padding: 0 0.5rem;
+        line-height: 1.65;
+    }
+    
+    .about-container h2 {
+        font-size: 1.8rem;
+    }
+
+    .about-text {
+        font-size: 0.95rem;
+    }
+}

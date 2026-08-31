@@ -31,7 +31,7 @@ header {
     padding: 2.5rem 2rem;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 10000;
     background: linear-gradient(to bottom, rgba(30, 41, 59, 0.13), rgba(15, 23, 42, 0.178));
     backdrop-filter: blur(50px);
     -webkit-backdrop-filter: blur(50px);
@@ -48,14 +48,6 @@ header {
     justify-content: space-between;
     align-items: center;
     text-align: left;
-}
-
-@media (max-width: 600px) {
-    .header-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 1.5rem;
-    }
 }
 
 /* Brand Logo */
@@ -590,26 +582,24 @@ main {
     transform: scale(1.1);
 }
 
-@media (max-width: 768px) {
-    main {
-        padding: 2rem 1.5rem;
-    }
-
-    header {
-        padding: 4rem 1.5rem;
-    }
-
-    header h1 {
-        font-size: 2.5rem;
-    }
-}
-
 /* Utilities */
 .hidden {
     display: none !important;
 }
 
-/* Header Navigation */
+/* Header Navigation Container & Burger Button (Desktop defaults) */
+.mobile-menu-btn {
+    display: none !important;
+}
+
+.header-nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    margin-left: 3rem;
+}
+
 .header-nav {
     display: flex;
     gap: 2rem;
@@ -627,14 +617,6 @@ main {
 .header-nav a:hover,
 .header-nav a.active {
     color: var(--accent-color);
-}
-
-@media (max-width: 768px) {
-    .header-nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 1rem;
-    }
 }
 
 /* Header Buttons */
@@ -889,6 +871,11 @@ main {
     margin-top: 3rem;
 }
 
+/* ============================================
+   Responsive Design for Medium, Mobile & Slim Screens
+   ============================================ */
+
+/* ── Tablet & Medium Screens (<= 900px) ── */
 @media (max-width: 900px) {
 
     .hero-section,
@@ -898,6 +885,449 @@ main {
 
     .home-services {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ── Mobile Screens (<= 768px) ── */
+@media (max-width: 768px) {
+    header {
+        padding: 1.1rem 1.5rem;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(15, 23, 42, 0.95);
+    }
+
+    .header-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+        width: 100%;
+        position: relative;
+    }
+
+    .brand-logo {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .brand-name {
+        font-size: 2.5rem !important;
+    }
+
+    .brand-subtitle {
+        font-size: 0.95rem !important;
+    }
+
+    /* Burger Button */
+    .mobile-menu-btn {
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        cursor: pointer;
+        z-index: 120;
+        padding: 0;
+        transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-menu-btn:hover,
+    .mobile-menu-btn:active {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .hamburger-line {
+        width: 20px;
+        height: 2px;
+        background-color: var(--text-color);
+        border-radius: 2px;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+        transform-origin: center;
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(2) {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+
+    .mobile-menu-btn.active .hamburger-line:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    /* Mobile Dropdown Drawer (Blurred only for the menu itself) */
+    .header-nav-container {
+        position: absolute;
+        top: calc(100% + 0.85rem);
+        left: 0;
+        right: 0;
+        background: rgba(15, 23, 42, 0.78);
+        backdrop-filter: blur(40px) saturate(180%);
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 20px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.15);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px) scale(0.98);
+        pointer-events: none;
+        transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.25s;
+        z-index: 100000;
+        margin-left: 0;
+    }
+
+    .header-nav-container.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .header-nav {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+        width: 100%;
+    }
+
+    .header-nav a {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: var(--text-color);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .header-nav a:hover,
+    .header-nav a.active {
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--accent-color);
+        padding-left: 1.2rem;
+    }
+
+    .header-actions {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 1rem;
+        margin-top: 0.25rem;
+        min-width: unset;
+    }
+
+    .login-btn-header,
+    .logout-btn {
+        width: 100%;
+        text-align: center;
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+    }
+
+    main {
+        padding: 2.5rem 1.5rem;
+    }
+
+    .hero-section {
+        gap: 3rem;
+        margin-top: 1rem;
+        margin-bottom: 4.5rem;
+    }
+
+    .hero-text h2 {
+        font-size: 2.6rem;
+    }
+
+    .hero-text p {
+        font-size: 1.05rem;
+    }
+
+    .placeholder-box {
+        min-height: 380px;
+    }
+
+    .home-about {
+        padding: 2.5rem 2rem;
+        gap: 2.5rem;
+        margin-bottom: 4.5rem;
+    }
+
+    .placeholder-box.square {
+        min-height: 300px;
+    }
+
+    .home-about-text h3 {
+        font-size: 2.1rem;
+    }
+
+    .home-services {
+        gap: 1.5rem;
+        margin-bottom: 4.5rem;
+    }
+
+    .service-card {
+        padding: 2rem 1.75rem;
+    }
+
+    .home-gallery {
+        padding: 0 1.5rem;
+        margin-bottom: 4rem;
+    }
+
+    .section-title {
+        font-size: 2.1rem;
+    }
+
+    .section-subtitle {
+        margin-bottom: 2rem;
+    }
+
+    .scroll-cue {
+        padding: 2rem 0 1.5rem;
+    }
+
+    .lightbox-content {
+        max-width: 94%;
+        max-height: 85vh;
+    }
+
+    .close {
+        top: 20px;
+        right: 25px;
+        font-size: 38px;
+    }
+
+    .age-gate-card {
+        padding: 2rem 1.5rem;
+    }
+}
+
+/* ── Slim & Compact Screens (<= 480px) ── */
+@media (max-width: 480px) {
+    header {
+        padding: 0.85rem 1rem;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(15, 23, 42, 0.95);
+    }
+
+    .brand-name {
+        font-size: 2.1rem !important;
+        letter-spacing: 1px !important;
+    }
+
+    .brand-subtitle {
+        font-size: 0.85rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    .mobile-menu-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .header-nav-container {
+        padding: 1rem 0.85rem;
+        border-radius: 16px;
+        top: calc(100% + 0.65rem);
+    }
+
+    .header-nav a {
+        font-size: 0.95rem;
+        padding: 0.65rem 0.85rem;
+    }
+
+    .login-btn-header,
+    .logout-btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    main {
+        padding: 1.5rem 0.85rem;
+    }
+
+    .hero-section {
+        gap: 2rem;
+        margin-top: 0;
+        margin-bottom: 3.5rem;
+    }
+
+    .hero-text h2 {
+        font-size: 1.95rem;
+        line-height: 1.18;
+        margin-bottom: 1rem;
+    }
+
+    .hero-text p {
+        font-size: 0.95rem;
+        line-height: 1.55;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.65rem;
+    }
+
+    .hero-buttons .btn-primary,
+    .hero-buttons .btn-secondary {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+
+    .placeholder-box {
+        min-height: 240px;
+        border-radius: 14px;
+    }
+
+    .placeholder-box span img {
+        border-radius: 14px;
+    }
+
+    .home-about {
+        padding: 1.5rem 1.1rem;
+        border-radius: 14px;
+        gap: 1.5rem;
+        margin-bottom: 3.5rem;
+    }
+
+    .placeholder-box.square {
+        min-height: 200px;
+        border-radius: 12px;
+    }
+
+    .home-about-text h3 {
+        font-size: 1.6rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .home-about-text p {
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin-bottom: 1.25rem;
+    }
+
+    .home-services {
+        gap: 1rem;
+        margin-bottom: 3.5rem;
+    }
+
+    .service-card {
+        padding: 1.35rem 1.1rem;
+        border-radius: 12px;
+    }
+
+    .service-card h4 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .service-card p {
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+
+    .home-gallery {
+        padding: 0 0.85rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .section-title {
+        font-size: 1.65rem;
+    }
+
+    .section-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .gallery {
+        gap: 0.85rem;
+    }
+
+    .gallery-item {
+        border-radius: 10px;
+    }
+
+    .view-all-container {
+        margin-top: 1.75rem;
+    }
+
+    .view-all-container .btn-outline {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem 1rem;
+    }
+
+    .scroll-cue {
+        padding: 1.25rem 0 0.5rem;
+    }
+
+    .scroll-cue-line {
+        height: 38px;
+    }
+
+    .close {
+        top: 12px;
+        right: 12px;
+        font-size: 32px;
+    }
+
+    .picker-header {
+        padding: 1rem 1rem;
+    }
+
+    .picker-body {
+        padding: 1rem 0.85rem;
+    }
+
+    .age-gate-card {
+        padding: 1.6rem 1.1rem;
+        border-radius: 14px;
+    }
+
+    .age-gate-badge {
+        width: 44px;
+        height: 44px;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .age-gate-title {
+        font-size: 1.35rem;
+    }
+
+    .age-gate-desc {
+        font-size: 0.88rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .age-btn {
+        padding: 0.85rem 1.2rem;
+        font-size: 0.95rem;
     }
 }
 
@@ -1103,6 +1533,7 @@ main {
 body.is-overscrolling {
     overflow: hidden;
 }
+
 /* ============================================
    Age Verification Gate Modal (18+)
    ============================================ */
