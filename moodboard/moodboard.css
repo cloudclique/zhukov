@@ -394,6 +394,29 @@ body.moodboard-body.inside-board header {
 }
 
 /* Viewer (Read-Only) Mode */
+.canvas-viewport.is-viewer-mode {
+    cursor: grab !important;
+}
+
+.canvas-viewport.is-viewer-mode.is-panning {
+    cursor: grabbing !important;
+}
+
+.canvas-viewport.is-viewer-mode ~ .floating-toolbar,
+.canvas-viewport.is-viewer-mode ~ .tool-options-drawer,
+.canvas-viewport.is-viewer-mode ~ .selection-toolbar,
+.canvas-viewport.is-viewer-mode ~ .note-style-panel,
+.canvas-viewport.is-viewer-mode ~ .selection-marquee,
+.canvas-viewport.is-viewer-mode ~ .eraser-cursor-indicator,
+body.is-viewer-mode .floating-toolbar,
+body.is-viewer-mode .tool-options-drawer,
+body.is-viewer-mode .selection-toolbar,
+body.is-viewer-mode .note-style-panel,
+body.is-viewer-mode .selection-marquee,
+body.is-viewer-mode .eraser-cursor-indicator {
+    display: none !important;
+}
+
 .canvas-viewport.is-viewer-mode .transform-handle,
 .canvas-viewport.is-viewer-mode .group-selection-box {
     display: none !important;
@@ -401,18 +424,20 @@ body.moodboard-body.inside-board header {
 
 .canvas-viewport.is-viewer-mode .board-element {
     pointer-events: none !important;
-    cursor: default !important;
-    user-select: none;
+    cursor: grab !important;
+    user-select: none !important;
 }
 
 .canvas-viewport.is-viewer-mode .board-element textarea {
     pointer-events: none !important;
-    cursor: default !important;
-    user-select: none;
+    cursor: grab !important;
+    user-select: none !important;
+    resize: none !important;
 }
 
 .canvas-viewport.is-viewer-mode .board-element.is-selected {
     outline: none !important;
+    box-shadow: none !important;
 }
 
 /* Transform handles for selected elements */

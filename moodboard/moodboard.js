@@ -664,6 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateSelectionToolbar = () => {
         if (!selectionToolbar) return;
+        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) {
+            selectionToolbar.classList.remove('visible');
+            if (noteStylePanel) noteStylePanel.classList.remove('open');
+            return;
+        }
         const count = selectedElementIds.size || (selectedElementId ? 1 : 0);
         if (count > 0) {
             selectionToolbar.classList.add('visible');
@@ -1120,16 +1125,29 @@ document.addEventListener('DOMContentLoaded', () => {
             // Adjust UI for Viewer (Read-Only) Mode vs Editor Mode
             const floatingToolbar = document.querySelector('.floating-toolbar');
             const undoRedoBtns = document.querySelector('.top-history-btns');
+            const penDrawer = document.getElementById('pen-options-drawer');
+            const eraserDrawer = document.getElementById('eraser-options-drawer');
+            const selectionTb = document.getElementById('selection-toolbar');
+            const noteStyle = document.getElementById('note-style-panel');
+
             if (isPublicView) {
                 if (floatingToolbar) floatingToolbar.style.display = 'none';
                 if (undoRedoBtns) undoRedoBtns.style.display = 'none';
                 if (btnBoardSettings) btnBoardSettings.style.display = 'none';
+                if (penDrawer) penDrawer.classList.remove('show');
+                if (eraserDrawer) eraserDrawer.classList.remove('show');
+                if (selectionTb) selectionTb.classList.remove('visible');
+                if (noteStyle) noteStyle.classList.remove('open');
                 canvasViewport.classList.add('is-viewer-mode');
+                document.body.classList.add('is-viewer-mode');
+                deselectAll();
+                setTool('move');
             } else {
                 if (floatingToolbar) floatingToolbar.style.display = 'flex';
                 if (undoRedoBtns) undoRedoBtns.style.display = 'flex';
                 if (btnBoardSettings) btnBoardSettings.style.display = '';
                 canvasViewport.classList.remove('is-viewer-mode');
+                document.body.classList.remove('is-viewer-mode');
             }
 
             renderCanvasElements(activeBoardData.elements || []);
@@ -1156,7 +1174,8 @@ document.addEventListener('DOMContentLoaded', () => {
             unsubscribeBoardSnapshot();
             unsubscribeBoardSnapshot = null;
         }
-        document.body.classList.remove('inside-board');
+        document.body.classList.remove('inside-board', 'is-viewer-mode');
+        canvasViewport.classList.remove('is-viewer-mode');
         activeBoardId = null;
         activeBoardData = null;
         selectedElementIds.clear();
@@ -1466,6 +1485,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Keyboard Shortcuts (skip when typing in text fields)
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) {
+            // View-Only mode: block all edit & tool switch shortcuts
+            return;
+        }
+
         // Undo / Redo
         if (e.ctrlKey || e.metaKey) {
             if (e.key === 'z' || e.key === 'Z') {
@@ -1567,6 +1592,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Toolbar & Tool Selection ---
     const setTool = (tool) => {
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) {
+            tool = 'move';
+        }
         activeTool = tool;
         [toolSelect, toolMove, toolPen, toolEraser].filter(Boolean).forEach(b => b.classList.remove('active'));
         canvasViewport.classList.remove('is-drawing', 'is-eraser-active', 'is-move-tool');
@@ -1972,6 +2001,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        if (isViewer) {
+            // View-Only mode: every drag interaction pans the canvas (move tool)
+            isPanning = true;
+            panStartX = e.clientX - viewportPanX;
+            panStartY = e.clientY - viewportPanY;
+            canvasViewport.classList.add('is-panning');
+            return;
+        }
+
         // If clicking background/canvas/elements-container directly
         const isBackground = e.target === canvasViewport || e.target === drawingCanvas || e.target === elementsContainer || e.target === canvasWorld;
         
@@ -2157,6 +2196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     groupSelectionBox.addEventListener('pointerdown', (e) => {
+        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTool !== 'select') return;
         if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
 
@@ -2455,6 +2495,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Selection & Drag Initiation
             el.addEventListener('pointerdown', (e) => {
+                if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
                 if (activeTool !== 'select') return;
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
                     return;
@@ -2537,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const selectElement = (id, addToSelection = false) => {
+        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         if (!addToSelection) {
             selectedElementIds.clear();
@@ -2565,6 +2607,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragRafId = null;
 
     const startElementDrag = (item, e) => {
+        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         isDraggingElement = true;
         elementsContainer.classList.add('is-dragging-active');
@@ -2712,6 +2755,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let transformRafId = null;
 
     const startElementTransform = (item, handleType, e) => {
+        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         isTransformingElement = true;
         transformAction = handleType;
