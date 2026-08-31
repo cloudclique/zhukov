@@ -1996,173 +1996,206 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements Rendering with In-Place Element Recycling (Eliminates Image Flickering) ---
     const renderCanvasElements = (elements = []) => {
         const activeEl = document.activeElement;
-        if (activeEl && activeEl.classList.contains('editable-text')) {
-            return;
-        }
+        const isEditingText = activeEl && activeEl.classList.contains('editable-text');
+        const activeEditingId = isEditingText && activeEl.closest('.board-element') ? 
+            activeEl.closest('.board-element').dataset.id : null;
+        const cursorSelectionStart = isEditingText ? activeEl.selectionStart : null;
+        const cursorSelectionEnd = isEditingText ? activeEl.selectionEnd : null;
 
-        const currentIds = new Set(elements.map(item => item.id));
+        const currentIds = new Set((elements || []).map(it => it.id));
 
-        document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(domEl => {
+        // 1. Remove DOM elements that no longer exist
+        elementsContainer.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(domEl => {
             if (!currentIds.has(domEl.dataset.id)) {
                 domEl.remove();
             }
         });
 
-        elements.forEach(item => {
-            let el = elementsContainer.querySelector(`[data-id="${item.id}"]`);
+        // 2. Update existing elements or create new ones
+        (elements || []).forEach(item => {
+            let el = elementsContainer.querySelector(`.board-element[data-id="${item.id}"]`);
+            const isSelected = selectedElementIds.has(item.id) || item.id === selectedElementId;
 
-            if (!el) {
-                el = document.createElement('div');
-                el.className = `board-element ${item.type === 'text' ? 'element-text' : 'element-image'}`;
-                el.dataset.id = item.id;
+            if (el) {
+                // Update properties in-place without unmounting or resetting <img>
+                el.style.left = `${item.x}px`;
+                el.style.top = `${item.y}px`;
+                el.style.width = `${item.width}px`;
+                el.style.height = `${item.height}px`;
+                el.style.transform = `rotate(${item.rotation || 0}deg)`;
+                el.style.zIndex = item.zIndex || 10;
+                el.classList.toggle('is-selected', isSelected);
 
-                if (item.type === 'image') {
-                    const img = document.createElement('img');
-                    img.src = item.url;
-                    img.draggable = false;
-                    img.alt = item.alt || 'Moodboard Image';
-
-                    const handlesContainer = document.createElement('div');
-                    handlesContainer.className = 'transform-handles';
-                    handlesContainer.innerHTML = `
-                        <div class="transform-handle handle-nw" data-handle="nw"></div>
-                        <div class="transform-handle handle-ne" data-handle="ne"></div>
-                        <div class="transform-handle handle-se" data-handle="se"></div>
-                        <div class="transform-handle handle-sw" data-handle="sw"></div>
-                        <div class="transform-handle handle-rotate" data-handle="rotate"></div>
-                    `;
-
-                    el.appendChild(img);
-                    el.appendChild(handlesContainer);
-                } else if (item.type === 'text') {
-                    const body = document.createElement('div');
-                    body.className = `note-body ${item.stylePreset || 'note-dark'}`;
-
-                    const textarea = document.createElement('textarea');
-                    textarea.className = 'editable-text';
-                    textarea.placeholder = 'Type something...';
-                    textarea.value = item.content || '';
-
-                    body.appendChild(textarea);
-                    el.appendChild(body);
-
-                    const handlesContainer = document.createElement('div');
-                    handlesContainer.className = 'transform-handles';
-                    handlesContainer.innerHTML = `
-                        <div class="transform-handle handle-nw" data-handle="nw"></div>
-                        <div class="transform-handle handle-ne" data-handle="ne"></div>
-                        <div class="transform-handle handle-se" data-handle="se"></div>
-                        <div class="transform-handle handle-sw" data-handle="sw"></div>
-                        <div class="transform-handle handle-rotate" data-handle="rotate"></div>
-                    `;
-                    el.appendChild(handlesContainer);
-
-                    let initialTextContent = '';
-                    textarea.addEventListener('focus', () => {
-                        initialTextContent = textarea.value;
-                    });
-
-                    textarea.addEventListener('input', () => {
-                        item.content = textarea.value;
-                        if (item.type === 'text' && !item.stylePreset) {
-                            item.stylePreset = 'note-dark';
+                if (item.type === 'text') {
+                    const textarea = el.querySelector('.editable-text');
+                    if (textarea && textarea !== activeEl) {
+                        if (textarea.value !== (item.content || '')) {
+                            textarea.value = item.content || '';
                         }
-                    });
-
-                    textarea.addEventListener('blur', () => {
-                        if (textarea.value !== initialTextContent) {
-                            recordAction({ type: 'TEXT_CHANGE', id: item.id, from: initialTextContent, to: textarea.value });
-                            queueSaveBoard();
-                        }
-                    });
+                    }
+                    const noteBody = el.querySelector('.note-body');
+                    if (noteBody) {
+                        const preset = item.stylePreset || 'note-dark';
+                        noteBody.className = `note-body ${preset !== 'note-custom' ? preset : ''}`;
+                        noteBody.style.background = item.customBg || '';
+                        noteBody.style.color = item.customColor || '';
+                        noteBody.style.fontSize = item.fontSize ? `${item.fontSize}px` : '';
+                        noteBody.style.fontWeight = item.fontBold ? '700' : '';
+                        noteBody.style.fontStyle = item.fontItalic ? 'italic' : '';
+                    }
+                } else if (item.type === 'image') {
+                    const img = el.querySelector('img');
+                    if (img && img.getAttribute('src') !== item.content) {
+                        img.src = item.content;
+                    }
                 }
-
-                el.addEventListener('pointerdown', (e) => {
-                    if (activeTool !== 'select') return;
-                    if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
-
-                    const handle = e.target.closest('.transform-handle');
-                    if (handle) {
-                        e.stopPropagation();
-                        startElementTransform(item, handle.dataset.handle, e);
-                        return;
-                    }
-
-                    if (e.target.classList.contains('editable-text')) {
-                        e.stopPropagation();
-                        selectElement(item.id, e.shiftKey);
-                        return;
-                    }
-
-                    e.stopPropagation();
-                    if (!selectedElementIds.has(item.id)) {
-                        selectElement(item.id, e.shiftKey);
-                    }
-                    startElementDrag(item, e);
-                });
-
-                elementsContainer.appendChild(el);
+                return;
             }
 
+            // Create new DOM element if it does not yet exist
+            el = document.createElement('div');
+            el.className = `board-element ${isSelected ? 'is-selected' : ''}`;
+            el.dataset.id = item.id;
             el.style.left = `${item.x}px`;
             el.style.top = `${item.y}px`;
             el.style.width = `${item.width}px`;
             el.style.height = `${item.height}px`;
-            
-            const rotation = item.rotation || 0;
-            el.style.transform = `rotate(${rotation}deg)`;
-            el.dataset.rotation = rotation;
+            el.style.transform = `rotate(${item.rotation || 0}deg)`;
+            el.style.zIndex = item.zIndex || 10;
 
-            if (item.type === 'text') {
-                const body = el.querySelector('.note-body');
-                if (body) {
-                    body.className = `note-body ${item.stylePreset || 'note-dark'}`;
-                    if (item.stylePreset === 'note-custom' && item.customBg) {
-                        body.style.background = item.customBg;
-                    } else {
-                        body.style.background = '';
-                    }
-                    if (item.customColor) {
-                        body.style.color = item.customColor;
-                    } else {
-                        body.style.color = '';
-                    }
-                    if (item.fontSize) {
-                        body.style.fontSize = `${item.fontSize}px`;
-                    } else {
-                        body.style.fontSize = '';
-                    }
-                    body.style.fontWeight = item.fontBold ? '700' : '';
-                    body.style.fontStyle = item.fontItalic ? 'italic' : '';
+            if (item.type === 'image') {
+                el.classList.add('board-element-image');
+                el.innerHTML = `
+                    <div class="img-inner" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <img src="${escapeHtml(item.content)}" alt="Moodboard image" style="width:100%; height:100%; object-fit:contain; pointer-events:none; display:block;" loading="lazy">
+                    </div>
+                    <div class="transform-handle handle-nw" data-handle="nw"></div>
+                    <div class="transform-handle handle-ne" data-handle="ne"></div>
+                    <div class="transform-handle handle-se" data-handle="se"></div>
+                    <div class="transform-handle handle-sw" data-handle="sw"></div>
+                    <div class="transform-handle handle-rotate" data-handle="rotate"></div>
+                `;
+            } else if (item.type === 'text') {
+                const preset = item.stylePreset || 'note-dark';
+                el.classList.add('board-element-text');
 
-                    const ta = body.querySelector('.editable-text');
-                    if (ta) {
-                        if (document.activeElement !== ta) {
-                            ta.value = item.content || '';
-                        }
-                        ta.style.color = item.customColor || '';
-                        ta.style.fontSize = item.fontSize ? `${item.fontSize}px` : '';
-                        ta.style.fontWeight = item.fontBold ? '700' : '';
-                        ta.style.fontStyle = item.fontItalic ? 'italic' : '';
+                const bodyBg = item.customBg || '';
+                const bodyColor = item.customColor || '';
+                const bodyFontSize = item.fontSize ? `${item.fontSize}px` : '';
+                const bodyFontWeight = item.fontBold ? '700' : '';
+                const bodyFontStyle = item.fontItalic ? 'italic' : '';
+                const presetClass = (preset !== 'note-custom') ? preset : '';
+
+                el.innerHTML = `
+                    <div class="note-body ${presetClass}"
+                         style="${bodyBg ? 'background:'+bodyBg+';' : ''}${bodyColor ? 'color:'+bodyColor+';' : ''}${bodyFontSize ? 'font-size:'+bodyFontSize+';' : ''}${bodyFontWeight ? 'font-weight:'+bodyFontWeight+';' : ''}${bodyFontStyle ? 'font-style:'+bodyFontStyle+';' : ''}">
+                        <textarea class="editable-text" placeholder="Type notes or labels..."></textarea>
+                    </div>
+                    <div class="transform-handle handle-nw" data-handle="nw"></div>
+                    <div class="transform-handle handle-ne" data-handle="ne"></div>
+                    <div class="transform-handle handle-se" data-handle="se"></div>
+                    <div class="transform-handle handle-sw" data-handle="sw"></div>
+                    <div class="transform-handle handle-rotate" data-handle="rotate"></div>
+                `;
+
+                const textarea = el.querySelector('.editable-text');
+                textarea.value = item.content || '';
+
+                if (bodyColor) textarea.style.color = bodyColor;
+                if (bodyFontSize) textarea.style.fontSize = bodyFontSize;
+                if (bodyFontWeight) textarea.style.fontWeight = bodyFontWeight;
+                if (bodyFontStyle) textarea.style.fontStyle = bodyFontStyle;
+
+                let initialTextContent = null;
+                textarea.addEventListener('focus', () => {
+                    initialTextContent = textarea.value;
+                });
+                textarea.addEventListener('blur', () => {
+                    if (initialTextContent !== null && initialTextContent !== textarea.value) {
+                        recordAction({
+                            type: 'TEXT_CHANGE',
+                            id: item.id,
+                            from: initialTextContent,
+                            to: textarea.value
+                        });
+                        initialTextContent = null;
                     }
+                });
+
+                textarea.addEventListener('input', () => {
+                    item.content = textarea.value;
+                    queueSaveBoard();
+                });
+            }
+
+            // Selection & Drag Initiation
+            el.addEventListener('pointerdown', (e) => {
+                if (activeTool !== 'select') return;
+                if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
+                    return;
                 }
-            }
+                
+                const handle = e.target.closest('.transform-handle');
+                if (handle) {
+                    e.stopPropagation();
+                    startElementTransform(item, handle.dataset.handle, e);
+                    return;
+                }
 
-            if (selectedElementIds.has(item.id)) {
-                el.classList.add('is-selected');
-            } else {
-                el.classList.remove('is-selected');
-            }
+                if (['TEXTAREA', 'BUTTON', 'INPUT'].includes(e.target.tagName)) {
+                    if (activeTouches.size < 2) {
+                        selectElement(item.id, e.shiftKey);
+                    }
+                    return;
+                }
+
+                e.stopPropagation();
+                if (!selectedElementIds.has(item.id)) {
+                    selectElement(item.id, e.shiftKey);
+                }
+                startElementDrag(item, e);
+            });
+
+            elementsContainer.appendChild(el);
         });
 
+        // Also render drawing selection boxes
+        updateDrawingSelectionBoxes();
+
+        // Exact cursor and focus restoration
+        if (activeEditingId) {
+            const el = elementsContainer.querySelector(`[data-id="${activeEditingId}"] textarea`);
+            if (el) {
+                el.focus();
+                if (cursorSelectionStart !== null && cursorSelectionEnd !== null) {
+                    el.setSelectionRange(cursorSelectionStart, cursorSelectionEnd);
+                }
+            }
+        }
+    };
+
+    let prevSelectedIdsKey = '';
+    const updateSelectedDOM = () => {
+        const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '');
+        if (currentKey === prevSelectedIdsKey) return;
+        prevSelectedIdsKey = currentKey;
+
+        document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(el => {
+            const isSel = selectedElementIds.has(el.dataset.id) || el.dataset.id === selectedElementId;
+            el.classList.toggle('is-selected', isSel);
+        });
         updateDrawingSelectionBoxes();
     };
 
-    // Selection State Management
-    const selectElement = (id, multi = false) => {
-        if (!multi) selectedElementIds.clear();
-        if (id) selectedElementIds.add(id);
-        selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
+    const selectElement = (id, addToSelection = false) => {
+        if (activeTouches.size >= 2) return;
+        if (!addToSelection) {
+            selectedElementIds.clear();
+        }
+        if (id) {
+            selectedElementIds.add(id);
+        }
+        selectedElementId = id || (selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null);
         updateSelectedDOM();
         updateSelectionToolbar();
     };
@@ -2174,285 +2207,320 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectionToolbar();
     };
 
-    const updateSelectedDOM = () => {
-        document.querySelectorAll('.board-element').forEach(el => {
-            if (selectedElementIds.has(el.dataset.id)) {
-                el.classList.add('is-selected');
-            } else {
-                el.classList.remove('is-selected');
-            }
-        });
-        updateDrawingSelectionBoxes();
-        updateSelectionToolbar();
-    };
+    const deselectElement = deselectAll;
 
-    // --- Element Dragging & Multi-Drag ---
-    let dragStartPositions = new Map();
+    // Multi-Element & Drawing Drag Handling
+    let dragItemInitialPositions = new Map();
+    let dragPathInitialPoints = new Map();
+    let dragRafId = null;
 
     const startElementDrag = (item, e) => {
+        if (activeTouches.size >= 2) return;
         isDraggingElement = true;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
+        elementsContainer.classList.add('is-dragging-active');
 
-        dragStartPositions.clear();
-        selectedElementIds.forEach(id => {
-            const el = activeBoardData.elements?.find(it => it.id === id);
-            if (el) {
-                dragStartPositions.set(id, { x: el.x, y: el.y, isDrawing: false });
+        if (!selectedElementIds.has(item.id)) {
+            if (e.shiftKey) {
+                selectedElementIds.add(item.id);
             } else {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (path) {
-                    dragStartPositions.set(id, {
-                        isDrawing: true,
-                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
-                    });
-                }
+                selectedElementIds.clear();
+                selectedElementIds.add(item.id);
+            }
+            selectedElementId = item.id;
+            updateSelectedDOM();
+            updateSelectionToolbar();
+        }
+
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        dragStartX = worldPos.x;
+        dragStartY = worldPos.y;
+
+        dragItemInitialPositions.clear();
+        dragPathInitialPoints.clear();
+
+        selectedElementIds.forEach(id => {
+            const elItem = activeBoardData?.elements.find(it => it.id === id);
+            if (elItem) {
+                dragItemInitialPositions.set(id, { x: elItem.x, y: elItem.y });
+            }
+            const pathItem = activeBoardData?.drawingPaths.find(p => p.id === id);
+            if (pathItem && pathItem.points) {
+                dragPathInitialPoints.set(id, pathItem.points.map(pt => ({ x: pt.x, y: pt.y })));
             }
         });
-
-        try {
-            if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
-        } catch (_) {}
     };
 
     const handleElementDragMove = (e) => {
-        if (!isDraggingElement) return;
-        const deltaX = (e.clientX - dragStartX) / viewportScale;
-        const deltaY = (e.clientY - dragStartY) / viewportScale;
+        if (activeTouches.size >= 2) {
+            isDraggingElement = false;
+            elementsContainer.classList.remove('is-dragging-active');
+            return;
+        }
+        if (!isDraggingElement || (dragItemInitialPositions.size === 0 && dragPathInitialPoints.size === 0) || !activeBoardData) return;
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        const dx = Math.round(worldPos.x - dragStartX);
+        const dy = Math.round(worldPos.y - dragStartY);
 
-        selectedElementIds.forEach(id => {
-            const initial = dragStartPositions.get(id);
-            if (!initial) return;
+        if (dragRafId) cancelAnimationFrame(dragRafId);
+        dragRafId = requestAnimationFrame(() => {
+            // Move DOM elements directly
+            dragItemInitialPositions.forEach((startPos, id) => {
+                const item = activeBoardData.elements.find(it => it.id === id);
+                if (item) {
+                    item.x = startPos.x + dx;
+                    item.y = startPos.y + dy;
+                    const el = elementsContainer.querySelector(`[data-id="${id}"]`);
+                    if (el) {
+                        el.style.left = `${item.x}px`;
+                        el.style.top = `${item.y}px`;
+                    }
+                }
+            });
 
-            if (initial.isDrawing) {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (path && initial.points) {
-                    path.points = initial.points.map(pt => ({
-                        x: pt.x + deltaX,
-                        y: pt.y + deltaY
+            // Move Drawing Strokes
+            dragPathInitialPoints.forEach((initialPts, id) => {
+                const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                if (path) {
+                    path.points = initialPts.map(pt => ({
+                        x: Math.round(pt.x + dx),
+                        y: Math.round(pt.y + dy)
                     }));
                 }
-            } else {
-                const el = activeBoardData.elements?.find(it => it.id === id);
-                if (el) {
-                    el.x = initial.x + deltaX;
-                    el.y = initial.y + deltaY;
+            });
+
+            if (dragPathInitialPoints.size > 0) {
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateDrawingSelectionBoxes();
+            }
+        });
+    };
+
+    const endElementDrag = () => {
+        if (dragRafId) {
+            cancelAnimationFrame(dragRafId);
+            dragRafId = null;
+        }
+        elementsContainer.classList.remove('is-dragging-active');
+        if (!isDraggingElement) return;
+        isDraggingElement = false;
+        if ((dragItemInitialPositions.size > 0 || dragPathInitialPoints.size > 0) && activeBoardData) {
+            const moves = [];
+            dragItemInitialPositions.forEach((startPos, id) => {
+                const item = activeBoardData.elements.find(it => it.id === id);
+                if (item && (item.x !== startPos.x || item.y !== startPos.y)) {
+                    moves.push({
+                        id: id,
+                        isDrawing: false,
+                        from: { ...startPos },
+                        to: { x: item.x, y: item.y }
+                    });
+                }
+            });
+            dragPathInitialPoints.forEach((initialPts, id) => {
+                const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                if (path) {
+                    moves.push({
+                        id: id,
+                        isDrawing: true,
+                        fromPoints: initialPts,
+                        toPoints: path.points.map(pt => ({ x: pt.x, y: pt.y }))
+                    });
+                }
+            });
+
+            if (moves.length > 0) {
+                recordAction({
+                    type: 'MOVE_ITEMS',
+                    moves: moves
+                });
+            }
+        }
+        dragItemInitialPositions.clear();
+        dragPathInitialPoints.clear();
+        queueSaveBoard();
+    };
+
+    // --- Unified Element & Group Transform Handling ---
+    let transformInitialGroupRect = null;
+    let transformAnchorPoint = null;
+    let transformGroupElements = new Map(); // id -> { id, x, y, width, height, rotation, fontSize }
+    let transformGroupDrawings = new Map(); // id -> { id, points: [{x,y}], size, box }
+    let transformInitialAngle = 0;
+    let transformGroupCenter = { x: 0, y: 0 };
+    let transformRafId = null;
+
+    const startElementTransform = (item, handleType, e) => {
+        if (activeTouches.size >= 2) return;
+        isTransformingElement = true;
+        transformAction = handleType;
+        elementsContainer.classList.add('is-dragging-active');
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        dragStartX = worldPos.x;
+        dragStartY = worldPos.y;
+
+        // If the manipulated item is not yet part of selectedElementIds, select it
+        if (!selectedElementIds.has(item.id)) {
+            selectElement(item.id);
+        }
+
+        transformGroupElements.clear();
+        transformGroupDrawings.clear();
+
+        let gMinX = Infinity, gMinY = Infinity, gMaxX = -Infinity, gMaxY = -Infinity;
+
+        selectedElementIds.forEach(id => {
+            const el = activeBoardData?.elements?.find(it => it.id === id);
+            if (el) {
+                const w = el.width || 100;
+                const h = el.height || 100;
+                transformGroupElements.set(id, {
+                    id: el.id,
+                    x: el.x,
+                    y: el.y,
+                    width: w,
+                    height: h,
+                    rotation: el.rotation || 0,
+                    fontSize: el.fontSize || 14,
+                    type: el.type,
+                    aspectRatio: w / h
+                });
+                gMinX = Math.min(gMinX, el.x);
+                gMinY = Math.min(gMinY, el.y);
+                gMaxX = Math.max(gMaxX, el.x + w);
+                gMaxY = Math.max(gMaxY, el.y + h);
+            }
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
+            if (path && path.points && path.points.length > 0) {
+                const box = getPathBoundingBox(path);
+                transformGroupDrawings.set(id, {
+                    id: path.id,
+                    points: path.points.map(pt => ({ x: pt.x, y: pt.y })),
+                    size: path.size || 6,
+                    box: box
+                });
+                if (box) {
+                    gMinX = Math.min(gMinX, box.x);
+                    gMinY = Math.min(gMinY, box.y);
+                    gMaxX = Math.max(gMaxX, box.x + box.width);
+                    gMaxY = Math.max(gMaxY, box.y + box.height);
+                }
+            }
+        });
+
+        if (!isFinite(gMinX) || !isFinite(gMinY) || !isFinite(gMaxX) || !isFinite(gMaxY)) {
+            gMinX = item.x || 0;
+            gMinY = item.y || 0;
+            gMaxX = gMinX + (item.width || 100);
+            gMaxY = gMinY + (item.height || 100);
+        }
+
+        const gWidth = Math.max(20, gMaxX - gMinX);
+        const gHeight = Math.max(20, gMaxY - gMinY);
+        transformInitialGroupRect = { minX: gMinX, minY: gMinY, maxX: gMaxX, maxY: gMaxY, width: gWidth, height: gHeight };
+        transformGroupCenter = { x: (gMinX + gMaxX) / 2, y: (gMinY + gMaxY) / 2 };
+        transformInitialAngle = Math.atan2(dragStartY - transformGroupCenter.y, dragStartX - transformGroupCenter.x);
+
+        // Pick anchor point opposite to the dragged handle corner
+        switch (handleType) {
+            case 'se':
+                transformAnchorPoint = { x: gMinX, y: gMinY };
+                break;
+            case 'sw':
+                transformAnchorPoint = { x: gMaxX, y: gMinY };
+                break;
+            case 'ne':
+                transformAnchorPoint = { x: gMinX, y: gMaxY };
+                break;
+            case 'nw':
+                transformAnchorPoint = { x: gMaxX, y: gMaxY };
+                break;
+            default:
+                transformAnchorPoint = { x: transformGroupCenter.x, y: transformGroupCenter.y };
+                break;
+        }
+    };
+
+    const handleElementTransformMove = (e) => {
+        if (!isTransformingElement || !activeBoardData) return;
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+
+        if (transformRafId) cancelAnimationFrame(transformRafId);
+        transformRafId = requestAnimationFrame(() => {
+            if (transformAction === 'rotate') {
+                const currentAngle = Math.atan2(worldPos.y - transformGroupCenter.y, worldPos.x - transformGroupCenter.x);
+                const dTheta = currentAngle - transformInitialAngle;
+                const cos = Math.cos(dTheta);
+                const sin = Math.sin(dTheta);
+                const dDeg = Math.round(dTheta * (180 / Math.PI));
+
+                const isSingleItem = (transformGroupElements.size === 1 && transformGroupDrawings.size === 0);
+                const isSingleDrawing = (transformGroupElements.size === 0 && transformGroupDrawings.size === 1);
+
+                // Rotate DOM elements
+                transformGroupElements.forEach((init, id) => {
+                    const el = activeBoardData.elements.find(it => it.id === id);
+                    if (!el) return;
+
+                    if (isSingleItem) {
+                        el.rotation = (init.rotation + dDeg) % 360;
+                    } else {
+                        const elCenterX = init.x + init.width / 2;
+                        const elCenterY = init.y + init.height / 2;
+                        const rx = transformGroupCenter.x + (elCenterX - transformGroupCenter.x) * cos - (elCenterY - transformGroupCenter.y) * sin;
+                        const ry = transformGroupCenter.y + (elCenterX - transformGroupCenter.x) * sin + (elCenterY - transformGroupCenter.y) * cos;
+                        el.x = Math.round(rx - el.width / 2);
+                        el.y = Math.round(ry - el.height / 2);
+                        el.rotation = (init.rotation + dDeg) % 360;
+                    }
 
                     const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
                     if (domEl) {
                         domEl.style.left = `${el.x}px`;
                         domEl.style.top = `${el.y}px`;
+                        domEl.style.transform = `rotate(${el.rotation}deg)`;
                     }
-                }
-            }
-        });
-
-        renderDrawingPaths(activeBoardData.drawingPaths);
-        updateDrawingSelectionBoxes();
-    };
-
-    const endElementDrag = async () => {
-        if (!isDraggingElement) return;
-        isDraggingElement = false;
-
-        const moves = [];
-        selectedElementIds.forEach(id => {
-            const initial = dragStartPositions.get(id);
-            if (!initial) return;
-
-            if (initial.isDrawing) {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (path && initial.points) {
-                    const hasMoved = path.points.some((pt, idx) => pt.x !== initial.points[idx].x || pt.y !== initial.points[idx].y);
-                    if (hasMoved) {
-                        moves.push({
-                            id,
-                            isDrawing: true,
-                            fromPoints: initial.points.map(pt => ({ ...pt })),
-                            toPoints: path.points.map(pt => ({ ...pt }))
-                        });
-                    }
-                }
-            } else {
-                const el = activeBoardData.elements?.find(it => it.id === id);
-                if (el) {
-                    if (el.x !== initial.x || el.y !== initial.y) {
-                        moves.push({
-                            id,
-                            isDrawing: false,
-                            from: { x: initial.x, y: initial.y },
-                            to: { x: el.x, y: el.y }
-                        });
-                    }
-                }
-            }
-        });
-
-        if (moves.length > 0) {
-            recordAction({ type: 'MOVE_ITEMS', moves });
-            await queueSaveBoard();
-        }
-    };
-
-    // --- Element Transformation (Resize & Rotate) ---
-    let initialSelectedItemsState = new Map();
-
-    const startElementTransform = (item, action, e) => {
-        isTransformingElement = true;
-        transformAction = action;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-
-        initialSelectedItemsState.clear();
-        selectedElementIds.forEach(id => {
-            const el = activeBoardData.elements?.find(it => it.id === id);
-            if (el) {
-                initialSelectedItemsState.set(id, {
-                    isDrawing: false,
-                    x: el.x,
-                    y: el.y,
-                    width: el.width,
-                    height: el.height,
-                    rotation: el.rotation || 0
                 });
-            } else {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (path) {
-                    const box = getPathBoundingBox(path);
-                    initialSelectedItemsState.set(id, {
-                        isDrawing: true,
-                        box,
-                        size: path.size || 6,
-                        points: path.points.map(pt => ({ x: pt.x, y: pt.y }))
-                    });
-                }
-            }
-        });
 
-        try {
-            if (e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId);
-        } catch (_) {}
-    };
-
-    const handleElementTransformMove = (e) => {
-        if (!isTransformingElement) return;
-
-        const deltaX = (e.clientX - dragStartX) / viewportScale;
-        const deltaY = (e.clientY - dragStartY) / viewportScale;
-
-        selectedElementIds.forEach(id => {
-            const init = initialSelectedItemsState.get(id);
-            if (!init) return;
-
-            if (init.isDrawing) {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (!path || !init.box) return;
-
-                if (transformAction === 'rotate') {
-                    const centerScreenX = init.box.cx * viewportScale + viewportPanX + canvasViewport.getBoundingClientRect().left;
-                    const centerScreenY = init.box.cy * viewportScale + viewportPanY + canvasViewport.getBoundingClientRect().top;
-
-                    const rad = Math.atan2(e.clientY - centerScreenY, e.clientX - centerScreenX) - Math.atan2(dragStartY - centerScreenY, dragStartX - centerScreenX);
-
-                    const cos = Math.cos(rad);
-                    const sin = Math.sin(rad);
-
-                    path.points = init.points.map(pt => {
-                        const dx = pt.x - init.box.cx;
-                        const dy = pt.y - init.box.cy;
-                        return {
-                            x: init.box.cx + (dx * cos - dy * sin),
-                            y: init.box.cy + (dx * sin + dy * cos)
-                        };
-                    });
-                } else {
-                    let scaleX = 1;
-                    let scaleY = 1;
-                    let originX = init.box.x;
-                    let originY = init.box.y;
-
-                    if (transformAction === 'se') {
-                        originX = init.box.x;
-                        originY = init.box.y;
-                        scaleX = Math.max(0.1, (init.box.width + deltaX) / init.box.width);
-                        scaleY = Math.max(0.1, (init.box.height + deltaY) / init.box.height);
-                    } else if (transformAction === 'sw') {
-                        originX = init.box.x + init.box.width;
-                        originY = init.box.y;
-                        scaleX = Math.max(0.1, (init.box.width - deltaX) / init.box.width);
-                        scaleY = Math.max(0.1, (init.box.height + deltaY) / init.box.height);
-                    } else if (transformAction === 'ne') {
-                        originX = init.box.x;
-                        originY = init.box.y + init.box.height;
-                        scaleX = Math.max(0.1, (init.box.width + deltaX) / init.box.width);
-                        scaleY = Math.max(0.1, (init.box.height - deltaY) / init.box.height);
-                    } else if (transformAction === 'nw') {
-                        originX = init.box.x + init.box.width;
-                        originY = init.box.y + init.box.height;
-                        scaleX = Math.max(0.1, (init.box.width - deltaX) / init.box.width);
-                        scaleY = Math.max(0.1, (init.box.height - deltaY) / init.box.height);
-                    }
-
-                    const avgScale = (scaleX + scaleY) / 2;
-                    path.size = Math.max(2, Math.round(init.size * avgScale));
+                // Rotate Drawing paths
+                transformGroupDrawings.forEach((init, id) => {
+                    const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                    if (!path || !init.points) return;
+                    const center = (isSingleDrawing && init.box) ? { x: init.box.cx, y: init.box.cy } : transformGroupCenter;
 
                     path.points = init.points.map(pt => ({
-                        x: originX + (pt.x - originX) * scaleX,
-                        y: originY + (pt.y - originY) * scaleY
+                        x: Math.round(center.x + (pt.x - center.x) * cos - (pt.y - center.y) * sin),
+                        y: Math.round(center.y + (pt.x - center.x) * sin + (pt.y - center.y) * cos)
                     }));
+                });
+
+                if (transformGroupDrawings.size > 0) {
+                    renderDrawingPaths(activeBoardData.drawingPaths);
+                    updateDrawingSelectionBoxes();
                 }
             } else {
-                const el = activeBoardData.elements?.find(it => it.id === id);
-                if (!el) return;
+                // Proportional Multi-Item / Element Scaling
+                const anchor = transformAnchorPoint || { x: transformInitialGroupRect.minX, y: transformInitialGroupRect.minY };
 
-                if (transformAction === 'rotate') {
-                    const centerWorldX = init.x + init.width / 2;
-                    const centerWorldY = init.y + init.height / 2;
+                let diagX = 1, diagY = 1;
+                if (transformAction === 'nw') { diagX = -1; diagY = -1; }
+                else if (transformAction === 'ne') { diagX = 1; diagY = -1; }
+                else if (transformAction === 'sw') { diagX = -1; diagY = 1; }
+                else if (transformAction === 'se') { diagX = 1; diagY = 1; }
 
-                    const centerScreenX = centerWorldX * viewportScale + viewportPanX + canvasViewport.getBoundingClientRect().left;
-                    const centerScreenY = centerWorldY * viewportScale + viewportPanY + canvasViewport.getBoundingClientRect().top;
+                const dx = (worldPos.x - dragStartX) * diagX;
+                const dy = (worldPos.y - dragStartY) * diagY;
+                const avgDelta = (dx + dy) / 2;
+                const baseDimension = Math.max(50, (transformInitialGroupRect.width + transformInitialGroupRect.height) / 2);
+                const scale = Math.max(0.08, Math.min(12, 1 + avgDelta / baseDimension));
 
-                    const startAngle = Math.atan2(dragStartY - centerScreenY, dragStartX - centerScreenX);
-                    const currentAngle = Math.atan2(e.clientY - centerScreenY, e.clientX - centerScreenX);
-
-                    let newRot = init.rotation + (currentAngle - startAngle) * (180 / Math.PI);
-                    if (e.shiftKey) newRot = Math.round(newRot / 15) * 15;
-
-                    el.rotation = Math.round(newRot % 360);
-
-                    const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
-                    if (domEl) {
-                        domEl.style.transform = `rotate(${el.rotation}deg)`;
-                        domEl.dataset.rotation = el.rotation;
-                    }
-                } else {
-                    let newX = init.x;
-                    let newY = init.y;
-                    let newW = init.width;
-                    let newH = init.height;
-
-                    if (transformAction === 'se') {
-                        newW = Math.max(40, init.width + deltaX);
-                        newH = Math.max(40, init.height + deltaY);
-                    } else if (transformAction === 'sw') {
-                        newW = Math.max(40, init.width - deltaX);
-                        newX = init.x + (init.width - newW);
-                        newH = Math.max(40, init.height + deltaY);
-                    } else if (transformAction === 'ne') {
-                        newW = Math.max(40, init.width + deltaX);
-                        newH = Math.max(40, init.height - deltaY);
-                        newY = init.y + (init.height - newH);
-                    } else if (transformAction === 'nw') {
-                        newW = Math.max(40, init.width - deltaX);
-                        newX = init.x + (init.width - newW);
-                        newH = Math.max(40, init.height - deltaY);
-                        newY = init.y + (init.height - newH);
-                    }
-
-                    el.x = newX;
-                    el.y = newY;
-                    el.width = newW;
-                    el.height = newH;
+                // Scale DOM elements proportionally relative to group anchor
+                transformGroupElements.forEach((init, id) => {
+                    const el = activeBoardData.elements.find(it => it.id === id);
+                    if (!el) return;
+                    el.width = Math.max(40, Math.round(init.width * scale));
+                    el.height = Math.max(30, Math.round(init.height * scale));
+                    el.x = Math.round(anchor.x + (init.x - anchor.x) * scale);
+                    el.y = Math.round(anchor.y + (init.y - anchor.y) * scale);
 
                     const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
                     if (domEl) {
@@ -2461,352 +2529,511 @@ document.addEventListener('DOMContentLoaded', () => {
                         domEl.style.width = `${el.width}px`;
                         domEl.style.height = `${el.height}px`;
                     }
+                });
+
+                // Scale Vector Drawing strokes proportionally relative to group anchor
+                transformGroupDrawings.forEach((init, id) => {
+                    const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                    if (!path || !init.points) return;
+                    path.points = init.points.map(pt => ({
+                        x: Math.round(anchor.x + (pt.x - anchor.x) * scale),
+                        y: Math.round(anchor.y + (pt.y - anchor.y) * scale)
+                    }));
+                    path.size = Math.max(1, Math.round((init.size || 6) * scale));
+                });
+
+                if (transformGroupDrawings.size > 0) {
+                    renderDrawingPaths(activeBoardData.drawingPaths);
+                    updateDrawingSelectionBoxes();
                 }
             }
         });
-
-        renderDrawingPaths(activeBoardData.drawingPaths);
-        updateDrawingSelectionBoxes();
     };
 
-    const endElementTransform = async () => {
+    const endElementTransform = () => {
+        if (transformRafId) {
+            cancelAnimationFrame(transformRafId);
+            transformRafId = null;
+        }
+        elementsContainer.classList.remove('is-dragging-active');
         if (!isTransformingElement) return;
         isTransformingElement = false;
+        transformAction = null;
 
         const elemChanges = [];
+        transformGroupElements.forEach((init, id) => {
+            const el = activeBoardData?.elements?.find(it => it.id === id);
+            if (el && (el.x !== init.x || el.y !== init.y || el.width !== init.width || el.height !== init.height || el.rotation !== init.rotation)) {
+                elemChanges.push({
+                    id,
+                    from: { x: init.x, y: init.y, width: init.width, height: init.height, rotation: init.rotation },
+                    to: { x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation }
+                });
+            }
+        });
+
         const drawChanges = [];
-
-        selectedElementIds.forEach(id => {
-            const init = initialSelectedItemsState.get(id);
-            if (!init) return;
-
-            if (init.isDrawing) {
-                const path = activeBoardData.drawingPaths?.find(p => p.id === id);
-                if (path && init.points) {
-                    drawChanges.push({
-                        id,
-                        fromPoints: init.points.map(pt => ({ ...pt })),
-                        toPoints: path.points.map(pt => ({ ...pt })),
-                        fromSize: init.size,
-                        toSize: path.size
-                    });
-                }
-            } else {
-                const el = activeBoardData.elements?.find(it => it.id === id);
-                if (el) {
-                    elemChanges.push({
-                        id,
-                        from: { x: init.x, y: init.y, width: init.width, height: init.height, rotation: init.rotation },
-                        to: { x: el.x, y: el.y, width: el.width, height: el.height, rotation: el.rotation }
-                    });
-                }
+        transformGroupDrawings.forEach((init, id) => {
+            const path = activeBoardData?.drawingPaths?.find(p => p.id === id);
+            if (path && init.points) {
+                drawChanges.push({
+                    id,
+                    fromPoints: init.points,
+                    toPoints: path.points.map(pt => ({ ...pt })),
+                    fromSize: init.size,
+                    toSize: path.size
+                });
             }
         });
 
         if (elemChanges.length > 0 || drawChanges.length > 0) {
-            recordAction({ type: 'TRANSFORM_ITEMS', elements: elemChanges, drawings: drawChanges });
-            await queueSaveBoard();
+            recordAction({
+                type: 'TRANSFORM_ITEMS',
+                elements: elemChanges,
+                drawings: drawChanges
+            });
         }
+
+        transformGroupElements.clear();
+        transformGroupDrawings.clear();
+        transformInitialGroupRect = null;
+        transformAnchorPoint = null;
+        queueSaveBoard();
     };
 
-    // --- Delete Selected Elements ---
+    // Add New Text Note
+    const addNewTextElement = () => {
+        if (!activeBoardData) {
+            activeBoardData = getOrCreateLocalBoard();
+            activeBoardId = activeBoardData.id;
+        }
+        // Position near center of user's current viewport
+        const centerPos = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+
+        const newId = 'elem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const newItem = {
+            id: newId,
+            type: 'text',
+            content: 'Double click to add notes or styling concepts...',
+            x: Math.round(centerPos.x - 120),
+            y: Math.round(centerPos.y - 60),
+            width: 260,
+            height: 140,
+            rotation: 0,
+            stylePreset: 'note-dark',
+            zIndex: ((activeBoardData.elements && activeBoardData.elements.length) || 0) + 10
+        };
+
+        if (!activeBoardData.elements) activeBoardData.elements = [];
+        activeBoardData.elements.push(newItem);
+        recordAction({ type: 'ADD_ELEMENT', element: { ...newItem } });
+        renderCanvasElements(activeBoardData.elements);
+        selectElement(newId);
+        queueSaveBoard();
+        showToast('Text note added.');
+    };
+
+    toolAddText.addEventListener('click', addNewTextElement);
+
     const deleteSelectedElements = async () => {
-        if (selectedElementIds.size === 0 || !activeBoardData) return;
+        if (!activeBoardData) return;
+        if (selectedElementIds.size === 0 && selectedElementId) {
+            selectedElementIds.add(selectedElementId);
+        }
+        if (selectedElementIds.size === 0) return;
 
-        const deletedElems = [];
-        const deletedDrawings = [];
+        const toDeleteElements = (activeBoardData.elements || []).filter(it => selectedElementIds.has(it.id));
+        const toDeleteDrawings = (activeBoardData.drawingPaths || []).filter(p => selectedElementIds.has(p.id));
 
-        selectedElementIds.forEach(id => {
-            const elemIdx = (activeBoardData.elements || []).findIndex(e => e.id === id);
-            if (elemIdx !== -1) {
-                deletedElems.push(activeBoardData.elements[elemIdx]);
-                activeBoardData.elements.splice(elemIdx, 1);
-            } else {
-                const drawIdx = (activeBoardData.drawingPaths || []).findIndex(p => p.id === id);
-                if (drawIdx !== -1) {
-                    deletedDrawings.push(activeBoardData.drawingPaths[drawIdx]);
-                    activeBoardData.drawingPaths.splice(drawIdx, 1);
-                }
-            }
+        if (toDeleteElements.length === 0 && toDeleteDrawings.length === 0) return;
+
+        recordAction({
+            type: 'DELETE_ITEMS',
+            elements: toDeleteElements.map(it => ({ ...it })),
+            drawings: toDeleteDrawings.map(p => ({ ...p, points: p.points.map(pt => ({ ...pt })) }))
         });
 
-        recordAction({ type: 'DELETE_ITEMS', elements: deletedElems, drawings: deletedDrawings });
+        activeBoardData.elements = (activeBoardData.elements || []).filter(it => !selectedElementIds.has(it.id));
+        activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => !selectedElementIds.has(p.id));
+
+        const totalDeleted = toDeleteElements.length + toDeleteDrawings.length;
         deselectAll();
         renderCanvasElements(activeBoardData.elements);
         renderDrawingPaths(activeBoardData.drawingPaths);
         await queueSaveBoard();
-        showToast('Selected item(s) deleted.');
+        showToast(`Deleted ${totalDeleted} item${totalDeleted === 1 ? '' : 's'}.`);
     };
 
-    // --- Adding New Elements ---
-    const addNewTextElement = async () => {
+    const deleteElementById = async (id) => {
+        if (!activeBoardData) return;
+        const itemToDelete = (activeBoardData.elements || []).find(it => it.id === id);
+        const pathToDelete = (activeBoardData.drawingPaths || []).find(p => p.id === id);
+
+        if (itemToDelete) {
+            recordAction({ type: 'DELETE_ELEMENT', element: { ...itemToDelete } });
+            activeBoardData.elements = (activeBoardData.elements || []).filter(it => it.id !== id);
+        } else if (pathToDelete) {
+            recordAction({ type: 'DELETE_ITEMS', drawings: [{ ...pathToDelete, points: pathToDelete.points.map(pt => ({ ...pt })) }] });
+            activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => p.id !== id);
+        }
+
+        selectedElementIds.delete(id);
+        if (selectedElementId === id) {
+            selectedElementId = Array.from(selectedElementIds)[0] || null;
+        }
+        renderCanvasElements(activeBoardData.elements);
+        renderDrawingPaths(activeBoardData.drawingPaths);
+        updateSelectionToolbar();
+        await queueSaveBoard();
+        showToast('Item deleted.');
+    };
+
+    // Add Image Element Helper (Calculates Exact Natural Aspect Ratio & Viewport Scale)
+    const insertImageElement = (imageUrl) => {
+        if (!imageUrl) return;
+
         if (!activeBoardData) {
             activeBoardData = getOrCreateLocalBoard();
             activeBoardId = activeBoardData.id;
         }
 
-        const vpRect = canvasViewport.getBoundingClientRect();
-        const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
+        const img = new Image();
+        // Do NOT use crossOrigin='anonymous' to avoid CORS rejections on external image hosts
+        img.onload = () => {
+            const naturalW = img.naturalWidth || 800;
+            const naturalH = img.naturalHeight || 600;
+            const aspect = naturalW / naturalH;
 
-        const newEl = {
-            id: 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            type: 'text',
-            content: '',
-            x: Math.round(centerWorld.x - 120),
-            y: Math.round(centerWorld.y - 100),
-            width: 240,
-            height: 200,
-            rotation: 0,
-            stylePreset: 'note-dark',
-            fontSize: 14,
-            fontBold: false,
-            fontItalic: false
+            // Target size relative to current viewport: ~38% of visible screen height
+            const vpRect = canvasViewport.getBoundingClientRect();
+            const targetVisibleHeight = Math.max(260, Math.min(480, (vpRect.height || 600) * 0.42));
+            
+            // Adjust for current canvas zoom level
+            let elementH = targetVisibleHeight / viewportScale;
+            let elementW = elementH * aspect;
+
+            // Clamp reasonable bounds
+            if (elementW > 1200) {
+                elementW = 1200;
+                elementH = elementW / aspect;
+            }
+
+            const centerPos = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+            const newId = 'elem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const newItem = {
+                id: newId,
+                type: 'image',
+                content: imageUrl,
+                x: Math.round(centerPos.x - elementW / 2),
+                y: Math.round(centerPos.y - elementH / 2),
+                width: Math.round(elementW),
+                height: Math.round(elementH),
+                rotation: 0,
+                zIndex: ((activeBoardData.elements && activeBoardData.elements.length) || 0) + 10
+            };
+
+            if (!activeBoardData.elements) activeBoardData.elements = [];
+            activeBoardData.elements.push(newItem);
+            recordAction({ type: 'ADD_ELEMENT', element: { ...newItem } });
+            renderCanvasElements(activeBoardData.elements);
+            selectElement(newId);
+            queueSaveBoard();
+            closeModal(modalAddPhoto);
+            showToast('Photo placed onto moodboard in original ratio.');
         };
 
-        if (!activeBoardData.elements) activeBoardData.elements = [];
-        activeBoardData.elements.push(newEl);
-        recordAction({ type: 'ADD_ELEMENT', element: { ...newEl } });
-        renderCanvasElements(activeBoardData.elements);
-        selectElement(newEl.id);
+        img.onerror = () => {
+            const centerPos = screenToWorld(window.innerWidth / 2, window.innerHeight / 2);
+            const newId = 'elem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const newItem = {
+                id: newId,
+                type: 'image',
+                content: imageUrl,
+                x: Math.round(centerPos.x - 180),
+                y: Math.round(centerPos.y - 180),
+                width: 360,
+                height: 360,
+                rotation: 0,
+                zIndex: ((activeBoardData.elements && activeBoardData.elements.length) || 0) + 10
+            };
+            if (!activeBoardData.elements) activeBoardData.elements = [];
+            activeBoardData.elements.push(newItem);
+            recordAction({ type: 'ADD_ELEMENT', element: { ...newItem } });
+            renderCanvasElements(activeBoardData.elements);
+            selectElement(newId);
+            queueSaveBoard();
+            closeModal(modalAddPhoto);
+            showToast('Photo placed onto moodboard.');
+        };
 
-        setTimeout(() => {
-            const domEl = elementsContainer.querySelector(`[data-id="${newEl.id}"] .editable-text`);
-            if (domEl) domEl.focus();
-        }, 50);
-
-        await queueSaveBoard();
+        img.src = imageUrl;
     };
 
-    if (toolAddText) {
-        toolAddText.addEventListener('click', addNewTextElement);
-    }
+    // --- Photoshoot Library & Image Inserter Modal ---
+    toolAddPhoto.addEventListener('click', () => {
+        openModal(modalAddPhoto);
+        loadPhotoshootPicker();
+    });
 
-    // Add Photo Modal
-    if (toolAddPhoto) {
-        toolAddPhoto.addEventListener('click', () => {
-            openModal(modalAddPhoto);
-            loadPhotoshootLibrary();
-        });
-    }
+    // Tab switcher in Photoshoot Modal
+    document.querySelectorAll('.picker-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.picker-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+            btn.classList.add('active');
 
-    // Modal Tabs
-    document.querySelectorAll('.picker-tab-btn').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.picker-tab-btn').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const tabName = tab.dataset.tab;
-            document.getElementById('tab-content-photoshoots').style.display = tabName === 'photoshoots' ? 'block' : 'none';
-            document.getElementById('tab-content-url').style.display = tabName === 'url' ? 'block' : 'none';
-            document.getElementById('tab-content-upload').style.display = tabName === 'upload' ? 'block' : 'none';
+            const tab = btn.dataset.tab;
+            const targetPane = document.getElementById(`tab-content-${tab}`);
+            if (targetPane) targetPane.style.display = 'block';
         });
     });
 
-    // Photoshoot Explorer
-    let loadedPhotoshoots = [];
-    const loadPhotoshootLibrary = async () => {
-        if (loadedPhotoshoots.length > 0) return;
-        pickerPhotosGrid.innerHTML = '<div style="color:var(--mb-text-muted); grid-column:1/-1; text-align:center; padding:2rem;">Loading photoshoot references...</div>';
+    // Load Photoshoots with Role Permissions
+    const loadPhotoshootPicker = async () => {
+        pickerPhotosGrid.innerHTML = '<div style="color: var(--mb-text-muted); grid-column: 1/-1; text-align: center; padding: 2rem;">Loading photoshoot library...</div>';
+        photoshootCategoryFilter.innerHTML = '<option value="all">All Photoshoots</option>';
 
         try {
-            const snap = await getDocs(collection(db, 'photoshoots'));
-            loadedPhotoshoots = [];
-            photoshootCategoryFilter.innerHTML = '<option value="all">All Photoshoots</option>';
+            let allPhotos = [];
 
-            snap.forEach(docSnap => {
+            // 1. Fetch Single Shots
+            const singleSnap = await getDocs(collection(db, 'single_shots'));
+            singleSnap.forEach(docSnap => {
                 const data = docSnap.data();
-                if (data.images && data.images.length > 0) {
-                    loadedPhotoshoots.push({ id: docSnap.id, title: data.title || 'Untitled', images: data.images });
-                    const opt = document.createElement('option');
-                    opt.value = docSnap.id;
-                    opt.textContent = data.title || 'Untitled';
-                    photoshootCategoryFilter.appendChild(opt);
+                if (data.url) {
+                    allPhotos.push({
+                        url: data.url,
+                        title: 'Single Shot',
+                        isArchived: false,
+                        category: 'Single Shots'
+                    });
                 }
             });
 
-            renderPhotoshootGrid('all');
+            // 2. Fetch Photo Sets
+            const setsSnap = await getDocs(collection(db, 'photo_sets'));
+            const categoriesFound = new Set(['Single Shots']);
+
+            setsSnap.forEach(docSnap => {
+                const data = docSnap.data();
+                const isArchived = data.archived === true;
+
+                // If regular user, exclude archived
+                if (isArchived && !currentIsAdmin) return;
+
+                const catName = data.categoryName || 'Untitled Set';
+                categoriesFound.add(catName);
+
+                if (data.urls && Array.isArray(data.urls)) {
+                    data.urls.forEach(url => {
+                        allPhotos.push({
+                            url: url,
+                            title: catName,
+                            isArchived: isArchived,
+                            category: catName
+                        });
+                    });
+                }
+            });
+
+            // Populate category filter dropdown
+            categoriesFound.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                photoshootCategoryFilter.appendChild(opt);
+            });
+
+            photoshootCountBadge.textContent = `${allPhotos.length} photos available`;
+
+            // Render Photos
+            const renderPickerGrid = (filtered) => {
+                pickerPhotosGrid.innerHTML = '';
+                if (filtered.length === 0) {
+                    pickerPhotosGrid.innerHTML = '<div style="color: var(--mb-text-muted); grid-column: 1/-1; text-align: center; padding: 2rem;">No photos match the filter.</div>';
+                    return;
+                }
+
+                filtered.forEach(photo => {
+                    const card = document.createElement('div');
+                    card.className = 'picker-photo-card';
+                    card.innerHTML = `
+                        <img src="${photo.url}" alt="${escapeHtml(photo.title)}" loading="lazy">
+                        ${photo.isArchived ? '<span class="picker-badge-archived">Archived</span>' : ''}
+                    `;
+                    card.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        insertImageElement(photo.url);
+                    });
+                    pickerPhotosGrid.appendChild(card);
+                });
+            };
+
+            renderPickerGrid(allPhotos);
+
+            // Filter select handler
+            photoshootCategoryFilter.onchange = () => {
+                const selected = photoshootCategoryFilter.value;
+                if (selected === 'all') renderPickerGrid(allPhotos);
+                else renderPickerGrid(allPhotos.filter(p => p.category === selected));
+            };
+
         } catch (err) {
-            console.error("Error loading photoshoots:", err);
-            pickerPhotosGrid.innerHTML = '<div style="color:var(--mb-danger); grid-column:1/-1; text-align:center;">Failed to load photoshoots.</div>';
+            console.error("Error loading photoshoot images:", err);
+            pickerPhotosGrid.innerHTML = '<div style="color: var(--mb-danger); grid-column: 1/-1; text-align: center;">Error loading photos.</div>';
         }
     };
 
-    const renderPhotoshootGrid = (filterId) => {
-        pickerPhotosGrid.innerHTML = '';
-        let count = 0;
+    // Insert Image via URL
+    btnInsertUrlImg.addEventListener('click', () => {
+        const url = inputImgUrl.value.trim();
+        if (!url) {
+            alert('Please enter a valid image URL.');
+            return;
+        }
+        insertImageElement(url);
+        inputImgUrl.value = '';
+    });
 
-        loadedPhotoshoots.forEach(set => {
-            if (filterId !== 'all' && set.id !== filterId) return;
+    // Local File Upload directly onto Moodboard via Cloudflare Worker -> ImgBB
+    inputFileLocal.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-            set.images.forEach(imgUrl => {
-                count++;
-                const item = document.createElement('div');
-                item.className = 'picker-photo-item';
-                item.innerHTML = `<img src="${imgUrl}" alt="Photoshoot Reference" loading="lazy">`;
-                item.addEventListener('click', () => {
-                    insertImageToCanvas(imgUrl);
-                    closeModal(modalAddPhoto);
-                });
-                pickerPhotosGrid.appendChild(item);
+        uploadStatusText.style.display = 'block';
+        uploadStatusText.textContent = 'Compressing & uploading image to ImgBB...';
+
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const workerUrl = 'https://long-sky-4aa4.dener4826.workers.dev';
+            const response = await fetch(workerUrl, {
+                method: 'POST',
+                body: formData
             });
-        });
 
-        photoshootCountBadge.textContent = `${count} photo${count === 1 ? '' : 's'}`;
-    };
-
-    if (photoshootCategoryFilter) {
-        photoshootCategoryFilter.addEventListener('change', (e) => {
-            renderPhotoshootGrid(e.target.value);
-        });
-    }
-
-    // Direct Image URL Insert
-    if (inputImgUrl) {
-        inputImgUrl.addEventListener('input', () => {
-            const url = inputImgUrl.value.trim();
-            const previewBox = document.getElementById('url-preview-box');
-            const previewImg = document.getElementById('url-preview-img');
-            if (url) {
-                previewImg.src = url;
-                previewBox.style.display = 'block';
+            const data = await response.json();
+            if (data.success && data.data && data.data.url) {
+                insertImageElement(data.data.url);
+                uploadStatusText.style.display = 'none';
+                inputFileLocal.value = '';
             } else {
-                previewBox.style.display = 'none';
+                throw new Error(data.error?.message || 'Upload failed');
             }
-        });
-    }
-
-    if (btnInsertUrlImg) {
-        btnInsertUrlImg.addEventListener('click', () => {
-            const url = inputImgUrl.value.trim();
-            if (url) {
-                insertImageToCanvas(url);
-                closeModal(modalAddPhoto);
-                inputImgUrl.value = '';
-                document.getElementById('url-preview-box').style.display = 'none';
-            }
-        });
-    }
-
-    // Local Image File Upload (ImgBB)
-    if (inputFileLocal) {
-        inputFileLocal.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            uploadStatusText.style.display = 'block';
-            uploadStatusText.textContent = 'Uploading image, please wait...';
-
-            try {
-                const formData = new FormData();
-                formData.append('image', file);
-
-                const response = await fetch('https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY_HERE', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const resData = await response.json();
-                if (resData && resData.data && resData.data.url) {
-                    insertImageToCanvas(resData.data.url);
-                    closeModal(modalAddPhoto);
-                    uploadStatusText.style.display = 'none';
-                    inputFileLocal.value = '';
-                } else {
-                    uploadStatusText.textContent = 'Upload failed. Please try again.';
-                }
-            } catch (err) {
-                console.error("Local file upload error:", err);
-                uploadStatusText.textContent = 'Upload error. Please check internet connection.';
-            }
-        });
-    }
-
-    const insertImageToCanvas = async (url) => {
-        if (!activeBoardData) {
-            activeBoardData = getOrCreateLocalBoard();
-            activeBoardId = activeBoardData.id;
+        } catch (err) {
+            console.error("Direct upload error:", err);
+            uploadStatusText.textContent = 'Upload failed. Please try a direct URL.';
+            uploadStatusText.style.color = '#f43f5e';
         }
+    });
 
-        const vpRect = canvasViewport.getBoundingClientRect();
-        const centerWorld = screenToWorld(vpRect.left + vpRect.width / 2, vpRect.top + vpRect.height / 2);
-
-        // Preload image to get original intrinsic aspect ratio
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.src = url;
-        await new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-        });
-
-        let targetW = 320;
-        let targetH = 240;
-        if (img.width && img.height) {
-            const aspect = img.width / img.height;
-            targetW = 360;
-            targetH = Math.round(360 / aspect);
-        }
-
-        const newEl = {
-            id: 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            type: 'image',
-            url: url,
-            x: Math.round(centerWorld.x - targetW / 2),
-            y: Math.round(centerWorld.y - targetH / 2),
-            width: targetW,
-            height: targetH,
-            rotation: 0
-        };
-
-        if (!activeBoardData.elements) activeBoardData.elements = [];
-        activeBoardData.elements.push(newEl);
-        recordAction({ type: 'ADD_ELEMENT', element: { ...newEl } });
-        renderCanvasElements(activeBoardData.elements);
-        selectElement(newEl.id);
-        await queueSaveBoard();
-        showToast('Image added to moodboard!');
+    // Helper: Check if current user is board creator or admin
+    const isBoardCreatorOrAdmin = () => {
+        if (currentIsAdmin) return true;
+        if (!currentUser || !activeBoardData) return false;
+        const uidMatch = activeBoardData.creatorUid && activeBoardData.creatorUid === currentUser.uid;
+        const emailMatch = activeBoardData.creatorEmail && currentUser.email &&
+            activeBoardData.creatorEmail.toLowerCase() === currentUser.email.toLowerCase();
+        return !!(uidMatch || emailMatch);
     };
 
-    // --- Board Settings & Share Modal ---
+    // --- Moodboard Settings Modal (Title, Description, Collaborators & View via URL) ---
     if (btnBoardSettings) {
         btnBoardSettings.addEventListener('click', () => {
-            if (!activeBoardData) return;
-            settingsBoardTitle.value = activeBoardData.title || '';
-            settingsBoardDesc.value = activeBoardData.description || '';
-            
-            settingViewViaUrl.checked = activeBoardData.viewViaUrl === true || activeBoardData.viewViaUrl === 'true';
-            
-            const origin = window.location.origin;
-            const shareUrl = `${origin}/moodboard/?id=${activeBoardId}`;
-            inputShareUrl.value = shareUrl;
-            shareLinkBox.style.display = settingViewViaUrl.checked ? 'block' : 'none';
+            if (!activeBoardData) {
+                activeBoardData = getOrCreateLocalBoard();
+                activeBoardId = activeBoardData.id;
+            }
+            const canEdit = isBoardCreatorOrAdmin();
+            if (settingsBoardTitle) {
+                settingsBoardTitle.value = activeBoardData.title || '';
+                settingsBoardTitle.disabled = !canEdit;
+            }
+            if (settingsBoardDesc) {
+                settingsBoardDesc.value = activeBoardData.description || '';
+                settingsBoardDesc.disabled = !canEdit;
+            }
+            const collabControls = document.getElementById('collab-add-controls');
+            if (collabControls) collabControls.style.display = canEdit ? 'flex' : 'none';
+            if (btnSaveBoardSettings) btnSaveBoardSettings.style.display = canEdit ? '' : 'none';
 
-            renderCollaboratorChips();
+            if (settingViewViaUrl) {
+                settingViewViaUrl.checked = !!activeBoardData.viewViaUrl;
+                settingViewViaUrl.disabled = !canEdit;
+            }
+
+            const shareUrl = activeBoardId && !activeBoardId.startsWith('local_')
+                ? `${window.location.origin}/moodboard/?id=${activeBoardId}`
+                : `${window.location.origin}/moodboard/`;
+            if (inputShareUrl) inputShareUrl.value = shareUrl;
+            if (shareLinkBox) shareLinkBox.style.display = activeBoardData.viewViaUrl ? 'block' : 'none';
+
+            renderCollabChips(canEdit);
             openModal(modalBoardSettings);
         });
     }
 
     if (settingViewViaUrl) {
-        settingViewViaUrl.addEventListener('change', (e) => {
-            shareLinkBox.style.display = e.target.checked ? 'block' : 'none';
+        settingViewViaUrl.addEventListener('change', () => {
+            if (shareLinkBox) shareLinkBox.style.display = settingViewViaUrl.checked ? 'block' : 'none';
         });
     }
 
     if (btnCopyShareUrl) {
         btnCopyShareUrl.addEventListener('click', () => {
-            inputShareUrl.select();
-            navigator.clipboard.writeText(inputShareUrl.value).then(() => {
-                showToast('Share link copied to clipboard!');
-            });
+            if (inputShareUrl) {
+                inputShareUrl.select();
+                navigator.clipboard.writeText(inputShareUrl.value);
+                showToast('Moodboard link copied to clipboard!');
+            }
         });
     }
 
-    const renderCollaboratorChips = () => {
+    if (btnSaveBoardSettings) {
+        btnSaveBoardSettings.addEventListener('click', async () => {
+            if (!activeBoardData) return;
+            if (!isBoardCreatorOrAdmin()) {
+                showToast('Only the moodboard creator can change settings.');
+                return;
+            }
+            const newTitle = settingsBoardTitle ? settingsBoardTitle.value.trim() : '';
+            const newDesc = settingsBoardDesc ? settingsBoardDesc.value.trim() : '';
+
+            activeBoardData.title = newTitle || 'Untitled Board';
+            activeBoardData.description = newDesc;
+            activeBoardData.viewViaUrl = settingViewViaUrl ? settingViewViaUrl.checked : false;
+            if (activeBoardTitle) activeBoardTitle.textContent = activeBoardData.title;
+
+            if (activeBoardId && !activeBoardId.startsWith('local_')) {
+                try {
+                    const boardRef = doc(db, 'moodboards', activeBoardId);
+                    await updateDoc(boardRef, {
+                        title: activeBoardData.title,
+                        description: activeBoardData.description,
+                        trustedEmails: activeBoardData.trustedEmails || [],
+                        viewViaUrl: !!activeBoardData.viewViaUrl,
+                        updatedAt: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Error saving board settings:", err);
+                }
+            } else {
+                queueSaveBoard();
+            }
+
+            closeModal(modalBoardSettings);
+            showToast('Moodboard settings saved!');
+        });
+    }
+
+    const renderCollabChips = (canEdit = isBoardCreatorOrAdmin()) => {
+        if (!collabChipsContainer) return;
         collabChipsContainer.innerHTML = '';
-        const emails = activeBoardData?.trustedEmails || [];
+        const emails = (activeBoardData && activeBoardData.trustedEmails) || [];
 
         if (emails.length === 0) {
-            collabChipsContainer.innerHTML = '<span style="color:var(--mb-text-muted); font-size:0.85rem;">No trusted collaborators added yet.</span>';
+            collabChipsContainer.innerHTML = '<span style="color: var(--mb-text-muted); font-size: 0.85rem;">No collaborators added yet.</span>';
             return;
         }
 
@@ -2815,100 +3042,108 @@ document.addEventListener('DOMContentLoaded', () => {
             chip.className = 'collab-chip';
             chip.innerHTML = `
                 <span>${escapeHtml(email)}</span>
-                <button class="remove-chip-btn" title="Remove collaborator">&times;</button>
+                ${canEdit ? `<span class="remove-chip" title="Remove Collaborator">&times;</span>` : ''}
             `;
 
-            chip.querySelector('.remove-chip-btn').addEventListener('click', () => {
-                activeBoardData.trustedEmails = activeBoardData.trustedEmails.filter(e => e !== email);
-                renderCollaboratorChips();
-            });
+            if (canEdit) {
+                const removeBtn = chip.querySelector('.remove-chip');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', async () => {
+                        activeBoardData.trustedEmails = activeBoardData.trustedEmails.filter(e => e !== email);
+                        renderCollabChips(canEdit);
+                        await queueSaveBoard();
+                        showToast(`Removed ${email}`);
+                    });
+                }
+            }
 
             collabChipsContainer.appendChild(chip);
         });
     };
 
     if (btnAddCollabEmail) {
-        btnAddCollabEmail.addEventListener('click', () => {
+        btnAddCollabEmail.addEventListener('click', async () => {
+            if (!isBoardCreatorOrAdmin()) {
+                showToast('Only the creator can add collaborators.');
+                return;
+            }
             const email = inputAddCollabEmail.value.trim().toLowerCase();
-            if (email && email.includes('@')) {
-                if (!activeBoardData.trustedEmails) activeBoardData.trustedEmails = [];
-                if (!activeBoardData.trustedEmails.includes(email)) {
-                    activeBoardData.trustedEmails.push(email);
-                    inputAddCollabEmail.value = '';
-                    renderCollaboratorChips();
-                }
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address.');
+                return;
             }
+
+            if (!activeBoardData.trustedEmails) activeBoardData.trustedEmails = [];
+            if (activeBoardData.trustedEmails.includes(email)) {
+                alert('User is already added to this board.');
+                return;
+            }
+
+            activeBoardData.trustedEmails.push(email);
+            inputAddCollabEmail.value = '';
+            renderCollabChips(true);
+            await queueSaveBoard();
+            showToast(`Added ${email} to collaborators!`);
         });
     }
 
-    if (btnSaveBoardSettings) {
-        btnSaveBoardSettings.addEventListener('click', async () => {
-            if (!activeBoardData || !activeBoardId) return;
-
-            activeBoardData.title = settingsBoardTitle.value.trim() || 'Untitled Board';
-            activeBoardData.description = settingsBoardDesc.value.trim();
-            activeBoardData.viewViaUrl = settingViewViaUrl.checked;
-
-            activeBoardTitle.textContent = activeBoardData.title;
-
-            try {
-                await updateDoc(doc(db, 'moodboards', activeBoardId), {
-                    title: activeBoardData.title,
-                    description: activeBoardData.description,
-                    trustedEmails: activeBoardData.trustedEmails || [],
-                    viewViaUrl: activeBoardData.viewViaUrl,
-                    updatedAt: new Date().toISOString()
-                });
-
-                closeModal(modalBoardSettings);
-                showToast('Board settings updated!');
-            } catch (err) {
-                console.error("Error saving board settings:", err);
-                showToast('Error saving board settings.');
-            }
-        });
-    }
-
-    // --- Persistence & Firestore Saving ---
-    const getOrCreateLocalBoard = () => {
-        return {
-            id: 'local_' + Date.now(),
-            title: 'Guest Moodboard',
-            description: 'Local session moodboard',
-            elements: [],
-            drawingPaths: []
-        };
-    };
-
+    // --- Clean Non-Existent/Empty Drawings and Firestore Persistence ---
     const cleanAndSaveBoard = async () => {
         if (!activeBoardId || !activeBoardData) return;
-
-        // Clean out invalid entries
-        activeBoardData.elements = (activeBoardData.elements || []).filter(el => el && el.id && isFinite(el.x) && isFinite(el.y));
-        activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => p && p.id && Array.isArray(p.points));
-
-        if (activeBoardId.startsWith('local_')) return;
-
+        // Clean out any empty strokes (< 2 points) or invalid drawings
+        if (activeBoardData.drawingPaths) {
+            activeBoardData.drawingPaths = activeBoardData.drawingPaths.filter(
+                p => p && p.points && p.points.length >= 2 && !p.isDeleted
+            );
+        }
+        if (activeBoardId.startsWith('local_')) {
+            localStorage.setItem('zhukov_local_board', JSON.stringify(activeBoardData));
+            return;
+        }
         try {
-            await updateDoc(doc(db, 'moodboards', activeBoardId), {
-                elements: activeBoardData.elements,
-                drawingPaths: activeBoardData.drawingPaths,
+            const boardRef = doc(db, 'moodboards', activeBoardId);
+            await updateDoc(boardRef, {
+                elements: activeBoardData.elements || [],
+                drawingPaths: activeBoardData.drawingPaths || [],
+                trustedEmails: activeBoardData.trustedEmails || [],
                 updatedAt: new Date().toISOString()
             });
         } catch (err) {
-            console.error("Error saving moodboard to Firestore:", err);
+            console.error("Error persisting cleaned moodboard:", err);
         }
     };
 
+    window.addEventListener('beforeunload', () => {
+        cleanAndSaveBoard();
+    });
+    window.addEventListener('pagehide', () => {
+        cleanAndSaveBoard();
+    });
+
     const queueSaveBoard = async () => {
-        if (saveTimeout) clearTimeout(saveTimeout);
+        if (!activeBoardId || !activeBoardData) return;
+        clearTimeout(saveTimeout);
         saveTimeout = setTimeout(async () => {
             await cleanAndSaveBoard();
-        }, 400);
+        }, 300);
     };
 
-    // Helper: Escape HTML
+    // Helper: HTML Escaper
     function escapeHtml(str) {
-        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        if (!str) return '';
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // --- URL-based Board Routing on Page Load ---
+    const initialBoardId = getBoardIdFromUrl();
+    if (initialBoardId) {
+        setTimeout(() => {
+            if (!activeBoardId) openMoodboard(initialBoardId);
+        }, 150);
     }
 });
