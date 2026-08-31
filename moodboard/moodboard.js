@@ -185,6 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
+    const getOrCreateLocalBoard = () => {
+        let localData = null;
+        try {
+            const saved = localStorage.getItem('zhukov_local_board');
+            if (saved) localData = JSON.parse(saved);
+        } catch (_) {}
+        if (!localData) {
+            localData = {
+                id: 'local_' + Date.now(),
+                title: 'Untitled Moodboard',
+                description: '',
+                elements: [],
+                drawingPaths: [],
+                trustedEmails: []
+            };
+        }
+        return localData;
+    };
+
     // --- Auth Management ---
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
@@ -434,6 +453,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDrawingPaths(activeBoardData.drawingPaths);
                 break;
             }
+            case 'ERASE_STROKES': {
+                activeBoardData.drawingPaths = (action.fromPaths || []).map(p => ({
+                    ...p,
+                    points: (p.points || []).map(pt => ({ ...pt }))
+                }));
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateDrawingSelectionBoxes();
+                break;
+            }
             case 'CLEAR_DRAWINGS': {
                 activeBoardData.drawingPaths = [ ...action.paths ];
                 renderDrawingPaths(activeBoardData.drawingPaths);
@@ -587,6 +615,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
                 activeBoardData.drawingPaths.push({ ...action.path });
                 renderDrawingPaths(activeBoardData.drawingPaths);
+                break;
+            }
+            case 'ERASE_STROKES': {
+                activeBoardData.drawingPaths = (action.toPaths || []).map(p => ({
+                    ...p,
+                    points: (p.points || []).map(pt => ({ ...pt }))
+                }));
+                renderDrawingPaths(activeBoardData.drawingPaths);
+                updateDrawingSelectionBoxes();
                 break;
             }
             case 'CLEAR_DRAWINGS': {
@@ -1044,15 +1081,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (isDraggingElement || isTransformingElement || isDrawingStroke || isPanning || isMarqueeSelecting) {
-                // Do not recreate DOM elements while the user is actively dragging or transforming
-                return;
-            }
+            // Preserve in-progress textarea text if the user is currently typing
+            const activeEl = document.activeElement;
+            const isEditingText = activeEl && activeEl.classList.contains('editable-text');
+            const activeEditingId = isEditingText && activeEl.closest('.board-element') ? 
+                activeEl.closest('.board-element').dataset.id : null;
+            const currentEditingText = isEditingText ? activeEl.value : null;
 
             activeBoardData = { id: docSnap.id, ...data };
             if (!activeBoardData.elements) activeBoardData.elements = [];
             if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
+            activeBoardData.drawingPaths = activeBoardData.drawingPaths.filter(p => !p.isEraser);
             if (!activeBoardData.trustedEmails) activeBoardData.trustedEmails = [];
+
+            if (activeEditingId && currentEditingText !== null) {
+                const activeItem = activeBoardData.elements.find(it => it.id === activeEditingId);
+                if (activeItem) {
+                    activeItem.content = currentEditingText;
+                }
+            }
 
             activeBoardTitle.textContent = activeBoardData.title || 'Untitled Board';
 
@@ -1616,22 +1663,170 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Freehand Pen & Eraser Drawing Layer ---
+    // --- Precision Vector Eraser & Freehand Pen Drawing Layer ---
+    let eraserInitialSnapshot = null;
+    let prevEraserPos = null;
+
+    const eraseStrokesAlongSegment = (pA, pB, radius) => {
+        if (!activeBoardData || !activeBoardData.drawingPaths || activeBoardData.drawingPaths.length === 0) {
+            return false;
+        }
+
+        let anyChanged = false;
+        const newDrawingPaths = [];
+        const erasedIds = new Set();
+
+        activeBoardData.drawingPaths.forEach(path => {
+            if (!path.points || path.points.length < 2) return;
+            const strokeHalfSize = (path.size || 6) / 2;
+            const effectiveRadius = radius + strokeHalfSize;
+
+            // Fast bounding box check
+            const box = getPathBoundingBox(path);
+            if (box) {
+                const segMinX = Math.min(pA.x, pB.x) - effectiveRadius;
+                const segMaxX = Math.max(pA.x, pB.x) + effectiveRadius;
+                const segMinY = Math.min(pA.y, pB.y) - effectiveRadius;
+                const segMaxY = Math.max(pA.y, pB.y) + effectiveRadius;
+
+                if (box.x > segMaxX || (box.x + box.width) < segMinX ||
+                    box.y > segMaxY || (box.y + box.height) < segMinY) {
+                    newDrawingPaths.push(path);
+                    return;
+                }
+            }
+
+            // 1. Densify points so fast swipes don't miss segments
+            const densePoints = [];
+            for (let i = 0; i < path.points.length; i++) {
+                const cur = path.points[i];
+                if (densePoints.length === 0) {
+                    densePoints.push(cur);
+                } else {
+                    const prev = densePoints[densePoints.length - 1];
+                    const dist = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+                    if (dist > 6) {
+                        const steps = Math.ceil(dist / 4);
+                        for (let s = 1; s <= steps; s++) {
+                            densePoints.push({
+                                x: Math.round(prev.x + (cur.x - prev.x) * (s / steps)),
+                                y: Math.round(prev.y + (cur.y - prev.y) * (s / steps))
+                            });
+                        }
+                    } else {
+                        densePoints.push(cur);
+                    }
+                }
+            }
+
+            // 2. Mark erased points
+            let pathModified = false;
+            const keptRuns = [];
+            let currentRun = [];
+
+            for (let i = 0; i < densePoints.length; i++) {
+                const pt = densePoints[i];
+                const d = distToSegment(pt, pA, pB);
+                if (d <= effectiveRadius) {
+                    pathModified = true;
+                    if (currentRun.length > 0) {
+                        keptRuns.push(currentRun);
+                        currentRun = [];
+                    }
+                } else {
+                    currentRun.push(pt);
+                }
+            }
+            if (currentRun.length > 0) {
+                keptRuns.push(currentRun);
+            }
+
+            if (!pathModified) {
+                newDrawingPaths.push(path);
+                return;
+            }
+
+            anyChanged = true;
+
+            // 3. Filter and simplify valid sub-runs (length >= 2)
+            const validSubRuns = [];
+            keptRuns.forEach(run => {
+                const cleanRun = [];
+                for (const pt of run) {
+                    if (cleanRun.length === 0) {
+                        cleanRun.push(pt);
+                    } else {
+                        const last = cleanRun[cleanRun.length - 1];
+                        if (Math.hypot(pt.x - last.x, pt.y - last.y) >= 2) {
+                            cleanRun.push(pt);
+                        }
+                    }
+                }
+                if (cleanRun.length >= 2) {
+                    validSubRuns.push(cleanRun);
+                }
+            });
+
+            if (validSubRuns.length === 0) {
+                erasedIds.add(path.id);
+            } else {
+                // First valid sub-run keeps the original path id
+                newDrawingPaths.push({
+                    id: path.id,
+                    color: path.color,
+                    size: path.size,
+                    points: validSubRuns[0]
+                });
+                // Additional split sub-runs get unique split ids
+                for (let k = 1; k < validSubRuns.length; k++) {
+                    newDrawingPaths.push({
+                        id: path.id + '_split_' + Date.now() + '_' + k,
+                        color: path.color,
+                        size: path.size,
+                        points: validSubRuns[k]
+                    });
+                }
+            }
+        });
+
+        if (anyChanged) {
+            activeBoardData.drawingPaths = newDrawingPaths;
+            renderDrawingPaths(activeBoardData.drawingPaths);
+
+            if (erasedIds.size > 0 && selectedElementIds.size > 0) {
+                erasedIds.forEach(id => selectedElementIds.delete(id));
+                if (erasedIds.has(selectedElementId)) {
+                    selectedElementId = selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null;
+                }
+                updateSelectedDOM();
+                updateSelectionToolbar();
+            } else if (selectedElementIds.size > 0) {
+                updateDrawingSelectionBoxes();
+            }
+        }
+
+        return anyChanged;
+    };
+
     const startStroke = (e) => {
         if (activeTool !== 'pen' && activeTool !== 'eraser') return;
         isDrawingStroke = true;
         const pos = screenToWorld(e.clientX, e.clientY);
-        currentStrokePoints = [pos];
-
-        drawingCtx.beginPath();
-        drawingCtx.moveTo(pos.x, pos.y);
-        drawingCtx.lineCap = 'round';
-        drawingCtx.lineJoin = 'round';
 
         if (activeTool === 'eraser') {
-            drawingCtx.globalCompositeOperation = 'destination-out';
-            drawingCtx.lineWidth = eraserSize;
+            if (!activeBoardData) {
+                activeBoardData = getOrCreateLocalBoard();
+                activeBoardId = activeBoardData.id;
+            }
+            eraserInitialSnapshot = JSON.parse(JSON.stringify(activeBoardData.drawingPaths || []));
+            prevEraserPos = pos;
+            eraseStrokesAlongSegment(pos, pos, eraserSize / 2);
         } else {
+            currentStrokePoints = [pos];
+            drawingCtx.beginPath();
+            drawingCtx.moveTo(pos.x, pos.y);
+            drawingCtx.lineCap = 'round';
+            drawingCtx.lineJoin = 'round';
             drawingCtx.globalCompositeOperation = 'source-over';
             drawingCtx.strokeStyle = penColor;
             drawingCtx.lineWidth = penSize;
@@ -1641,35 +1836,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const drawStroke = (e) => {
         if (!isDrawingStroke) return;
         const pos = screenToWorld(e.clientX, e.clientY);
-        currentStrokePoints.push(pos);
 
-        drawingCtx.lineTo(pos.x, pos.y);
-        drawingCtx.stroke();
+        if (activeTool === 'eraser') {
+            if (prevEraserPos) {
+                eraseStrokesAlongSegment(prevEraserPos, pos, eraserSize / 2);
+            } else {
+                eraseStrokesAlongSegment(pos, pos, eraserSize / 2);
+            }
+            prevEraserPos = pos;
+        } else {
+            currentStrokePoints.push(pos);
+            drawingCtx.lineTo(pos.x, pos.y);
+            drawingCtx.stroke();
+        }
     };
 
     const endStroke = async () => {
         if (!isDrawingStroke) return;
         isDrawingStroke = false;
 
-        if (currentStrokePoints.length > 1) {
-            if (!activeBoardData) {
-                activeBoardData = getOrCreateLocalBoard();
-                activeBoardId = activeBoardData.id;
+        if (activeTool === 'eraser') {
+            prevEraserPos = null;
+            if (eraserInitialSnapshot && activeBoardData) {
+                const currentJson = JSON.stringify(activeBoardData.drawingPaths || []);
+                const initialJson = JSON.stringify(eraserInitialSnapshot);
+                if (currentJson !== initialJson) {
+                    recordAction({
+                        type: 'ERASE_STROKES',
+                        fromPaths: eraserInitialSnapshot,
+                        toPaths: JSON.parse(currentJson)
+                    });
+                    await queueSaveBoard();
+                }
             }
-            const newPath = {
-                id: 'path_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                points: currentStrokePoints,
-                color: penColor,
-                size: activeTool === 'eraser' ? eraserSize : penSize,
-                isEraser: activeTool === 'eraser'
-            };
+            eraserInitialSnapshot = null;
+        } else {
+            if (currentStrokePoints.length > 1) {
+                if (!activeBoardData) {
+                    activeBoardData = getOrCreateLocalBoard();
+                    activeBoardId = activeBoardData.id;
+                }
+                const newPath = {
+                    id: 'path_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    points: currentStrokePoints,
+                    color: penColor,
+                    size: penSize
+                };
 
-            if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
-            activeBoardData.drawingPaths.push(newPath);
-            recordAction({ type: 'DRAW_STROKE', path: { ...newPath } });
-            await queueSaveBoard();
+                if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
+                activeBoardData.drawingPaths.push(newPath);
+                recordAction({ type: 'DRAW_STROKE', path: { ...newPath } });
+                await queueSaveBoard();
+            }
+            currentStrokePoints = [];
         }
-        currentStrokePoints = [];
     };
 
     // Geometry Helpers for Vector Drawing Selection & Transforms
@@ -1718,20 +1938,14 @@ document.addEventListener('DOMContentLoaded', () => {
         drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
 
         (paths || []).forEach(path => {
-            if (!path.points || path.points.length < 2) return;
+            if (path.isEraser || !path.points || path.points.length < 2) return;
             drawingCtx.beginPath();
             drawingCtx.moveTo(path.points[0].x, path.points[0].y);
             drawingCtx.lineCap = 'round';
             drawingCtx.lineJoin = 'round';
-
-            if (path.isEraser) {
-                drawingCtx.globalCompositeOperation = 'destination-out';
-                drawingCtx.lineWidth = path.size || 30;
-            } else {
-                drawingCtx.globalCompositeOperation = 'source-over';
-                drawingCtx.strokeStyle = path.color || '#38bdf8';
-                drawingCtx.lineWidth = path.size || 6;
-            }
+            drawingCtx.globalCompositeOperation = 'source-over';
+            drawingCtx.strokeStyle = path.color || '#38bdf8';
+            drawingCtx.lineWidth = path.size || 6;
 
             for (let i = 1; i < path.points.length; i++) {
                 drawingCtx.lineTo(path.points[i].x, path.points[i].y);
@@ -1926,8 +2140,94 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('pointerup', handlePointerEnd);
     window.addEventListener('pointercancel', handlePointerEnd);
 
+    // --- Unified Group Selection Bounding Box for Multi-Selection ---
+    let groupSelectionBox = document.getElementById('group-selection-box');
+    if (!groupSelectionBox) {
+        groupSelectionBox = document.createElement('div');
+        groupSelectionBox.id = 'group-selection-box';
+        groupSelectionBox.className = 'group-selection-box';
+        groupSelectionBox.innerHTML = `
+            <div class="transform-handle handle-nw" data-handle="nw"></div>
+            <div class="transform-handle handle-ne" data-handle="ne"></div>
+            <div class="transform-handle handle-se" data-handle="se"></div>
+            <div class="transform-handle handle-sw" data-handle="sw"></div>
+            <div class="transform-handle handle-rotate" data-handle="rotate"></div>
+        `;
+        elementsContainer.appendChild(groupSelectionBox);
+    }
+
+    groupSelectionBox.addEventListener('pointerdown', (e) => {
+        if (activeTool !== 'select') return;
+        if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
+
+        const handle = e.target.closest('.transform-handle');
+        if (handle) {
+            e.stopPropagation();
+            startElementTransform({ id: 'group' }, handle.dataset.handle, e);
+            return;
+        }
+
+        e.stopPropagation();
+        startElementDrag({ id: 'group' }, e);
+    });
+
+    // Helper: Compute aggregate bounding box enclosing all selected elements & drawings
+    const computeSelectionBoundingBox = () => {
+        if (selectedElementIds.size <= 1 || !activeBoardData) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let count = 0;
+
+        selectedElementIds.forEach(id => {
+            const el = activeBoardData.elements?.find(it => it.id === id);
+            if (el) {
+                const w = Number(el.width) || 100;
+                const h = Number(el.height) || 100;
+                const rot = (Number(el.rotation) || 0) * (Math.PI / 180);
+                const cos = Math.abs(Math.cos(rot));
+                const sin = Math.abs(Math.sin(rot));
+                const bw = w * cos + h * sin;
+                const bh = w * sin + h * cos;
+                const cx = el.x + w / 2;
+                const cy = el.y + h / 2;
+
+                minX = Math.min(minX, cx - bw / 2);
+                minY = Math.min(minY, cy - bh / 2);
+                maxX = Math.max(maxX, cx + bw / 2);
+                maxY = Math.max(maxY, cy + bh / 2);
+                count++;
+            }
+            const path = activeBoardData.drawingPaths?.find(p => p.id === id);
+            if (path && path.points && path.points.length > 0) {
+                const box = getPathBoundingBox(path);
+                if (box) {
+                    minX = Math.min(minX, box.x);
+                    minY = Math.min(minY, box.y);
+                    maxX = Math.max(maxX, box.x + box.width);
+                    maxY = Math.max(maxY, box.y + box.height);
+                    count++;
+                }
+            }
+        });
+
+        if (count <= 1 || !isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
+
+        const pad = 6;
+        return {
+            x: Math.round(minX - pad),
+            y: Math.round(minY - pad),
+            width: Math.max(20, Math.round(maxX - minX + pad * 2)),
+            height: Math.max(20, Math.round(maxY - minY + pad * 2))
+        };
+    };
+
     // Render interactive selection boxes for selected vector drawing strokes
     const updateDrawingSelectionBoxes = () => {
+        // If more than 1 item is selected, individual drawing boxes are hidden (group box encloses them)
+        if (selectedElementIds.size > 1) {
+            document.querySelectorAll('.board-element-drawing').forEach(el => el.remove());
+            return;
+        }
+
         // Remove boxes for drawings that are no longer selected
         document.querySelectorAll('.board-element-drawing').forEach(el => {
             if (!selectedElementIds.has(el.dataset.id)) {
@@ -2002,10 +2302,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursorSelectionStart = isEditingText ? activeEl.selectionStart : null;
         const cursorSelectionEnd = isEditingText ? activeEl.selectionEnd : null;
 
+        const isMulti = selectedElementIds.size > 1;
         const currentIds = new Set((elements || []).map(it => it.id));
 
         // 1. Remove DOM elements that no longer exist
         elementsContainer.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(domEl => {
+            if (domEl.id === 'group-selection-box') return;
             if (!currentIds.has(domEl.dataset.id)) {
                 domEl.remove();
             }
@@ -2025,6 +2327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.style.transform = `rotate(${item.rotation || 0}deg)`;
                 el.style.zIndex = item.zIndex || 10;
                 el.classList.toggle('is-selected', isSelected);
+                el.classList.toggle('is-multi-selected', isSelected && isMulti);
 
                 if (item.type === 'text') {
                     const textarea = el.querySelector('.editable-text');
@@ -2043,6 +2346,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         noteBody.style.fontWeight = item.fontBold ? '700' : '';
                         noteBody.style.fontStyle = item.fontItalic ? 'italic' : '';
                     }
+                    // Ensure edge handles exist on notes
+                    if (!el.querySelector('.handle-n')) {
+                        const handlesHtml = `
+                            <div class="transform-handle handle-n" data-handle="n"></div>
+                            <div class="transform-handle handle-s" data-handle="s"></div>
+                            <div class="transform-handle handle-e" data-handle="e"></div>
+                            <div class="transform-handle handle-w" data-handle="w"></div>
+                        `;
+                        el.insertAdjacentHTML('beforeend', handlesHtml);
+                    }
                 } else if (item.type === 'image') {
                     const img = el.querySelector('img');
                     if (img && img.getAttribute('src') !== item.content) {
@@ -2054,7 +2367,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Create new DOM element if it does not yet exist
             el = document.createElement('div');
-            el.className = `board-element ${isSelected ? 'is-selected' : ''}`;
+            el.className = `board-element ${isSelected ? 'is-selected' : ''} ${isSelected && isMulti ? 'is-multi-selected' : ''}`;
             el.dataset.id = item.id;
             el.style.left = `${item.x}px`;
             el.style.top = `${item.y}px`;
@@ -2095,6 +2408,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="transform-handle handle-ne" data-handle="ne"></div>
                     <div class="transform-handle handle-se" data-handle="se"></div>
                     <div class="transform-handle handle-sw" data-handle="sw"></div>
+                    <div class="transform-handle handle-n" data-handle="n"></div>
+                    <div class="transform-handle handle-s" data-handle="s"></div>
+                    <div class="transform-handle handle-e" data-handle="e"></div>
+                    <div class="transform-handle handle-w" data-handle="w"></div>
                     <div class="transform-handle handle-rotate" data-handle="rotate"></div>
                 `;
 
@@ -2112,6 +2429,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 textarea.addEventListener('blur', () => {
                     if (initialTextContent !== null && initialTextContent !== textarea.value) {
+                        const liveItem = (activeBoardData?.elements || []).find(it => it.id === item.id);
+                        if (liveItem) {
+                            liveItem.content = textarea.value;
+                        }
                         recordAction({
                             type: 'TEXT_CHANGE',
                             id: item.id,
@@ -2119,11 +2440,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             to: textarea.value
                         });
                         initialTextContent = null;
+                        queueSaveBoard();
                     }
                 });
 
                 textarea.addEventListener('input', () => {
-                    item.content = textarea.value;
+                    const liveItem = (activeBoardData?.elements || []).find(it => it.id === item.id);
+                    if (liveItem) {
+                        liveItem.content = textarea.value;
+                    }
                     queueSaveBoard();
                 });
             }
@@ -2159,8 +2484,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elementsContainer.appendChild(el);
         });
 
-        // Also render drawing selection boxes
-        updateDrawingSelectionBoxes();
+        // Also update selection visuals & bounding box
+        updateSelectedDOM();
 
         // Exact cursor and focus restoration
         if (activeEditingId) {
@@ -2176,15 +2501,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let prevSelectedIdsKey = '';
     const updateSelectedDOM = () => {
-        const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '');
-        if (currentKey === prevSelectedIdsKey) return;
-        prevSelectedIdsKey = currentKey;
-
+        const isMulti = selectedElementIds.size > 1;
+        const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '') + ':' + (isMulti ? 'm' : 's');
+        
         document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(el => {
+            if (el.id === 'group-selection-box') return;
             const isSel = selectedElementIds.has(el.dataset.id) || el.dataset.id === selectedElementId;
             el.classList.toggle('is-selected', isSel);
+            el.classList.toggle('is-multi-selected', isSel && isMulti);
         });
-        updateDrawingSelectionBoxes();
+
+        if (isMulti) {
+            document.querySelectorAll('.board-element-drawing').forEach(el => el.remove());
+            const bbox = computeSelectionBoundingBox();
+            if (bbox && groupSelectionBox) {
+                groupSelectionBox.style.left = `${bbox.x}px`;
+                groupSelectionBox.style.top = `${bbox.y}px`;
+                groupSelectionBox.style.width = `${bbox.width}px`;
+                groupSelectionBox.style.height = `${bbox.height}px`;
+                groupSelectionBox.style.transformOrigin = '50% 50%';
+                groupSelectionBox.style.transform = 'rotate(0deg)';
+                groupSelectionBox.classList.add('is-active');
+            } else if (groupSelectionBox) {
+                groupSelectionBox.classList.remove('is-active');
+            }
+        } else {
+            if (groupSelectionBox) {
+                groupSelectionBox.style.transform = 'rotate(0deg)';
+                groupSelectionBox.classList.remove('is-active');
+            }
+            updateDrawingSelectionBoxes();
+        }
+
+        prevSelectedIdsKey = currentKey;
     };
 
     const selectElement = (id, addToSelection = false) => {
@@ -2212,6 +2561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Multi-Element & Drawing Drag Handling
     let dragItemInitialPositions = new Map();
     let dragPathInitialPoints = new Map();
+    let dragGroupInitialBbox = null;
     let dragRafId = null;
 
     const startElementDrag = (item, e) => {
@@ -2219,16 +2569,18 @@ document.addEventListener('DOMContentLoaded', () => {
         isDraggingElement = true;
         elementsContainer.classList.add('is-dragging-active');
 
-        if (!selectedElementIds.has(item.id)) {
-            if (e.shiftKey) {
-                selectedElementIds.add(item.id);
-            } else {
-                selectedElementIds.clear();
-                selectedElementIds.add(item.id);
+        if (item && item.id && item.id !== 'group') {
+            if (!selectedElementIds.has(item.id)) {
+                if (e.shiftKey) {
+                    selectedElementIds.add(item.id);
+                } else {
+                    selectedElementIds.clear();
+                    selectedElementIds.add(item.id);
+                }
+                selectedElementId = item.id;
+                updateSelectedDOM();
+                updateSelectionToolbar();
             }
-            selectedElementId = item.id;
-            updateSelectedDOM();
-            updateSelectionToolbar();
         }
 
         const worldPos = screenToWorld(e.clientX, e.clientY);
@@ -2237,13 +2589,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dragItemInitialPositions.clear();
         dragPathInitialPoints.clear();
+        dragGroupInitialBbox = computeSelectionBoundingBox();
 
         selectedElementIds.forEach(id => {
-            const elItem = activeBoardData?.elements.find(it => it.id === id);
+            const elItem = activeBoardData?.elements?.find(it => it.id === id);
             if (elItem) {
                 dragItemInitialPositions.set(id, { x: elItem.x, y: elItem.y });
             }
-            const pathItem = activeBoardData?.drawingPaths.find(p => p.id === id);
+            const pathItem = activeBoardData?.drawingPaths?.find(p => p.id === id);
             if (pathItem && pathItem.points) {
                 dragPathInitialPoints.set(id, pathItem.points.map(pt => ({ x: pt.x, y: pt.y })));
             }
@@ -2288,6 +2641,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // Move Group Selection Box in sync
+            if (dragGroupInitialBbox && groupSelectionBox && selectedElementIds.size > 1) {
+                groupSelectionBox.style.left = `${dragGroupInitialBbox.x + dx}px`;
+                groupSelectionBox.style.top = `${dragGroupInitialBbox.y + dy}px`;
+            }
+
             if (dragPathInitialPoints.size > 0) {
                 renderDrawingPaths(activeBoardData.drawingPaths);
                 updateDrawingSelectionBoxes();
@@ -2303,6 +2662,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elementsContainer.classList.remove('is-dragging-active');
         if (!isDraggingElement) return;
         isDraggingElement = false;
+        dragGroupInitialBbox = null;
+
         if ((dragItemInitialPositions.size > 0 || dragPathInitialPoints.size > 0) && activeBoardData) {
             const moves = [];
             dragItemInitialPositions.forEach((startPos, id) => {
@@ -2337,13 +2698,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         dragItemInitialPositions.clear();
         dragPathInitialPoints.clear();
+        updateSelectedDOM();
         queueSaveBoard();
     };
 
     // --- Unified Element & Group Transform Handling ---
     let transformInitialGroupRect = null;
     let transformAnchorPoint = null;
-    let transformGroupElements = new Map(); // id -> { id, x, y, width, height, rotation, fontSize }
+    let transformGroupElements = new Map(); // id -> { id, x, y, width, height, rotation, fontSize, type }
     let transformGroupDrawings = new Map(); // id -> { id, points: [{x,y}], size, box }
     let transformInitialAngle = 0;
     let transformGroupCenter = { x: 0, y: 0 };
@@ -2358,8 +2720,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dragStartX = worldPos.x;
         dragStartY = worldPos.y;
 
-        // If the manipulated item is not yet part of selectedElementIds, select it
-        if (!selectedElementIds.has(item.id)) {
+        // If the manipulated item is a specific element and not in selectedElementIds, select it
+        if (item && item.id && item.id !== 'group' && !selectedElementIds.has(item.id)) {
             selectElement(item.id);
         }
 
@@ -2371,8 +2733,8 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedElementIds.forEach(id => {
             const el = activeBoardData?.elements?.find(it => it.id === id);
             if (el) {
-                const w = el.width || 100;
-                const h = el.height || 100;
+                const w = Number(el.width) || 100;
+                const h = Number(el.height) || 100;
                 transformGroupElements.set(id, {
                     id: el.id,
                     x: el.x,
@@ -2434,9 +2796,33 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'nw':
                 transformAnchorPoint = { x: gMaxX, y: gMaxY };
                 break;
+            case 'n':
+                transformAnchorPoint = { x: (gMinX + gMaxX) / 2, y: gMaxY };
+                break;
+            case 's':
+                transformAnchorPoint = { x: (gMinX + gMaxX) / 2, y: gMinY };
+                break;
+            case 'w':
+                transformAnchorPoint = { x: gMaxX, y: (gMinY + gMaxY) / 2 };
+                break;
+            case 'e':
+                transformAnchorPoint = { x: gMinX, y: (gMinY + gMaxY) / 2 };
+                break;
             default:
                 transformAnchorPoint = { x: transformGroupCenter.x, y: transformGroupCenter.y };
                 break;
+        }
+
+        if (selectedElementIds.size > 1 && groupSelectionBox) {
+            const bbox = computeSelectionBoundingBox();
+            if (bbox) {
+                groupSelectionBox.style.left = `${bbox.x}px`;
+                groupSelectionBox.style.top = `${bbox.y}px`;
+                groupSelectionBox.style.width = `${bbox.width}px`;
+                groupSelectionBox.style.height = `${bbox.height}px`;
+                groupSelectionBox.style.transformOrigin = '50% 50%';
+                groupSelectionBox.style.transform = 'rotate(0deg)';
+            }
         }
     };
 
@@ -2497,54 +2883,179 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderDrawingPaths(activeBoardData.drawingPaths);
                     updateDrawingSelectionBoxes();
                 }
+
+                // Rotate the Group Selection Box with the rotation transform
+                if (selectedElementIds.size > 1 && groupSelectionBox) {
+                    groupSelectionBox.style.transform = `rotate(${dDeg}deg)`;
+                }
             } else {
-                // Proportional Multi-Item / Element Scaling
-                const anchor = transformAnchorPoint || { x: transformInitialGroupRect.minX, y: transformInitialGroupRect.minY };
+                // Check if this is a single text note being resized
+                const isSingleNote = transformGroupElements.size === 1 && 
+                                     transformGroupDrawings.size === 0 && 
+                                     Array.from(transformGroupElements.values())[0].type === 'text';
 
-                let diagX = 1, diagY = 1;
-                if (transformAction === 'nw') { diagX = -1; diagY = -1; }
-                else if (transformAction === 'ne') { diagX = 1; diagY = -1; }
-                else if (transformAction === 'sw') { diagX = -1; diagY = 1; }
-                else if (transformAction === 'se') { diagX = 1; diagY = 1; }
+                if (isSingleNote) {
+                    // Non-proportional 2D free-form resizing for text notes
+                    const singleNoteInit = Array.from(transformGroupElements.values())[0];
+                    const el = activeBoardData.elements.find(it => it.id === singleNoteInit.id);
+                    if (el) {
+                        const rot = Number(singleNoteInit.rotation) || 0;
+                        const rad = rot * (Math.PI / 180);
+                        const cos = Math.cos(rad);
+                        const sin = Math.sin(rad);
 
-                const dx = (worldPos.x - dragStartX) * diagX;
-                const dy = (worldPos.y - dragStartY) * diagY;
-                const avgDelta = (dx + dy) / 2;
-                const baseDimension = Math.max(50, (transformInitialGroupRect.width + transformInitialGroupRect.height) / 2);
-                const scale = Math.max(0.08, Math.min(12, 1 + avgDelta / baseDimension));
+                        const dx = worldPos.x - dragStartX;
+                        const dy = worldPos.y - dragStartY;
 
-                // Scale DOM elements proportionally relative to group anchor
-                transformGroupElements.forEach((init, id) => {
-                    const el = activeBoardData.elements.find(it => it.id === id);
-                    if (!el) return;
-                    el.width = Math.max(40, Math.round(init.width * scale));
-                    el.height = Math.max(30, Math.round(init.height * scale));
-                    el.x = Math.round(anchor.x + (init.x - anchor.x) * scale);
-                    el.y = Math.round(anchor.y + (init.y - anchor.y) * scale);
+                        // Project dx, dy onto note's local coordinate axes
+                        const localDx = dx * cos + dy * sin;
+                        const localDy = -dx * sin + dy * cos;
 
-                    const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
-                    if (domEl) {
-                        domEl.style.left = `${el.x}px`;
-                        domEl.style.top = `${el.y}px`;
-                        domEl.style.width = `${el.width}px`;
-                        domEl.style.height = `${el.height}px`;
+                        const w0 = singleNoteInit.width;
+                        const h0 = singleNoteInit.height;
+                        const x0 = singleNoteInit.x;
+                        const y0 = singleNoteInit.y;
+
+                        const MIN_W = 100;
+                        const MIN_H = 50;
+
+                        let newW = w0;
+                        let newH = h0;
+                        let newX = x0;
+                        let newY = y0;
+
+                        switch (transformAction) {
+                            case 'se':
+                                newW = Math.max(MIN_W, Math.round(w0 + localDx));
+                                newH = Math.max(MIN_H, Math.round(h0 + localDy));
+                                break;
+                            case 'e':
+                                newW = Math.max(MIN_W, Math.round(w0 + localDx));
+                                break;
+                            case 's':
+                                newH = Math.max(MIN_H, Math.round(h0 + localDy));
+                                break;
+                            case 'sw': {
+                                newW = Math.max(MIN_W, Math.round(w0 - localDx));
+                                newH = Math.max(MIN_H, Math.round(h0 + localDy));
+                                const Ax = x0 + w0 * cos;
+                                const Ay = y0 + w0 * sin;
+                                newX = Math.round(Ax - newW * cos);
+                                newY = Math.round(Ay - newW * sin);
+                                break;
+                            }
+                            case 'w': {
+                                newW = Math.max(MIN_W, Math.round(w0 - localDx));
+                                const Ax = x0 + w0 * cos;
+                                const Ay = y0 + w0 * sin;
+                                newX = Math.round(Ax - newW * cos);
+                                newY = Math.round(Ay - newW * sin);
+                                break;
+                            }
+                            case 'ne': {
+                                newW = Math.max(MIN_W, Math.round(w0 + localDx));
+                                newH = Math.max(MIN_H, Math.round(h0 - localDy));
+                                const Bx = x0 - h0 * sin;
+                                const By = y0 + h0 * cos;
+                                newX = Math.round(Bx + newH * sin);
+                                newY = Math.round(By - newH * cos);
+                                break;
+                            }
+                            case 'n': {
+                                newH = Math.max(MIN_H, Math.round(h0 - localDy));
+                                const Bx = x0 - h0 * sin;
+                                const By = y0 + h0 * cos;
+                                newX = Math.round(Bx + newH * sin);
+                                newY = Math.round(By - newH * cos);
+                                break;
+                            }
+                            case 'nw': {
+                                newW = Math.max(MIN_W, Math.round(w0 - localDx));
+                                newH = Math.max(MIN_H, Math.round(h0 - localDy));
+                                const Cx = x0 + w0 * cos - h0 * sin;
+                                const Cy = y0 + w0 * sin + h0 * cos;
+                                newX = Math.round(Cx - newW * cos + newH * sin);
+                                newY = Math.round(Cy - newW * sin - newH * cos);
+                                break;
+                            }
+                        }
+
+                        el.width = newW;
+                        el.height = newH;
+                        el.x = newX;
+                        el.y = newY;
+
+                        const domEl = elementsContainer.querySelector(`[data-id="${el.id}"]`);
+                        if (domEl) {
+                            domEl.style.left = `${el.x}px`;
+                            domEl.style.top = `${el.y}px`;
+                            domEl.style.width = `${el.width}px`;
+                            domEl.style.height = `${el.height}px`;
+                        }
                     }
-                });
+                } else {
+                    // Proportional Multi-Item / Element Scaling
+                    const anchor = transformAnchorPoint || { x: transformInitialGroupRect.minX, y: transformInitialGroupRect.minY };
 
-                // Scale Vector Drawing strokes proportionally relative to group anchor
-                transformGroupDrawings.forEach((init, id) => {
-                    const path = activeBoardData.drawingPaths.find(p => p.id === id);
-                    if (!path || !init.points) return;
-                    path.points = init.points.map(pt => ({
-                        x: Math.round(anchor.x + (pt.x - anchor.x) * scale),
-                        y: Math.round(anchor.y + (pt.y - anchor.y) * scale)
-                    }));
-                    path.size = Math.max(1, Math.round((init.size || 6) * scale));
-                });
+                    let diagX = 1, diagY = 1;
+                    if (transformAction === 'nw') { diagX = -1; diagY = -1; }
+                    else if (transformAction === 'ne') { diagX = 1; diagY = -1; }
+                    else if (transformAction === 'sw') { diagX = -1; diagY = 1; }
+                    else if (transformAction === 'se') { diagX = 1; diagY = 1; }
+                    else if (transformAction === 'w') { diagX = -1; diagY = 0; }
+                    else if (transformAction === 'e') { diagX = 1; diagY = 0; }
+                    else if (transformAction === 'n') { diagX = 0; diagY = -1; }
+                    else if (transformAction === 's') { diagX = 0; diagY = 1; }
 
-                if (transformGroupDrawings.size > 0) {
-                    renderDrawingPaths(activeBoardData.drawingPaths);
-                    updateDrawingSelectionBoxes();
+                    const dx = (worldPos.x - dragStartX) * diagX;
+                    const dy = (worldPos.y - dragStartY) * diagY;
+                    const avgDelta = (diagX !== 0 && diagY !== 0) ? (dx + dy) / 2 : (dx || dy);
+                    const baseDimension = Math.max(50, (transformInitialGroupRect.width + transformInitialGroupRect.height) / 2);
+                    const scale = Math.max(0.08, Math.min(12, 1 + avgDelta / baseDimension));
+
+                    // Scale DOM elements proportionally relative to group anchor
+                    transformGroupElements.forEach((init, id) => {
+                        const el = activeBoardData.elements.find(it => it.id === id);
+                        if (!el) return;
+                        el.width = Math.max(40, Math.round(init.width * scale));
+                        el.height = Math.max(30, Math.round(init.height * scale));
+                        el.x = Math.round(anchor.x + (init.x - anchor.x) * scale);
+                        el.y = Math.round(anchor.y + (init.y - anchor.y) * scale);
+
+                        const domEl = elementsContainer.querySelector(`[data-id="${id}"]`);
+                        if (domEl) {
+                            domEl.style.left = `${el.x}px`;
+                            domEl.style.top = `${el.y}px`;
+                            domEl.style.width = `${el.width}px`;
+                            domEl.style.height = `${el.height}px`;
+                        }
+                    });
+
+                    // Scale Vector Drawing strokes proportionally relative to group anchor
+                    transformGroupDrawings.forEach((init, id) => {
+                        const path = activeBoardData.drawingPaths.find(p => p.id === id);
+                        if (!path || !init.points) return;
+                        path.points = init.points.map(pt => ({
+                            x: Math.round(anchor.x + (pt.x - anchor.x) * scale),
+                            y: Math.round(anchor.y + (pt.y - anchor.y) * scale)
+                        }));
+                        path.size = Math.max(1, Math.round((init.size || 6) * scale));
+                    });
+
+                    if (transformGroupDrawings.size > 0) {
+                        renderDrawingPaths(activeBoardData.drawingPaths);
+                        updateDrawingSelectionBoxes();
+                    }
+
+                    if (selectedElementIds.size > 1 && groupSelectionBox) {
+                        const bbox = computeSelectionBoundingBox();
+                        if (bbox) {
+                            groupSelectionBox.style.left = `${bbox.x}px`;
+                            groupSelectionBox.style.top = `${bbox.y}px`;
+                            groupSelectionBox.style.width = `${bbox.width}px`;
+                            groupSelectionBox.style.height = `${bbox.height}px`;
+                        }
+                    }
                 }
             }
         });
@@ -2598,6 +3109,10 @@ document.addEventListener('DOMContentLoaded', () => {
         transformGroupDrawings.clear();
         transformInitialGroupRect = null;
         transformAnchorPoint = null;
+        if (groupSelectionBox) {
+            groupSelectionBox.style.transform = 'rotate(0deg)';
+        }
+        updateSelectedDOM();
         queueSaveBoard();
     };
 
