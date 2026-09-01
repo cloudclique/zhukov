@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openPicker = async (slotIndex) => {
         if (!pickerOverlay) return;
         activeSlotIndex = slotIndex;
+        document.body.classList.add('picker-open');
         pickerOverlay.style.display = 'flex';
         requestAnimationFrame(() => pickerOverlay.classList.add('show'));
         document.body.style.overflow = 'hidden';
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closePicker = () => {
         if (!pickerOverlay) return;
         pickerOverlay.classList.remove('show');
+        document.body.classList.remove('picker-open');
         setTimeout(() => {
             pickerOverlay.style.display = 'none';
             document.body.style.overflow = '';
@@ -349,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openLightbox = (imgElement) => {
         if (!lightbox || !lightboxImg) return;
         activeOriginImg = imgElement;
+        document.body.classList.add('lightbox-open');
         
         // Temporarily reset styles to measure target layout
         lightboxImg.style.transition = 'none';
@@ -414,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
             
             lightbox.classList.remove('show');
+            document.body.classList.remove('lightbox-open');
             
             setTimeout(() => {
                 lightbox.style.display = 'none';
@@ -424,6 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 400);
         } else {
             lightbox.classList.remove('show');
+            document.body.classList.remove('lightbox-open');
             setTimeout(() => {
                 lightbox.style.display = 'none';
                 lightboxImg.src = '';

@@ -64,9 +64,9 @@ body.moodboard-body.inside-board header {
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     padding: 0.5rem 1rem;
     border-radius: 14px;
     border: 1px solid var(--mb-panel-border);
@@ -330,22 +330,28 @@ body.moodboard-body.inside-board header {
     width: 6000px;
     height: 6000px;
     transform-origin: 0 0;
-    will-change: transform;
 }
 
-/* Drawing Canvas Layer - ALWAYS overlaps DOM elements */
+/* Vector Drawing Layer - ALWAYS overlaps DOM elements (Zero-VRAM SVG) */
 .drawing-layer {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 6000px;
+    height: 6000px;
     pointer-events: none;
     z-index: 25;
+    overflow: visible;
 }
 
 .drawing-layer.drawing-active {
     pointer-events: auto;
+}
+
+.drawing-layer path {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
 }
 
 /* Elements container (HTML/DOM items) */
@@ -369,9 +375,7 @@ body.moodboard-body.inside-board header {
     border-radius: 12px;
     outline: 2px solid transparent;
     overflow: visible;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
+    contain: layout style;
     /* critical: let handles protrude outside element bounds */
 }
 
@@ -392,7 +396,6 @@ body.moodboard-body.inside-board header {
 
 .elements-container.is-dragging-active .board-element {
     transition: none !important;
-    will-change: left, top;
 }
 
 /* Viewer (Read-Only) Mode */
@@ -647,9 +650,6 @@ body.is-viewer-mode .eraser-cursor-indicator {
     pointer-events: none;
     user-select: none;
     -webkit-user-drag: none;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
 }
 
 /* Text & Note Element — no overflow:hidden so rotate handle is visible */
@@ -743,9 +743,9 @@ body.is-viewer-mode .eraser-cursor-indicator {
     bottom: max(5.4rem, calc(4.8rem + env(safe-area-inset-bottom, 0px))) !important;
     left: 50% !important;
     transform: translateX(-50%) translateY(8px) !important;
-    background: rgba(15, 23, 42, 0.94);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 18px;
     padding: 0.4rem 0.7rem;
@@ -879,9 +879,9 @@ body.is-viewer-mode .eraser-cursor-indicator {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 12px;
     color: #e2e8f0;
@@ -947,8 +947,8 @@ body.is-viewer-mode .eraser-cursor-indicator {
     right: 2rem;
     width: 280px;
     background: rgba(11, 15, 25, 0.96);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
     padding: 1.2rem;
@@ -1111,9 +1111,9 @@ body.is-viewer-mode .eraser-cursor-indicator {
     bottom: max(1.4rem, calc(1rem + env(safe-area-inset-bottom, 0px))) !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    background: rgba(15, 23, 42, 0.94);
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 20px;
     padding: 0.45rem 0.75rem;
@@ -1184,9 +1184,9 @@ body.is-viewer-mode .eraser-cursor-indicator {
     bottom: max(5.4rem, calc(4.8rem + env(safe-area-inset-bottom, 0px))) !important;
     left: 50% !important;
     transform: translateX(-50%) translateY(10px) !important;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 16px;
     padding: 0.55rem 0.9rem;
@@ -1316,9 +1316,9 @@ body.is-viewer-mode .eraser-cursor-indicator {
     position: fixed !important;
     bottom: max(1.4rem, calc(1rem + env(safe-area-inset-bottom, 0px))) !important;
     right: max(1.5rem, calc(1rem + env(safe-area-inset-right, 0px))) !important;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 14px;
     padding: 0.3rem;
@@ -1398,17 +1398,6 @@ body.is-viewer-mode .eraser-cursor-indicator {
 
 .selection-marquee.active {
     display: block;
-}
-
-/* PC-only Move Tool & Panning Cursor States */
-.pc-only-tool {
-    display: flex;
-}
-
-@media (max-width: 768px) {
-    .pc-only-tool {
-        display: none !important;
-    }
 }
 
 .canvas-viewport.is-panning,
@@ -1864,10 +1853,6 @@ select.form-input option:hover {
         gap: 0.2rem;
         border-radius: 16px;
         max-width: calc(100vw - 1rem);
-    }
-
-    .floating-toolbar .pc-only-tool {
-        display: none !important;
     }
 
     .floating-toolbar .tool-btn span {

@@ -39,6 +39,7 @@ header {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.24);
     max-width: 100dvw;
     margin: 0 auto;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .header-content {
@@ -265,9 +266,10 @@ main {
 .picker-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1100;
-    background: rgba(10, 15, 30, 0.92);
+    z-index: 100000;
+    background: rgba(10, 15, 30, 0.95);
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     display: none;
     flex-direction: column;
     opacity: 0;
@@ -277,6 +279,13 @@ main {
 .picker-overlay.show {
     display: flex;
     opacity: 1;
+}
+
+body.picker-open header,
+body:has(.picker-overlay.show) header {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 .picker-header {
@@ -524,7 +533,7 @@ main {
 .lightbox {
     display: none;
     position: fixed;
-    z-index: 999;
+    z-index: 100000;
     left: 0;
     top: 0;
     width: 100%;
@@ -541,6 +550,13 @@ main {
 .lightbox.show {
     display: flex;
     opacity: 1;
+}
+
+body.lightbox-open header,
+body:has(.lightbox.show) header {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 .lightbox-content {

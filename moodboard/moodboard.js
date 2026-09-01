@@ -22,7 +22,7 @@ let panStartX = 0;
 let panStartY = 0;
 
 // Active Tool State: 'select' | 'move' | 'pen' | 'eraser'
-let activeTool = 'select';
+let activeTool = 'move';
 let previousToolBeforePan = null;
 let isMiddleMousePanning = false;
 let penColor = '#38bdf8';
@@ -44,11 +44,12 @@ let dragStartX = 0;
 let dragStartY = 0;
 let elementInitialRect = { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
 
-// Freehand Ink Drawing System
+// Freehand Ink Drawing System (Zero-VRAM Vector SVG Layer)
 let isDrawingStroke = false;
 let currentStrokePoints = [];
 let drawingCanvas = null;
-let drawingCtx = null;
+let drawingPathsGroup = null;
+let activeStrokePath = null;
 
 // Debounce helper for saving to Firestore
 let saveTimeout = null;
@@ -89,7 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasWorld = document.getElementById('canvas-world');
     const elementsContainer = document.getElementById('elements-container');
     drawingCanvas = document.getElementById('drawing-layer');
-    drawingCtx = drawingCanvas.getContext('2d');
+    drawingPathsGroup = document.getElementById('drawing-paths-group');
+    activeStrokePath = document.getElementById('active-stroke-path');
 
     // Tool buttons
     const toolSelect = document.getElementById('tool-select');
@@ -878,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnUngroup.addEventListener('click', ungroupSelected);
     }
 
-    const updateSelectionToolbar = () => {
+    function updateSelectionToolbar() {
         if (!selectionToolbar) return;
         const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
@@ -1642,7 +1644,13 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTouches.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
         }
 
-        if (activeTouches.size >= 2) {
+        if (activeTouches.size >= 2 || (e.touches && e.touches.length >= 2)) {
+            // Cancel single-finger panning immediately to prevent conflicts
+            isPanning = false;
+            if (!isSpacePressed && activeTool !== 'move') {
+                canvasViewport.classList.remove('is-panning');
+            }
+
             // Cancel marquee selection immediately
             if (isMarqueeSelecting) {
                 isMarqueeSelecting = false;
@@ -1656,11 +1664,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Deselect any selected note or image during 2-finger camera gesture
             deselectAll();
 
-            const [t1, t2] = Array.from(activeTouches.values());
-            initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-            initialPinchScale = viewportScale;
-            initialPinchCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
-            lastTouchCenter = { ...initialPinchCenter };
+            if (e.touches && e.touches.length >= 2) {
+                const t1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const t2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
+                initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+                initialPinchScale = viewportScale;
+                initialPinchCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+                lastTouchCenter = { ...initialPinchCenter };
+            } else {
+                const [t1, t2] = Array.from(activeTouches.values());
+                if (t1 && t2) {
+                    initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+                    initialPinchScale = viewportScale;
+                    initialPinchCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+                    lastTouchCenter = { ...initialPinchCenter };
+                }
+            }
         }
     };
 
@@ -1668,8 +1687,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchstart', handleTouchStartGlobal, { passive: true });
 
     canvasViewport.addEventListener('touchmove', (e) => {
-        if (activeTouches.size >= 2) {
-            // Guarantee marquee box and element selection are never active during 2-finger gestures
+        if (activeTouches.size >= 2 || (e.touches && e.touches.length >= 2)) {
+            // Guarantee 1-finger pointermove and drag are completely disabled during 2-finger gestures
+            isPanning = false;
             if (isMarqueeSelecting) {
                 isMarqueeSelecting = false;
                 if (selectionMarquee) selectionMarquee.classList.remove('active');
@@ -1677,12 +1697,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isDraggingElement) isDraggingElement = false;
             if (isTransformingElement) isTransformingElement = false;
 
-            if (initialPinchDistance && e.touches.length >= 2) {
+            if (e.touches && e.touches.length >= 2) {
                 e.preventDefault();
                 const t1 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                 const t2 = { x: e.touches[1].clientX, y: e.touches[1].clientY };
                 const currentDist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
                 const currentCenter = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+
+                if (!initialPinchDistance) {
+                    initialPinchDistance = currentDist;
+                    initialPinchScale = viewportScale;
+                    initialPinchCenter = { ...currentCenter };
+                    lastTouchCenter = { ...currentCenter };
+                    return;
+                }
 
                 // Two-finger Pan
                 if (lastTouchCenter) {
@@ -1693,9 +1721,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 lastTouchCenter = { ...currentCenter };
 
-                // Two-finger Zoom
+                // Two-finger Zoom (allow zooming from 5% to 400%)
                 const scaleFactor = currentDist / initialPinchDistance;
-                const newScale = Math.max(0.2, Math.min(3.5, initialPinchScale * scaleFactor));
+                const newScale = Math.max(0.05, Math.min(4.0, initialPinchScale * scaleFactor));
                 zoomAroundPoint(currentCenter.x, currentCenter.y, newScale);
             }
         }
@@ -1705,13 +1733,20 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < e.changedTouches.length; i++) {
             activeTouches.delete(e.changedTouches[i].identifier);
         }
-        if (activeTouches.size < 2) {
+        if (activeTouches.size < 2 || (e.touches && e.touches.length < 2)) {
             initialPinchDistance = null;
             lastTouchCenter = null;
+            isPanning = false; // Reset single-finger panning so lifting a finger never jumps
+        }
+        if (e.touches && e.touches.length === 0) {
+            activeTouches.clear();
+            isPanning = false;
         }
     };
     canvasViewport.addEventListener('touchend', handleTouchEnd);
     canvasViewport.addEventListener('touchcancel', handleTouchEnd);
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     // Viewport Panning Drag (Middle click, Spacebar + Click, or Move Tool)
     let isSpacePressed = false;
@@ -1839,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Toolbar & Tool Selection ---
-    const setTool = (tool) => {
+    function setTool(tool) {
         const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
             tool = 'move';
@@ -1876,7 +1911,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deselectAll();
             updateEraserCursor();
         }
-    };
+    }
 
     if (toolSelect) toolSelect.addEventListener('click', () => setTool('select'));
     if (toolMove) toolMove.addEventListener('click', () => setTool('move'));
@@ -2100,13 +2135,12 @@ document.addEventListener('DOMContentLoaded', () => {
             eraseStrokesAlongSegment(pos, pos, eraserSize / 2);
         } else {
             currentStrokePoints = [pos];
-            drawingCtx.beginPath();
-            drawingCtx.moveTo(pos.x, pos.y);
-            drawingCtx.lineCap = 'round';
-            drawingCtx.lineJoin = 'round';
-            drawingCtx.globalCompositeOperation = 'source-over';
-            drawingCtx.strokeStyle = penColor;
-            drawingCtx.lineWidth = penSize;
+            if (activeStrokePath) {
+                activeStrokePath.setAttribute('d', `M ${pos.x} ${pos.y}`);
+                activeStrokePath.setAttribute('stroke', penColor);
+                activeStrokePath.setAttribute('stroke-width', penSize);
+                activeStrokePath.style.display = 'block';
+            }
         }
     };
 
@@ -2123,14 +2157,21 @@ document.addEventListener('DOMContentLoaded', () => {
             prevEraserPos = pos;
         } else {
             currentStrokePoints.push(pos);
-            drawingCtx.lineTo(pos.x, pos.y);
-            drawingCtx.stroke();
+            if (activeStrokePath) {
+                const prevD = activeStrokePath.getAttribute('d') || `M ${pos.x} ${pos.y}`;
+                activeStrokePath.setAttribute('d', `${prevD} L ${pos.x} ${pos.y}`);
+            }
         }
     };
 
     const endStroke = async () => {
         if (!isDrawingStroke) return;
         isDrawingStroke = false;
+
+        if (activeStrokePath) {
+            activeStrokePath.setAttribute('d', '');
+            activeStrokePath.style.display = 'none';
+        }
 
         if (activeTool === 'eraser') {
             prevEraserPos = null;
@@ -2162,6 +2203,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!activeBoardData.drawingPaths) activeBoardData.drawingPaths = [];
                 activeBoardData.drawingPaths.push(newPath);
+                renderDrawingPaths(activeBoardData.drawingPaths);
                 recordAction({ type: 'DRAW_STROKE', path: { ...newPath } });
                 await queueSaveBoard();
             }
@@ -2209,25 +2251,26 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Render all saved drawing paths onto canvas
+    // Render all saved drawing paths onto vector SVG layer
     const renderDrawingPaths = (paths) => {
-        if (!drawingCtx) return;
-        drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        if (!drawingPathsGroup) return;
+        drawingPathsGroup.innerHTML = '';
 
         (paths || []).forEach(path => {
             if (path.isEraser || !path.points || path.points.length < 2) return;
-            drawingCtx.beginPath();
-            drawingCtx.moveTo(path.points[0].x, path.points[0].y);
-            drawingCtx.lineCap = 'round';
-            drawingCtx.lineJoin = 'round';
-            drawingCtx.globalCompositeOperation = 'source-over';
-            drawingCtx.strokeStyle = path.color || '#38bdf8';
-            drawingCtx.lineWidth = path.size || 6;
-
+            const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            let d = `M ${path.points[0].x} ${path.points[0].y}`;
             for (let i = 1; i < path.points.length; i++) {
-                drawingCtx.lineTo(path.points[i].x, path.points[i].y);
+                d += ` L ${path.points[i].x} ${path.points[i].y}`;
             }
-            drawingCtx.stroke();
+            pathEl.setAttribute('d', d);
+            pathEl.setAttribute('stroke', path.color || '#38bdf8');
+            pathEl.setAttribute('stroke-width', path.size || 6);
+            pathEl.setAttribute('stroke-linecap', 'round');
+            pathEl.setAttribute('stroke-linejoin', 'round');
+            pathEl.setAttribute('fill', 'none');
+            pathEl.dataset.id = path.id;
+            drawingPathsGroup.appendChild(pathEl);
         });
     };
 
@@ -2260,9 +2303,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // If clicking background/canvas/elements-container directly
-        const isBackground = e.target === canvasViewport || e.target === drawingCanvas || e.target === elementsContainer || e.target === canvasWorld;
+        const isBackground = e.target === canvasViewport || e.target === drawingCanvas || e.target === drawingPathsGroup || e.target === activeStrokePath || e.target === elementsContainer || e.target === canvasWorld || (e.target.closest && e.target.closest('#drawing-layer') !== null);
         
         if (isSpacePressed || activeTool === 'move' || (activeTool === 'select' && isBackground && e.button !== 0)) {
+            if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
+                isPanning = false;
+                return;
+            }
             // Start Panning
             isPanning = true;
             panStartX = e.clientX - viewportPanX;
@@ -2322,6 +2369,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('pointermove', (e) => {
+        if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
+            if (isPanning) {
+                isPanning = false;
+                if (!isSpacePressed && activeTool !== 'move') canvasViewport.classList.remove('is-panning');
+            }
+            return;
+        }
         if (isPanning) {
             viewportPanX = e.clientX - panStartX;
             viewportPanY = e.clientY - panStartY;
@@ -2510,7 +2564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Render interactive selection boxes for selected vector drawing strokes
-    const updateDrawingSelectionBoxes = () => {
+    function updateDrawingSelectionBoxes() {
         // If more than 1 item is selected, individual drawing boxes are hidden (group box encloses them)
         if (selectedElementIds.size > 1) {
             document.querySelectorAll('.board-element-drawing').forEach(el => el.remove());
@@ -2670,7 +2724,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.classList.add('board-element-image');
                 el.innerHTML = `
                     <div class="img-inner" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                        <img src="${escapeHtml(item.content)}" alt="Moodboard image" style="width:100%; height:100%; object-fit:contain; pointer-events:none; display:block;" loading="lazy">
+                        <img src="${escapeHtml(item.content)}" alt="Moodboard image" style="width:100%; height:100%; object-fit:contain; pointer-events:none; display:block;" loading="lazy" decoding="async">
                     </div>
                     <div class="transform-handle handle-nw" data-handle="nw"></div>
                     <div class="transform-handle handle-ne" data-handle="ne"></div>
@@ -2792,7 +2846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let prevSelectedIdsKey = '';
-    const updateSelectedDOM = () => {
+    function updateSelectedDOM() {
         const isMulti = selectedElementIds.size > 1;
         const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '') + ':' + (isMulti ? 'm' : 's');
         
@@ -2826,9 +2880,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         prevSelectedIdsKey = currentKey;
-    };
+    }
 
-    const selectElement = (id, addToSelection = false) => {
+    function selectElement(id, addToSelection = false) {
         if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         if (!addToSelection) {
@@ -2840,14 +2894,14 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedElementId = id || (selectedElementIds.size > 0 ? Array.from(selectedElementIds)[0] : null);
         updateSelectedDOM();
         updateSelectionToolbar();
-    };
+    }
 
-    const deselectAll = () => {
+    function deselectAll() {
         selectedElementIds.clear();
         selectedElementId = null;
         updateSelectedDOM();
         updateSelectionToolbar();
-    };
+    }
 
     const deselectElement = deselectAll;
 
@@ -3969,6 +4023,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
+
+    // Initialize default tool
+    setTool('move');
 
     // --- URL-based Board Routing on Page Load ---
     const initialBoardId = getBoardIdFromUrl();
