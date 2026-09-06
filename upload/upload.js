@@ -1,6 +1,7 @@
-﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
+import { invalidateCache } from "../site-cache.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -312,6 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 4. Update metadata tags
             await updateMetadata(category, modelName, theme);
+
+            // Invalidate cached photoshoots so fresh uploads appear immediately
+            invalidateCache('photoshoots');
+            invalidateCache('gallery');
 
             // Success!
             statusMsg.innerHTML = '<span class="success">All photos successfully uploaded and saved!</span>';

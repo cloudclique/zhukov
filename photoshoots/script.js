@@ -1,13 +1,16 @@
-﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { ensureAgeVerification, getAgeVerificationStatus } from "./age-gate.js";
+import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', async () => {
+    registerSiteServiceWorker();
+
     // Auth UI Elements
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
@@ -40,18 +43,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (uploadLink) uploadLink.classList.remove('hidden');
                     const archivedLink = document.getElementById('archived-nav-link');
                     if (archivedLink) archivedLink.classList.remove('hidden');
-                    renderGallery();
+                } else {
+                    isAdmin = false;
+                    if (uploadLink) uploadLink.classList.add('hidden');
+                    const archivedLink = document.getElementById('archived-nav-link');
+                    if (archivedLink) archivedLink.classList.add('hidden');
                 }
+                await loadPhotos();
             } catch (error) {
                 console.error("Auth check error:", error);
+                isAdmin = false;
+                await loadPhotos();
             }
         } else {
             if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
             if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
             if (uploadLink) uploadLink.classList.add('hidden');
+            const archivedLink = document.getElementById('archived-nav-link');
+            if (archivedLink) archivedLink.classList.add('hidden');
             isAdmin = false;
-            renderGallery();
+            await loadPhotos();
         }
     });
 
@@ -194,37 +206,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Fetch Data ---
+    let loadPhotosReqId = 0;
+
     const loadPhotos = async () => {
-        // Show skeleton loading state
-        categoriesContainer.innerHTML = '';
-        for (let i = 0; i < 3; i++) {
-            categoriesContainer.innerHTML += `
-                <div class="category-row">
-                    <div class="category-header">
-                        <div style="width: 100%;">
-                            <div class="skeleton skeleton-text skeleton-title"></div>
-                            <div class="skeleton skeleton-text skeleton-meta"></div>
+        const currentReqId = ++loadPhotosReqId;
+        const isAdult = getAgeVerificationStatus() === true;
+        const cacheKey = `photoshoots_list_adult_${isAdult}_admin_${isAdmin}`;
+
+        // 1. Instant SWR Render from Local Memory / Storage
+        const cached = getCachedData(cacheKey);
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+            categoriesData = cached;
+            renderGallery();
+        } else {
+            // Show skeleton loading state only on cold / un-cached load
+            categoriesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                categoriesContainer.innerHTML += `
+                    <div class="category-row">
+                        <div class="category-header">
+                            <div style="width: 100%;">
+                                <div class="skeleton skeleton-text skeleton-title"></div>
+                                <div class="skeleton skeleton-text skeleton-meta"></div>
+                            </div>
+                        </div>
+                        <div class="scrollable-row-wrapper">
+                            <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
+                                <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
+                                <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
+                                <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
+                                <div class="skeleton skeleton-img row-img" style="width: 200px;"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="scrollable-row-wrapper">
-                        <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
-                            <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
-                            <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
-                            <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
-                            <div class="skeleton skeleton-img row-img" style="width: 200px;"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
+                `;
+            }
+            noResults.style.display = 'none';
         }
-        noResults.style.display = 'none';
 
         try {
-            categoriesData = [];
-            const isAdult = getAgeVerificationStatus() === true;
+            const loadedCategories = [];
             
-            // 1. Fetch Single Shots (filtered if not 18+)
-            const singleSnap = await getDocs(collection(db, 'single_shots'));
+            // 1. Fetch Single Shots (filtered if not 18+ and not archived for public)
+            const [singleSnap, orderDoc] = await Promise.all([
+                getDocs(collection(db, 'single_shots')),
+                getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
+            ]);
             const singleUrls = [];
             const singleItems = [];
             let latestSingleDate = '1970-01-01T00:00:00.000Z';
@@ -232,18 +259,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             singleSnap.forEach(doc => {
                 const data = doc.data();
                 if (!isAdult && data.isAdult === true) return; // Hide 18+ single shots for non-adults
+                if (!isAdmin && data.archived === true) return; // Hide archived single shots for non-admins
                 singleItems.push(data);
                 if (data.date && data.date > latestSingleDate) {
                     latestSingleDate = data.date;
                 }
             });
             
-            // Sort newest to oldest
-            singleItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            // Sort by custom order or newest to oldest
+            const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
+            const orderMap = new Map();
+            customOrder.forEach((url, idx) => orderMap.set(url, idx));
+
+            singleItems.sort((a, b) => {
+                const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : 999999;
+                const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : 999999;
+                if (idxA !== idxB) return idxA - idxB;
+                return new Date(b.date || 0) - new Date(a.date || 0);
+            });
             singleItems.forEach(item => singleUrls.push(item.url));
 
             if (singleUrls.length > 0) {
-                categoriesData.push({
+                loadedCategories.push({
                     categoryId: 'single-shots',
                     categoryName: 'Single Shots',
                     modelName: 'Mixed',
@@ -253,14 +290,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // 2. Fetch Photo Sets (exclude archived and filter 18+)
+            // 2. Fetch Photo Sets (exclude fully archived sets & sets with all photos archived)
             const setsSnap = await getDocs(collection(db, 'photo_sets'));
             setsSnap.forEach(doc => {
                 const data = doc.data();
-                if (data.archived === true) return; // Hide archived sets from public
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+                    const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                    const allImagesArchived = data.urls.every(url => archivedUrls.includes(url));
+
+                    // Sets that are fully archived or have every single image archived should ONLY be visible in the archived tab
+                    if (data.archived === true || allImagesArchived) return;
+
                     let visibleUrls = [...data.urls];
                     
+                    // Filter out individually archived photos for non-admins
+                    if (!isAdmin) {
+                        visibleUrls = visibleUrls.filter(url => !archivedUrls.includes(url));
+                        if (visibleUrls.length === 0) {
+                            return; // All images in this set are archived, hide set
+                        }
+                    }
+
                     if (!isAdult) {
                         const adultUrls = data.adultUrls || [];
                         if (data.isAdult === true && adultUrls.length === 0) {
@@ -273,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
-                    categoriesData.push({
+                    loadedCategories.push({
                         categoryId: doc.id,
                         categoryName: data.categoryName || 'Unknown Photo set',
                         modelName: data.modelName || 'Unknown',
@@ -284,16 +334,114 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            renderGallery();
+            // Prevent race condition overwrite
+            if (currentReqId !== loadPhotosReqId) return;
+
+            // Only re-render if data has changed or if first load was un-cached
+            if (!isDataEqual(categoriesData, loadedCategories) || !cached) {
+                categoriesData = loadedCategories;
+                setCachedData(cacheKey, loadedCategories);
+                renderGallery();
+            } else {
+                // Refresh cache TTL
+                setCachedData(cacheKey, loadedCategories);
+            }
         } catch (error) {
             console.error("Error loading photos:", error);
         }
     };
 
+    // --- Custom Modal Confirmation Helper ---
+    const showConfirmModal = ({
+        title = "Confirm Action",
+        message = "Are you sure you want to proceed?",
+        confirmText = "Confirm",
+        cancelText = "Cancel",
+        confirmVariant = "amber" // "amber" | "red" | "blue"
+    }) => {
+        return new Promise((resolve) => {
+            const existing = document.getElementById('zhukov-confirm-modal-overlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'zhukov-confirm-modal-overlay';
+            overlay.className = 'confirm-modal-overlay';
+
+            const iconHtml = confirmVariant === 'red'
+                ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+                : (confirmVariant === 'amber'
+                    ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>`
+                    : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`);
+
+            const submitStyle = confirmVariant === 'red'
+                ? 'background: #dc2626; color: #fff; border: 1px solid #ef4444;'
+                : (confirmVariant === 'amber'
+                    ? 'background: #d97706; color: #fff; border: 1px solid #f59e0b;'
+                    : 'background: #2563eb; color: #fff; border: 1px solid #3b82f6;');
+
+            const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+            overlay.innerHTML = `
+                <div class="confirm-modal-card" role="dialog" aria-modal="true">
+                    <div class="confirm-modal-header">
+                        <div class="confirm-modal-icon confirm-icon-${confirmVariant}">
+                            ${iconHtml}
+                        </div>
+                        <h3 class="confirm-modal-title">${escapeHtml(title)}</h3>
+                    </div>
+                    <p class="confirm-modal-message">${message}</p>
+                    <div class="confirm-modal-actions">
+                        <button type="button" class="confirm-modal-btn confirm-modal-cancel" id="confirm-modal-cancel-btn">${escapeHtml(cancelText)}</button>
+                        <button type="button" class="confirm-modal-btn confirm-modal-submit" id="confirm-modal-submit-btn" style="${submitStyle}">${escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('show'));
+
+            const cancelBtn = overlay.querySelector('#confirm-modal-cancel-btn');
+            const submitBtn = overlay.querySelector('#confirm-modal-submit-btn');
+
+            let resolved = false;
+            const close = (result) => {
+                if (resolved) return;
+                resolved = true;
+                overlay.classList.remove('show');
+                setTimeout(() => overlay.remove(), 250);
+                document.removeEventListener('keydown', onKeyDown);
+                resolve(result);
+            };
+
+            const onKeyDown = (e) => {
+                if (e.key === 'Escape') close(false);
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+            cancelBtn.addEventListener('click', () => close(false));
+            submitBtn.addEventListener('click', () => {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Processing...";
+                submitBtn.style.opacity = "0.7";
+                close(true);
+            });
+        });
+    };
+
     // --- Admin Deletion Logic ---
     const deletePhoto = async (categoryId, photoUrl) => {
-        if (!confirm("Are you sure you want to delete this photo?")) return;
+        const confirmed = await showConfirmModal({
+            title: "Delete Photo",
+            message: "Are you sure you want to delete this photo?",
+            confirmText: "Delete Photo",
+            confirmVariant: "red"
+        });
+        if (!confirmed) return;
+
         try {
+            invalidateCache('photoshoots');
+            invalidateCache('gallery');
             if (categoryId === 'single-shots') {
                 const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                 const snap = await getDocs(q);
@@ -309,29 +457,49 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadPhotos();
         } catch (error) {
             console.error("Error deleting photo:", error);
-            alert("Error deleting photo.");
+            alert("Error deleting photo: " + (error.message || error));
         }
     };
 
     const deleteCategory = async (categoryId) => {
-        if (!confirm("Are you sure you want to delete this ENTIRE set?")) return;
+        const confirmed = await showConfirmModal({
+            title: "Delete Entire Photoshoot",
+            message: "Are you sure you want to permanently delete this ENTIRE set? This cannot be undone.",
+            confirmText: "Delete Set",
+            confirmVariant: "red"
+        });
+        if (!confirmed) return;
+
         try {
+            invalidateCache('photoshoots');
+            invalidateCache('gallery');
+            invalidateCache('archived');
             await deleteDoc(doc(db, 'photo_sets', categoryId));
             await loadPhotos();
         } catch (error) {
             console.error("Error deleting photo set:", error);
-            alert("Error deleting photo set.");
+            alert("Error deleting photo set: " + (error.message || error));
         }
     };
 
     const archiveCategory = async (categoryId) => {
-        if (!confirm("Archive this photo set? It will be hidden from the public gallery.")) return;
+        const confirmed = await showConfirmModal({
+            title: "Archive Photoshoot Set",
+            message: "Archive this photo set? It will be moved to the Archived tab and hidden from public visitors.",
+            confirmText: "Archive Set",
+            confirmVariant: "amber"
+        });
+        if (!confirmed) return;
+
         try {
-            await updateDoc(doc(db, 'photo_sets', categoryId), { archived: true });
+            invalidateCache('photoshoots');
+            invalidateCache('gallery');
+            invalidateCache('archived');
+            await setDoc(doc(db, 'photo_sets', categoryId), { archived: true }, { merge: true });
             await loadPhotos();
         } catch (error) {
             console.error("Error archiving photo set:", error);
-            alert("Error archiving photo set.");
+            alert("Error archiving photo set: " + (error.message || error));
         }
     };
 
@@ -395,7 +563,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const archCatBtn = document.createElement('button');
                 archCatBtn.className = 'archive-category-btn';
-                archCatBtn.innerText = 'â¬› Archive';
+                archCatBtn.innerText = 'Archive Set';
                 archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
 
                 const delCatBtn = document.createElement('button');

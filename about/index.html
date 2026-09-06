@@ -1,14 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
+    <style>
+        html,
+        body {
+            background: #0f172a
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f8fafc;
+            border-radius: 8px
+        }
+    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | About</title>
+    <title>ZHUKOV.s | About & Process</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="about.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <header>
         <div class="header-content">
@@ -18,7 +34,8 @@
             </a>
 
             <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu"
+                aria-expanded="false">
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
@@ -47,7 +64,7 @@
             </div>
         </div>
         <script>
-            (function() {
+            (function () {
                 const btn = document.getElementById('mobile-menu-btn');
                 const nav = document.getElementById('header-nav-container');
                 if (!btn || !nav) return;
@@ -79,16 +96,340 @@
             })();
         </script>
     </header>
-    
+
     <main id="app-content">
-        <div class="about-container">
-            <h2>Hi, I'm Stanislav</h2>
-            <p class="about-text">
-                I am a passionate photographer dedicated to capturing the beauty of everyday moments. With a keen eye for detail and a love for visual storytelling, I strive to create stunning imagery that resonates with my audience. Welcome to my portfolio!
-            </p>
-        </div>
+        <!-- About Me Intro Section -->
+        <section class="about-hero-section">
+            <div class="about-container">
+                <span class="about-kicker">Photographer & Visual Artist</span>
+                <h2>Hi, I'm Stanislav</h2>
+                <p class="about-text">
+                    I am a passionate photographer dedicated to capturing the beauty of everyday moments. With a keen
+                    eye for detail and a love for visual storytelling, I strive to create stunning imagery that
+                    resonates with my audience. Welcome to my portfolio!
+                </p>
+            </div>
+        </section>
+
+        <!-- Working Process Workflow Roadmap -->
+        <section class="process-section">
+            <div class="process-header">
+                <span class="process-badge">Creative Roadmap</span>
+                <h3 class="process-section-title">My Working Process</h3>
+                <p class="process-section-subtitle">
+                    A comprehensive walkthrough of how every photoshoot is planned, directed, and crafted into final
+                    art.
+                </p>
+            </div>
+
+            <!-- Workflow Roadmap (2-Column Flow) -->
+            <div class="process-roadmap-grid">
+
+                <!-- Left Column: Steps 1, 3, 5, 6 -->
+                <div class="process-column process-col-left">
+
+                    <!-- STEP 1: Picking a Theme -->
+                    <div class="process-step-wrapper step-1" id="step-picking-theme">
+                        <div class="process-step-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">1</span>
+                                <span class="step-pill">Ideation</span>
+                            </div>
+
+                            <!-- Fan Styled Theme Concept Images -->
+                            <div class="fan-deck" aria-label="Theme Concept Images">
+                                <div class="fan-card fan-card-left" title="Concept A">
+                                    <img src="/_images/theme_concept_a.jpg" alt="Theme Concept A" class="fan-card-img"
+                                        draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-center" title="Main Theme">
+                                    <img src="/_images/theme_main.jpg" alt="Main Theme" class="fan-card-img"
+                                        draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-right" title="Concept B">
+                                    <img src="/_images/theme_concept_b.jpg" alt="Theme Concept B" class="fan-card-img"
+                                        draggable="false">
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Picking a theme</h4>
+                                <p class="step-desc">
+                                    Every shoot starts with a narrative foundation. We explore creative themes,
+                                    character archetypes, mood boards, and evocative storytelling directions to set the
+                                    project's aesthetic anchor.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Location -->
+                    <div class="process-step-wrapper step-3" id="step-location">
+                        <div class="process-step-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">3</span>
+                                <span class="step-pill">Scouting</span>
+                            </div>
+
+                            <!-- Fan Styled Location Images -->
+                            <div class="fan-deck" aria-label="Location Scouting Images">
+                                <div class="fan-card fan-card-left" title="Outdoor & Nature">
+                                    <img src="/_images/location_waterfall.jpg" alt="Outdoor & Nature Location"
+                                        class="fan-card-img" draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-center" title="Interior & Architecture">
+                                    <img src="/_images/location_interior.jpg" alt="Interior Architecture Location"
+                                        class="fan-card-img" draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-right" title="Studio Setup">
+                                    <img src="/_images/location_studio.jpg" alt="Studio Setup Location"
+                                        class="fan-card-img" draggable="false">
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Location</h4>
+                                <p class="step-desc">
+                                    We scout natural, urban, and studio locations with optimal lighting angles and
+                                    background textures. Sun positions, shadow play, and spatial depth are mapped out
+                                    beforehand.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 5: Photoshoot -->
+                    <div class="process-step-wrapper step-5" id="step-photoshoot">
+                        <div class="process-step-card text-focused-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">5</span>
+                                <span class="step-pill">Production</span>
+                            </div>
+
+                            <div class="step-mini-visual">
+                                <div class="shutter-icon-box">
+                                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
+                                        stroke-width="1.5">
+                                        <path
+                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                        <circle cx="12" cy="13" r="4" />
+                                    </svg>
+                                    <span>Live Capture Phase</span>
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Photoshoot</h4>
+                                <p class="step-desc">
+                                    Production day is where vision meets spontaneous magic. I direct comfortable,
+                                    natural posing, shape lighting with precision, and capture authentic expressions.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 6: Editing (Placed directly under Step 5) -->
+                    <div class="process-step-wrapper step-6" id="step-editing">
+                        <div class="process-step-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">6</span>
+                                <span class="step-pill">Post-Production</span>
+                            </div>
+
+                            <!-- Editing Preview Image -->
+                            <div class="process-image-container" aria-label="Editing and Color Grading Preview">
+                                <img src="/_images/editing_preview.jpg" alt="Lightroom Editing and Retouching Preview"
+                                    class="process-preview-img">
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Editing</h4>
+                                <p class="step-desc">
+                                    Careful image culling is followed by nuanced RAW processing, skin retouching, color
+                                    grading curves, and tonal adjustments that elevate every frame.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Steps 2, 4, 7 -->
+                <div class="process-column process-col-right">
+
+                    <!-- STEP 2: Color Palette -->
+                    <div class="process-step-wrapper step-2" id="step-color-palette">
+                        <div class="process-step-card interactive-tool-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">2</span>
+                                <div class="palette-header-meta">
+                                    <span class="step-pill interactive-pill">Interactive Tool</span>
+                                    <span class="palette-mode-status" id="palette-current-mode-name">Analogous (3
+                                        Colors)</span>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Palette Picker Component -->
+                            <div class="color-palette-widget">
+                                <div class="palette-top-controls">
+                                    <div class="palette-mode-selector" aria-label="Color Combination Types">
+                                        <!-- Mode 1: Analogous -->
+                                        <button type="button" class="palette-mode-btn active" data-mode="analogous"
+                                            title="Analogous Combination (3 colors)">
+                                            <svg viewBox="0 0 32 32" class="mode-icon-svg" fill="none"
+                                                stroke="currentColor">
+                                                <circle cx="16" cy="16" r="12" stroke-width="2" opacity="0.3" />
+                                                <line x1="16" y1="16" x2="9" y2="9" stroke-width="2" />
+                                                <line x1="16" y1="16" x2="16" y2="6" stroke-width="2" />
+                                                <line x1="16" y1="16" x2="23" y2="9" stroke-width="2" />
+                                                <circle cx="9" cy="9" r="2.5" fill="currentColor" />
+                                                <circle cx="16" cy="6" r="2.5" fill="currentColor" />
+                                                <circle cx="23" cy="9" r="2.5" fill="currentColor" />
+                                            </svg>
+                                        </button>
+                                        <!-- Mode 2: Complementary -->
+                                        <button type="button" class="palette-mode-btn" data-mode="complementary"
+                                            title="Complementary Combination (2 colors)">
+                                            <svg viewBox="0 0 32 32" class="mode-icon-svg" fill="none"
+                                                stroke="currentColor">
+                                                <circle cx="16" cy="16" r="12" stroke-width="2" opacity="0.3" />
+                                                <line x1="16" y1="4" x2="16" y2="28" stroke-width="2" />
+                                                <circle cx="16" cy="6" r="2.5" fill="currentColor" />
+                                                <circle cx="16" cy="26" r="2.5" fill="currentColor" />
+                                            </svg>
+                                        </button>
+                                        <!-- Mode 3: Split-Complementary (Sharp Triangle) -->
+                                        <button type="button" class="palette-mode-btn" data-mode="triadic"
+                                            title="Split-Complementary (Sharp Triangle, 3 colors)">
+                                            <svg viewBox="0 0 32 32" class="mode-icon-svg" fill="none"
+                                                stroke="currentColor">
+                                                <circle cx="16" cy="16" r="12" stroke-width="2" opacity="0.3" />
+                                                <line x1="16" y1="17" x2="16" y2="5" stroke-width="2" />
+                                                <line x1="16" y1="17" x2="11" y2="26" stroke-width="2" />
+                                                <line x1="16" y1="17" x2="21" y2="26" stroke-width="2" />
+                                                <circle cx="16" cy="5" r="2.5" fill="currentColor" />
+                                                <circle cx="11" cy="26" r="2.5" fill="currentColor" />
+                                                <circle cx="21" cy="26" r="2.5" fill="currentColor" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Color Wheel & Live Swatches Row -->
+                                <div class="palette-interactive-stage">
+                                    <div class="palette-wheel-container" title="Click or drag to select base hue">
+                                        <canvas id="palette-wheel-canvas"></canvas>
+                                        <svg id="palette-wheel-overlay" class="palette-wheel-overlay"
+                                            viewBox="0 0 220 220"></svg>
+                                        <div class="wheel-center-label">
+                                            <span class="wheel-hint">Drag Hue</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dynamic Color Swatch Preview Boxes -->
+                                    <div class="palette-swatches-column">
+                                        <span class="swatches-column-title">Selected Harmonies</span>
+                                        <div class="palette-swatches-container" id="palette-swatches-container">
+                                            <!-- Swatches injected via about.js -->
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Saturation & Luminance Sliders -->
+                                <div class="palette-sliders-box">
+                                    <div class="palette-slider-group">
+                                        <div class="slider-label-row">
+                                            <label for="palette-sat-slider">Saturation</label>
+                                            <span class="slider-val" id="palette-sat-val">90%</span>
+                                        </div>
+                                        <input type="range" id="palette-sat-slider" min="10" max="100" value="90"
+                                            class="palette-range-input">
+                                    </div>
+                                    <div class="palette-slider-group">
+                                        <div class="slider-label-row">
+                                            <label for="palette-lum-slider">Luminance</label>
+                                            <span class="slider-val" id="palette-lum-val">56%</span>
+                                        </div>
+                                        <input type="range" id="palette-lum-slider" min="15" max="85" value="56"
+                                            class="palette-range-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Color Palette</h4>
+                                <p class="step-desc">
+                                    Color harmony defines the visual mood. Using balanced chromatic palettes, we
+                                    coordinate wardrobe tones, environment hues, gels, and ambient lights to produce a
+                                    unified cinematic look.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Moodboard -->
+                    <div class="process-step-wrapper step-4" id="step-moodboard">
+                        <div class="process-step-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">4</span>
+                                <span class="step-pill">Visual Blueprint</span>
+                            </div>
+
+                            <!-- Moodboard Preview Image -->
+                            <div class="process-image-container" aria-label="Moodboard Reference Preview">
+                                <img src="/_images/moodboard_preview.jpg" alt="Moodboard Canvas Preview"
+                                    class="process-preview-img">
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Moodboard</h4>
+                                <p class="step-desc">
+                                    All concepts, poses, wardrobe suggestions, and lighting diagrams are assembled into
+                                    a coherent moodboard. This gives everyone on set a clear vision and shared
+                                    inspiration.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 7: Sending Files (Placed next to Step 6) -->
+                    <div class="process-step-wrapper step-7" id="step-sending-files">
+                        <div class="process-step-card">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">7</span>
+                                <span class="step-pill finish-pill">Completion</span>
+                            </div>
+
+                            <!-- Delivery Visual Banner -->
+                            <div class="step-mini-visual">
+                                <div class="delivery-icon-box">
+                                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                    <span>Private Gallery & Master Files</span>
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h4 class="step-title">Sending Files</h4>
+                                <p class="step-desc">
+                                    Finished, full-resolution files are delivered through a private, password-protected
+                                    online client gallery. Includes web-optimized versions and master print-ready files.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
     </main>
 
     <script type="module" src="/script.js"></script>
+    <script src="about.js"></script>
 </body>
+
 </html>

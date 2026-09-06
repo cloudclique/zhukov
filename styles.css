@@ -1670,3 +1670,22 @@ body.is-overscrolling {
     color: #64748b;
     margin-top: 0.5rem;
 }
+
+/* ==========================================================================
+   Global Image Protection (Prevent download, dragging, callout & selection)
+   ========================================================================== */
+img,
+.gallery-item img,
+.fan-card img,
+.process-preview-img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-touch-callout: none;
+}

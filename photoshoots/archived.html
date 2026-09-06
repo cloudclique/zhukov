@@ -4,90 +4,62 @@
     <meta charset="UTF-8">
     <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | Archived Sets</title>
+    <title>ZHUKOV.s | Archived Photoshoots</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="photoshoots.css">
     <style>
-        .archived-page-header {
-            text-align: center;
-            padding: 3rem 2rem 1.5rem;
+        .archived-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 2rem auto 0.5rem;
+            padding: 0 2rem;
+            max-width: 1600px;
         }
-        .archived-page-header h1 {
-            font-size: 2.2rem;
+        .archived-banner-title {
+            font-size: 2rem;
             font-weight: 700;
             color: #f59e0b;
-            margin: 0 0 0.5rem;
-            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0 0 0.35rem 0;
         }
-        .archived-page-header p {
+        .archived-banner-subtitle {
             color: #94a3b8;
-            font-size: 1rem;
+            font-size: 0.95rem;
             margin: 0;
         }
-        .archived-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
+        .access-denied {
+            text-align: center;
+            padding: 6rem 2rem;
+            color: #94a3b8;
         }
-        .archived-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-        .archived-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(245, 158, 11, 0.45);
-        }
-        .archived-card-thumb {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            display: block;
-            background: rgba(255,255,255,0.05);
-        }
-        .archived-card-body {
-            padding: 1rem 1.25rem;
-        }
-        .archived-card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #f1f5f9;
-            margin: 0 0 0.35rem;
-        }
-        .archived-card-meta {
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-bottom: 1rem;
-        }
-        .archived-card-actions {
-            display: flex;
-            gap: 0.5rem;
+        .access-denied h2 {
+            color: #ef4444;
+            margin-bottom: 0.75rem;
+            font-size: 1.8rem;
         }
         .archived-empty {
             text-align: center;
-            padding: 5rem 2rem;
-            color: #475569;
+            padding: 6rem 2rem;
+            color: #64748b;
         }
         .archived-empty-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
-        .archived-empty p {
-            font-size: 1.1rem;
-        }
-        .access-denied {
-            text-align: center;
-            padding: 5rem 2rem;
-            color: #94a3b8;
-        }
-        .access-denied h2 {
-            color: #ff4d4d;
-            margin-bottom: 0.5rem;
+        @media (max-width: 768px) {
+            .archived-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 0 1.25rem;
+                margin: 1.5rem auto 0.5rem;
+            }
+            .archived-banner-title {
+                font-size: 1.6rem;
+            }
         }
     </style>
 </head>
@@ -110,12 +82,12 @@
             <div class="header-nav-container" id="header-nav-container">
                 <nav class="header-nav">
                     <a href="/">Home</a>
-                    <a href="/photoshoots/" class="active">Photoshoots</a>
+                    <a href="/photoshoots/">Photoshoots</a>
                     <a href="/moodboard/">Moodboard</a>
                     <a href="/about/">About Me</a>
                     <a href="/contact/">Contact</a>
                     <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
-                    <a href="/photoshoots/archived.html" id="archived-nav-link" class="hidden">Archived</a>
+                    <a href="/photoshoots/archived.html" id="archived-nav-link" class="active">Archived</a>
                 </nav>
                 <div class="header-actions">
                     <button id="login-btn-header" class="login-btn-header hidden">Login</button>
@@ -165,26 +137,48 @@
     </header>
 
     <main id="app-content">
-        <div class="archived-page-header">
-            <h1>&#x1F5C4; Archived Sets</h1>
-            <p>Hidden from the public gallery. Unarchive to restore.</p>
+        <div class="archived-banner" id="archived-banner" style="display:none;">
+            <div>
+                <h1 class="archived-banner-title">📦 Archived Photoshoots</h1>
+                <p class="archived-banner-subtitle">Fully archived sets and sets with all photos archived. Unarchive to restore.</p>
+            </div>
+            <a href="/photoshoots/" class="back-link" style="margin:0;">← Back to Photoshoots</a>
         </div>
+
+        <!-- Sort Bar (Matches Photoshoots) -->
+        <div class="sort-bar" id="sort-bar" style="display:none;">
+            <select id="sort-select" class="sort-select">
+                <option value="category">Sort by Photo set</option>
+                <option value="date">Sort by Date</option>
+                <option value="model">Sort by Model</option>
+                <option value="theme">Sort by Theme</option>
+            </select>
+            <button id="sort-order-btn" class="sort-btn" data-order="asc">A-Z ↓</button>
+        </div>
+
+        <div id="loading-msg" style="text-align:center;padding:5rem;color:#94a3b8;font-size:1.1rem;">Checking access...</div>
 
         <div id="access-denied" class="access-denied" style="display:none;">
             <h2>Access Denied</h2>
-            <p>You must be an admin to view this page.</p>
-            <a href="/photoshoots/" style="color:#60a5fa;">&#x2190; Back to Photoshoots</a>
+            <p>You must be an administrator to view archived photo sets.</p>
+            <a href="/photoshoots/" style="color:#60a5fa;display:inline-block;margin-top:1rem;">← Back to Photoshoots</a>
         </div>
 
-        <div id="loading-msg" style="text-align:center;padding:3rem;color:#64748b;">Checking access...</div>
+        <!-- Categories Container (Matches Photoshoots Row Layout) -->
+        <div id="categories-container" style="display:none;"></div>
 
-        <div class="archived-grid" id="archived-grid" style="display:none;"></div>
-
-        <div class="archived-empty" id="archived-empty" style="display:none;">
-            <div class="archived-empty-icon">&#x1F4ED;</div>
-            <p>No archived photo sets.</p>
+        <div id="archived-empty" class="archived-empty" style="display:none;">
+            <div class="archived-empty-icon">📭</div>
+            <p style="font-size: 1.2rem; color: #94a3b8; margin-bottom: 0.5rem;">No archived photoshoots.</p>
+            <p style="font-size: 0.95rem; color: #64748b;">Fully archived sets will appear here.</p>
         </div>
     </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="close">&times;</span>
+        <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+    </div>
 
     <script type="module" src="archived.js"></script>
 </body>

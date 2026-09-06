@@ -1,6 +1,7 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot, query, where, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
+import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -60,6 +61,8 @@ let redoStack = [];
 const MAX_HISTORY = 50;
 
 document.addEventListener('DOMContentLoaded', () => {
+    registerSiteServiceWorker();
+
     // --- DOM Elements ---
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
@@ -1136,9 +1139,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- VIEW 1: Dashboard Boards Loader ---
+    const renderDashboardCards = (userBoards) => {
+        boardsGrid.innerHTML = '';
+
+        if (!userBoards || userBoards.length === 0) {
+            emptyBoardsNotice.classList.remove('hidden');
+            return;
+        } else {
+            emptyBoardsNotice.classList.add('hidden');
+        }
+
+        userBoards.forEach(board => {
+            const card = document.createElement('div');
+            card.className = 'board-card';
+            
+            const elemCount = (board.elements || []).length;
+            const collabsCount = (board.trustedEmails || []).length;
+
+            card.innerHTML = `
+                <div>
+                    <div class="board-card-header">
+                        <h3 class="board-card-title">${escapeHtml(board.title || 'Untitled Board')}</h3>
+                        <span class="board-badge ${currentIsAdmin ? 'admin-badge' : ''}">${currentIsAdmin ? 'Admin' : 'Collaborator'}</span>
+                    </div>
+                    <p class="board-card-desc">${escapeHtml(board.description || 'No description provided.')}</p>
+                </div>
+                <div class="board-card-footer">
+                    <div class="board-card-collaborators">
+                        <span class="collab-tag">${elemCount} items</span>
+                        <span class="collab-tag">${collabsCount} collaborator${collabsCount === 1 ? '' : 's'}</span>
+                    </div>
+                    ${currentIsAdmin ? `
+                        <div class="board-card-admin-actions">
+                            <button class="icon-btn-small delete-board-btn" title="Delete Moodboard">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // Click to open board
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-board-btn')) return;
+                openMoodboard(board.id);
+            });
+
+            // Admin delete handler
+            if (currentIsAdmin) {
+                const deleteBtn = card.querySelector('.delete-board-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm(`Are you sure you want to permanently delete the moodboard "${board.title}"?`)) {
+                            try {
+                                invalidateCache('moodboard_');
+                                await deleteDoc(doc(db, 'moodboards', board.id));
+                                showToast('Moodboard deleted.');
+                                loadDashboardBoards();
+                            } catch (err) {
+                                console.error("Error deleting moodboard:", err);
+                                showToast('Error deleting moodboard.');
+                            }
+                        }
+                    });
+                }
+            }
+
+            boardsGrid.appendChild(card);
+        });
+    };
+
     const loadDashboardBoards = async () => {
         if (!currentUser) return;
-        boardsGrid.innerHTML = '<div style="color: var(--mb-text-muted); font-size: 1.1rem; grid-column: 1/-1; text-align: center; padding: 2rem;">Loading moodboards...</div>';
+        const cacheKey = `moodboard_dashboard_${currentUser.uid}_admin_${currentIsAdmin}`;
+
+        // 1. Instant Cache Render
+        const cached = getCachedData(cacheKey);
+        if (cached && Array.isArray(cached)) {
+            renderDashboardCards(cached);
+        } else {
+            boardsGrid.innerHTML = '<div style="color: var(--mb-text-muted); font-size: 1.1rem; grid-column: 1/-1; text-align: center; padding: 2rem;">Loading moodboards...</div>';
+        }
 
         try {
             const boardsCol = collection(db, 'moodboards');
@@ -1157,77 +1239,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            boardsGrid.innerHTML = '';
-
-            if (userBoards.length === 0) {
-                // If admin has 0 boards, show empty notice or create first default board
-                emptyBoardsNotice.classList.remove('hidden');
-                return;
+            if (!isDataEqual(cached, userBoards)) {
+                setCachedData(cacheKey, userBoards);
+                renderDashboardCards(userBoards);
             } else {
-                emptyBoardsNotice.classList.add('hidden');
+                setCachedData(cacheKey, userBoards);
             }
-
-            userBoards.forEach(board => {
-                const card = document.createElement('div');
-                card.className = 'board-card';
-                
-                const elemCount = (board.elements || []).length;
-                const collabsCount = (board.trustedEmails || []).length;
-
-                card.innerHTML = `
-                    <div>
-                        <div class="board-card-header">
-                            <h3 class="board-card-title">${escapeHtml(board.title || 'Untitled Board')}</h3>
-                            <span class="board-badge ${currentIsAdmin ? 'admin-badge' : ''}">${currentIsAdmin ? 'Admin' : 'Collaborator'}</span>
-                        </div>
-                        <p class="board-card-desc">${escapeHtml(board.description || 'No description provided.')}</p>
-                    </div>
-                    <div class="board-card-footer">
-                        <div class="board-card-collaborators">
-                            <span class="collab-tag">${elemCount} items</span>
-                            <span class="collab-tag">${collabsCount} collaborator${collabsCount === 1 ? '' : 's'}</span>
-                        </div>
-                        ${currentIsAdmin ? `
-                            <div class="board-card-admin-actions">
-                                <button class="icon-btn-small delete-board-btn" title="Delete Moodboard">
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-
-                // Click to open board
-                card.addEventListener('click', (e) => {
-                    if (e.target.closest('.delete-board-btn')) return;
-                    openMoodboard(board.id);
-                });
-
-                // Admin delete handler
-                if (currentIsAdmin) {
-                    const deleteBtn = card.querySelector('.delete-board-btn');
-                    if (deleteBtn) {
-                        deleteBtn.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            if (confirm(`Are you sure you want to permanently delete the moodboard "${board.title}"?`)) {
-                                try {
-                                    await deleteDoc(doc(db, 'moodboards', board.id));
-                                    showToast('Moodboard deleted.');
-                                    loadDashboardBoards();
-                                } catch (err) {
-                                    console.error("Error deleting moodboard:", err);
-                                    showToast('Error deleting moodboard.');
-                                }
-                            }
-                        });
-                    }
-                }
-
-                boardsGrid.appendChild(card);
-            });
         } catch (err) {
             console.error("Error loading moodboards:", err);
-            boardsGrid.innerHTML = '<div style="color: var(--mb-danger); grid-column: 1/-1; text-align: center; padding: 2rem;">Error loading moodboards. Please check your permissions.</div>';
+            if (!cached) {
+                boardsGrid.innerHTML = '<div style="color: var(--mb-danger); grid-column: 1/-1; text-align: center; padding: 2rem;">Error loading moodboards. Please check your permissions.</div>';
+            }
         }
     };
 
@@ -1250,6 +1272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const emailsRaw = newBoardCollabs.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
         try {
+            invalidateCache('moodboard_');
             const newDocRef = doc(collection(db, 'moodboards'));
             await setDoc(newDocRef, {
                 title: title,
@@ -1284,6 +1307,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUndoRedoButtons();
         selectedElementId = null;
         updateSelectionToolbar();
+
+        // Instant Cache Loading for this board
+        const cachedBoard = getCachedData(`moodboard_board_${boardId}`);
+        if (cachedBoard) {
+            activeBoardData = cachedBoard;
+            if (activeBoardTitle) activeBoardTitle.innerText = activeBoardData.title || 'Untitled Moodboard';
+            renderCanvasElements(activeBoardData.elements || []);
+            renderDrawingPaths(activeBoardData.drawingPaths || []);
+            renderGroupsSidebar();
+        }
 
         // Update URL with query param ?id= to support all hosting environments
         const newUrl = boardId.startsWith('local_') ? '/moodboard/' : `/moodboard/?id=${boardId}`;
@@ -1391,6 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
             renderGroupTags();
+            setCachedData(`moodboard_board_${boardId}`, activeBoardData);
 
             if (isFirstLoadForBoard) {
                 isFirstLoadForBoard = false;

@@ -1,6 +1,7 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "./firebase-config.js";
+import { getCachedData, setCachedData, isDataEqual, registerSiteServiceWorker } from "./site-cache.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -23,6 +24,9 @@ const fallbackImages = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Register Service Worker for offline asset & image caching
+    registerSiteServiceWorker();
+
     // UI Elements
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
@@ -43,27 +47,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadGallerySlots = async () => {
         if (!gallery) return;
-        gallery.innerHTML = '';
-        gallerySlots = [];
 
-        // Try loading curated slots from Firestore
+        // 1. Instant Cache Render (0ms delay)
+        const cachedSlots = getCachedData('home_gallery_slots');
+        if (cachedSlots && Array.isArray(cachedSlots) && cachedSlots.length > 0) {
+            gallerySlots = cachedSlots;
+            renderGallerySlots();
+        } else {
+            gallery.innerHTML = '';
+            gallerySlots = [];
+        }
+
+        // 2. Background Revalidation from Firestore
         try {
             const settingsDoc = await getDoc(doc(db, 'settings', 'home_gallery'));
+            let freshSlots = [];
             if (settingsDoc.exists() && settingsDoc.data().slots) {
-                gallerySlots = settingsDoc.data().slots;
+                freshSlots = settingsDoc.data().slots;
+            }
+
+            // Fill any missing slots with fallbacks
+            for (let i = 0; i < SLOT_COUNT; i++) {
+                if (!freshSlots[i] || !freshSlots[i].url) {
+                    freshSlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+                }
+            }
+
+            if (!isDataEqual(gallerySlots, freshSlots)) {
+                gallerySlots = freshSlots;
+                setCachedData('home_gallery_slots', freshSlots);
+                renderGallerySlots();
+            } else if (!cachedSlots) {
+                setCachedData('home_gallery_slots', freshSlots);
             }
         } catch (e) {
             console.warn('Could not load home_gallery settings:', e);
-        }
-
-        // Fill any missing slots with fallbacks
-        for (let i = 0; i < SLOT_COUNT; i++) {
-            if (!gallerySlots[i] || !gallerySlots[i].url) {
-                gallerySlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+            if (gallerySlots.length === 0) {
+                for (let i = 0; i < SLOT_COUNT; i++) {
+                    gallerySlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+                }
+                renderGallerySlots();
             }
         }
-
-        renderGallerySlots();
     };
 
     const renderGallerySlots = () => {
@@ -292,6 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeSlotIndex < 0) return;
         try {
             gallerySlots[activeSlotIndex].url = url;
+            setCachedData('home_gallery_slots', gallerySlots);
+            renderGallerySlots();
+            closePicker();
+
             // Save to Firestore
             const settingsRef = doc(db, 'settings', 'home_gallery');
             const snap = await getDoc(settingsRef);
@@ -300,8 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 await setDoc(settingsRef, { slots: gallerySlots });
             }
-            renderGallerySlots();
-            closePicker();
         } catch (err) {
             console.error('Failed to save gallery slot:', err);
             alert('Error saving image. Please try again.');
@@ -729,4 +756,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!navigating) releasePull();
     }, { passive: true });
 })();
+
+// ==========================================================================
+// Global Image Protection (Disable right click & dragging on images)
+// ==========================================================================
+document.addEventListener('contextmenu', (e) => {
+    if (e.target.tagName === 'IMG' || e.target.closest('img') || e.target.closest('.gallery-item') || e.target.closest('.fan-card') || e.target.closest('.process-image-container')) {
+        e.preventDefault();
+        return false;
+    }
+}, { capture: true });
+
+document.addEventListener('dragstart', (e) => {
+    if (e.target.tagName === 'IMG' || e.target.closest('img')) {
+        e.preventDefault();
+        return false;
+    }
+}, { capture: true });
 
