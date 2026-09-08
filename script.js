@@ -23,6 +23,17 @@ const fallbackImages = [
     'https://i.ibb.co/rqgS1mb/image-4.webp'
 ];
 
+const fallbackSetNames = [
+    'VOGUE PARIS EDITORIAL',
+    'HAUTE COUTURE FW24',
+    'MONOCHROME NOIR',
+    'AVANT-GARDE ATELIER',
+    'MINIMALIST PORTRAITURE',
+    'MILAN RUNWAY STUDY',
+    'EDITORIAL CAPSULE',
+    'STUDIO SELECTION'
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     // Register Service Worker for offline asset & image caching
     registerSiteServiceWorker();
@@ -35,18 +46,158 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallery = document.getElementById('gallery');
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
-    const closeBtn = document.querySelector('.close');
+    const lightboxSetName = document.getElementById('lightbox-set-name');
+    const closeBtn = document.querySelector('#lightbox-close, .lightbox .close, .close');
 
     // --- Admin state ---
     let currentIsAdmin = false;
 
+    // Map URL to origin photoshoot set name for automatic lookup
+    const urlToSetNameMap = new Map();
+
     // --- Gallery Slots ---
     // Horizontal alternating pattern: 8 featured image slots
     const SLOT_COUNT = 8;
-    let gallerySlots = []; // Array of { url, aspectRatio }
+    let gallerySlots = []; // Array of { url, aspectRatio, setName }
+
+    // --- 3D Tilt Effect Helper ---
+    const attachTiltEffect = (element) => {
+        element.classList.add('tilt-card');
+        
+        const onMouseMove = (e) => {
+            const rect = element.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            const deltaX = (x - centerX) / centerX;
+            const deltaY = (y - centerY) / centerY;
+            
+            // Scale tilt inversely with element size — big images tilt less
+            const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
+            const rotateX = (-deltaY * maxTilt).toFixed(2);
+            const rotateY = (deltaX * maxTilt).toFixed(2);
+            
+            element.classList.add('is-tilting');
+            element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
+        };
+        
+        const onMouseLeave = () => {
+            element.classList.remove('is-tilting');
+            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+        };
+        
+        element.addEventListener('mousemove', onMouseMove);
+        element.addEventListener('mouseleave', onMouseLeave);
+    };
+
+    // --- Editorial Fine-Art Lightbox Logic ---
+    let activeOriginImg = null;
+
+    const openLightbox = (imgElement, setName = 'EDITORIAL ARCHIVE') => {
+        if (!lightbox || !lightboxImg) return;
+        activeOriginImg = imgElement;
+        document.body.classList.add('lightbox-open');
+        
+        lightboxImg.src = imgElement.src;
+        if (lightboxSetName) {
+            lightboxSetName.textContent = (setName || 'EDITORIAL ARCHIVE').toUpperCase();
+        }
+        
+        lightbox.style.display = 'flex';
+        requestAnimationFrame(() => {
+            lightbox.classList.add('show');
+        });
+    };
+
+    const closeLightbox = () => {
+        if (!lightbox) return;
+        lightbox.classList.remove('show');
+        document.body.classList.remove('lightbox-open');
+        
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+            if (lightboxImg) lightboxImg.src = '';
+            activeOriginImg = null;
+        }, 300);
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeLightbox();
+        });
+    }
+    
+    if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
+                closeLightbox();
+            }
+        });
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
+            closeLightbox();
+        }
+    });
+
+    const resolveOriginSetNames = async () => {
+        try {
+            const [setsSnap, singleSnap] = await Promise.all([
+                getDocs(collection(db, 'photo_sets')),
+                getDocs(collection(db, 'single_shots'))
+            ]);
+
+            setsSnap.forEach(docSnap => {
+                const data = docSnap.data();
+                const categoryName = data.categoryName || 'PHOTOSHOOT';
+                if (data.urls && Array.isArray(data.urls)) {
+                    data.urls.forEach(url => urlToSetNameMap.set(url, categoryName));
+                }
+                if (data.adultUrls && Array.isArray(data.adultUrls)) {
+                    data.adultUrls.forEach(url => urlToSetNameMap.set(url, categoryName));
+                }
+                if (data.archivedUrls && Array.isArray(data.archivedUrls)) {
+                    data.archivedUrls.forEach(url => urlToSetNameMap.set(url, categoryName));
+                }
+            });
+
+            singleSnap.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.url) urlToSetNameMap.set(data.url, 'SINGLE SHOTS');
+            });
+
+            // Update any slots that didn't have their origin set name stored yet
+            let updated = false;
+            gallerySlots.forEach((slot, i) => {
+                if (slot.url && urlToSetNameMap.has(slot.url)) {
+                    const foundName = urlToSetNameMap.get(slot.url);
+                    if (slot.setName !== foundName) {
+                        slot.setName = foundName;
+                        updated = true;
+                    }
+                } else if (!slot.setName) {
+                    slot.setName = fallbackSetNames[i % fallbackSetNames.length];
+                }
+            });
+
+            if (updated) {
+                setCachedData('home_gallery_slots', gallerySlots);
+            }
+        } catch (e) {
+            console.warn('Could not resolve origin set names:', e);
+        }
+    };
 
     const loadGallerySlots = async () => {
         if (!gallery) return;
+
+        // Background resolve origin set names from Firestore sets
+        resolveOriginSetNames();
 
         // 1. Instant Cache Render (0ms delay)
         const cachedSlots = getCachedData('home_gallery_slots');
@@ -66,10 +217,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 freshSlots = settingsDoc.data().slots;
             }
 
-            // Fill any missing slots with fallbacks
+            // Fill any missing slots with fallbacks and set names
             for (let i = 0; i < SLOT_COUNT; i++) {
                 if (!freshSlots[i] || !freshSlots[i].url) {
-                    freshSlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+                    freshSlots[i] = { 
+                        url: fallbackImages[i % fallbackImages.length] || '', 
+                        aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait',
+                        setName: fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE'
+                    };
+                } else if (!freshSlots[i].setName) {
+                    freshSlots[i].setName = urlToSetNameMap.get(freshSlots[i].url) || fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE';
                 }
             }
 
@@ -84,7 +241,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Could not load home_gallery settings:', e);
             if (gallerySlots.length === 0) {
                 for (let i = 0; i < SLOT_COUNT; i++) {
-                    gallerySlots[i] = { url: fallbackImages[i % fallbackImages.length] || '', aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait' };
+                    gallerySlots[i] = { 
+                        url: fallbackImages[i % fallbackImages.length] || '', 
+                        aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait',
+                        setName: fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE'
+                    };
                 }
                 renderGallerySlots();
             }
@@ -111,7 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Lightbox on click (only if not admin — admin gets edit button)
                 item.addEventListener('click', (e) => {
                     if (e.target.closest('.slot-edit-btn')) return;
-                    openLightbox(img);
+                    const originSetName = slot.setName || urlToSetNameMap.get(slot.url) || fallbackSetNames[index % fallbackSetNames.length] || 'EDITORIAL ARCHIVE';
+                    openLightbox(img, originSetName);
                 });
 
                 attachTiltEffect(item);
@@ -194,13 +356,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = setDoc.data();
                 const urls = data.urls || [];
                 if (!urls.length) return;
+                const setName = data.categoryName || 'Untitled Set';
 
                 const setDiv = document.createElement('div');
                 setDiv.className = 'picker-set';
 
                 const titleEl = document.createElement('div');
                 titleEl.className = 'picker-set-title';
-                titleEl.innerHTML = `<span class="toggle-icon">▶</span>${data.categoryName || 'Untitled Set'} <span style="color:#475569;font-weight:400;font-size:0.8rem;">${urls.length} photos</span>`;
+                titleEl.innerHTML = `<span class="toggle-icon">▶</span>${setName} <span style="color:#475569;font-weight:400;font-size:0.8rem;">${urls.length} photos</span>`;
 
                 const imagesDiv = document.createElement('div');
                 imagesDiv.className = 'picker-set-images';
@@ -211,9 +374,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     imagesDiv.classList.toggle('show');
                 });
 
-                // Build thumbnails
+                // Build thumbnails with origin set name
                 urls.forEach(url => {
-                    const wrap = createPickerThumb(url);
+                    const wrap = createPickerThumb(url, setName);
                     imagesDiv.appendChild(wrap);
                 });
 
@@ -237,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     imagesDiv.classList.toggle('show');
                 });
                 singleSnap.forEach(d => {
-                    if (d.data().url) imagesDiv.appendChild(createPickerThumb(d.data().url));
+                    if (d.data().url) imagesDiv.appendChild(createPickerThumb(d.data().url, 'SINGLE SHOTS'));
                 });
                 setDiv.appendChild(titleEl);
                 setDiv.appendChild(imagesDiv);
@@ -250,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const createPickerThumb = (url) => {
+    const createPickerThumb = (url, setName = '') => {
         const wrap = document.createElement('div');
         wrap.className = 'picker-img-wrap';
 
@@ -290,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             holdTimer = setTimeout(async () => {
                 if (!holdStarted) return;
                 ring.classList.remove('active');
-                await selectImage(url);
+                await selectImage(url, setName);
             }, 2000);
         };
 
@@ -313,10 +476,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return wrap;
     };
 
-    const selectImage = async (url) => {
+    const selectImage = async (url, setName = '') => {
         if (activeSlotIndex < 0) return;
         try {
             gallerySlots[activeSlotIndex].url = url;
+            gallerySlots[activeSlotIndex].setName = setName || urlToSetNameMap.get(url) || 'CURATED SELECTION';
             setCachedData('home_gallery_slots', gallerySlots);
             renderGallerySlots();
             closePicker();
@@ -338,208 +502,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // Always load the gallery (reads from Firestore or uses fallback)
     loadGallerySlots();
 
-
-    // --- 3D Tilt Effect Helper ---
-    const attachTiltEffect = (element) => {
-        element.classList.add('tilt-card');
-        
-        const onMouseMove = (e) => {
-            const rect = element.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            const deltaX = (x - centerX) / centerX;
-            const deltaY = (y - centerY) / centerY;
-            
-            // Scale tilt inversely with element size — big images tilt less
-            const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
-            const rotateX = (-deltaY * maxTilt).toFixed(2);
-            const rotateY = (deltaX * maxTilt).toFixed(2);
-            
-            element.classList.add('is-tilting');
-            element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
-        };
-        
-        const onMouseLeave = () => {
-            element.classList.remove('is-tilting');
-            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-        };
-        
-        element.addEventListener('mousemove', onMouseMove);
-        element.addEventListener('mouseleave', onMouseLeave);
-    };
-
-    // --- Shared Element FLIP Lightbox Logic ---
-    let activeOriginImg = null;
-
-    const openLightbox = (imgElement) => {
-        if (!lightbox || !lightboxImg) return;
-        activeOriginImg = imgElement;
-        document.body.classList.add('lightbox-open');
-        
-        // Temporarily reset styles to measure target layout
-        lightboxImg.style.transition = 'none';
-        lightboxImg.style.transform = 'none';
-        lightboxImg.style.borderRadius = '';
-        lightboxImg.src = imgElement.src;
-        
-        lightbox.style.display = 'flex';
-        lightbox.classList.remove('show');
-        
-        const sourceRect = imgElement.getBoundingClientRect();
-        
-        requestAnimationFrame(() => {
-            const targetRect = lightboxImg.getBoundingClientRect();
-            
-            const targetCenterX = targetRect.left + targetRect.width / 2;
-            const targetCenterY = targetRect.top + targetRect.height / 2;
-            
-            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
-            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
-            
-            const deltaX = sourceCenterX - targetCenterX;
-            const deltaY = sourceCenterY - targetCenterY;
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            // Invert: Position exactly over the clicked image
-            lightboxImg.style.transformOrigin = 'center center';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
-            
-            // Play: Grow and zoom out to the viewer in center
-            requestAnimationFrame(() => {
-                lightbox.classList.add('show');
-                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
-                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
-                lightboxImg.style.borderRadius = '12px';
-            });
-        });
-    };
-
-    const closeLightbox = () => {
-        if (!lightbox) return;
-        
-        if (activeOriginImg && activeOriginImg.isConnected) {
-            const sourceRect = activeOriginImg.getBoundingClientRect();
-            const targetRect = lightboxImg.getBoundingClientRect();
-            
-            const targetCenterX = targetRect.left + targetRect.width / 2;
-            const targetCenterY = targetRect.top + targetRect.height / 2;
-            
-            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
-            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
-            
-            const deltaX = sourceCenterX - targetCenterX;
-            const deltaY = sourceCenterY - targetCenterY;
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            // Animate back to original thumbnail location
-            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
-            
-            lightbox.classList.remove('show');
-            document.body.classList.remove('lightbox-open');
-            
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                lightboxImg.style.transform = '';
-                lightboxImg.style.transition = '';
-                activeOriginImg = null;
-            }, 400);
-        } else {
-            lightbox.classList.remove('show');
-            document.body.classList.remove('lightbox-open');
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                activeOriginImg = null;
-            }, 300);
-        }
-    };
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeLightbox);
-    }
-    
-    if (lightbox) {
-        lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) closeLightbox();
-        });
-    }
-    
-    document.addEventListener('keydown', (e) => {
-        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
-            closeLightbox();
-        }
-    });
-
     // --- Firebase Authentication Logic ---
 
     // Combined auth state: update UI buttons + admin status + gallery
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
-            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
             localStorage.setItem('zhukov_logged_in', 'true');
             try {
                 const userSnap = await getDoc(doc(db, 'users', user.uid));
                 currentIsAdmin = userSnap.exists() && userSnap.data().role === 'admin';
             } catch { currentIsAdmin = false; }
         } else {
-            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
-            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
             currentIsAdmin = false;
+        }
+        if (window.updateHeaderAuthState) {
+            window.updateHeaderAuthState(user, currentIsAdmin);
         }
         renderGallerySlots();
     });
 
-    // Login button click handler
-    loginBtn.addEventListener('click', () => {
-        localStorage.setItem('zhukov_logged_in', 'true');
-        signInWithPopup(auth, provider).then(async (result) => {
-            const user = result.user;
-            
-            try {
-                // Reference to the user's document
-                const userRef = doc(db, 'users', user.uid);
-                const userSnap = await getDoc(userRef);
-                
-                // If the user document doesn't exist, this is a new signup
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        role: 'user',
-                        email: user.email,
-                        createdAt: new Date().toISOString()
-                    });
-                    console.log("New user registered and assigned 'user' role.");
-                } else {
-                    console.log("Existing user signed in.");
+    // Delegated Login / Logout button click handlers
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#login-btn-header')) {
+            localStorage.setItem('zhukov_logged_in', 'true');
+            signInWithPopup(auth, provider).then(async (result) => {
+                const user = result.user;
+                try {
+                    const userRef = doc(db, 'users', user.uid);
+                    const userSnap = await getDoc(userRef);
+                    if (!userSnap.exists()) {
+                        await setDoc(userRef, {
+                            role: 'user',
+                            email: user.email,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                } catch (dbError) {
+                    console.error("Error checking/creating user role in database: ", dbError);
                 }
-            } catch (dbError) {
-                console.error("Error checking/creating user role in database: ", dbError);
-                // Even if db write fails (e.g. permission issues), they are logged in via Auth.
-                // The firestore rules will simply block their database access.
-            }
-        }).catch((error) => {
-            console.error("Error signing in: ", error.code, error.message);
-            alert("Failed to sign in: " + error.message + "\n\n(Error code: " + error.code + ")");
-        });
-    });
+            }).catch((error) => {
+                console.error("Error signing in: ", error.code, error.message);
+                alert("Failed to sign in: " + error.message + "\n\n(Error code: " + error.code + ")");
+            });
+        }
 
-    // Logout button click handler
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('zhukov_logged_in');
-        signOut(auth).catch((error) => {
-            console.error("Error signing out: ", error);
-        });
+        if (e.target.closest('#logout-btn')) {
+            localStorage.removeItem('zhukov_logged_in');
+            signOut(auth).catch((error) => {
+                console.error("Error signing out: ", error);
+            });
+        }
     });
 });
 

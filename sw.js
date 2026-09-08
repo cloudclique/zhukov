@@ -2,13 +2,16 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v1';
+const CACHE_NAME_STATIC = 'zhukov-static-v28';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
 const PRECACHE_ASSETS = [
     '/',
     '/index.html',
+    '/header.html',
+    '/footer.html',
+    '/site-components.js',
     '/styles.css',
     '/script.js',
     '/site-cache.js',
@@ -28,6 +31,10 @@ const PRECACHE_ASSETS = [
     '/contact/',
     '/contact/index.html',
     '/contact/contact.css',
+    '/upload/',
+    '/upload/index.html',
+    '/upload/upload.css',
+    '/upload/upload.js',
     '/moodboard/',
     '/moodboard/index.html',
     '/moodboard/moodboard.css',

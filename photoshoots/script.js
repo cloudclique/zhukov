@@ -1,7 +1,6 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
-import { ensureAgeVerification, getAgeVerificationStatus } from "./age-gate.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 
 // Initialize Firebase Auth
@@ -23,7 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
-    const closeBtn = document.querySelector('.close');
+    const lightboxSetName = document.getElementById('lightbox-set-name');
+    const closeBtn = document.querySelector('#lightbox-close, .lightbox .close, .close');
 
     // Data store
     let categoriesData = [];
@@ -31,50 +31,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Firebase Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {
-        const uploadLink = document.getElementById('upload-nav-link');
         if (user) {
-            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
-            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
             localStorage.setItem('zhukov_logged_in', 'true');
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
                     isAdmin = true;
-                    if (uploadLink) uploadLink.classList.remove('hidden');
-                    const archivedLink = document.getElementById('archived-nav-link');
-                    if (archivedLink) archivedLink.classList.remove('hidden');
                 } else {
                     isAdmin = false;
-                    if (uploadLink) uploadLink.classList.add('hidden');
-                    const archivedLink = document.getElementById('archived-nav-link');
-                    if (archivedLink) archivedLink.classList.add('hidden');
                 }
-                await loadPhotos();
             } catch (error) {
                 console.error("Auth check error:", error);
                 isAdmin = false;
-                await loadPhotos();
             }
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(user, isAdmin);
+            }
+            await loadPhotos();
         } else {
-            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
-            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
-            if (uploadLink) uploadLink.classList.add('hidden');
-            const archivedLink = document.getElementById('archived-nav-link');
-            if (archivedLink) archivedLink.classList.add('hidden');
             isAdmin = false;
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(null, false);
+            }
             await loadPhotos();
         }
     });
 
-    loginBtn.addEventListener('click', () => {
-        localStorage.setItem('zhukov_logged_in', 'true');
-        signInWithPopup(auth, provider).catch(error => console.error(error));
-    });
+    // Delegated click listeners for header auth buttons
+    document.addEventListener('click', (e) => {
+        const loginTarget = e.target.closest('#login-btn-header');
+        if (loginTarget) {
+            localStorage.setItem('zhukov_logged_in', 'true');
+            signInWithPopup(auth, provider).catch(error => console.error(error));
+        }
 
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('zhukov_logged_in');
-        signOut(auth).catch(error => console.error(error));
+        const logoutTarget = e.target.closest('#logout-btn');
+        if (logoutTarget) {
+            localStorage.removeItem('zhukov_logged_in');
+            signOut(auth).catch(error => console.error(error));
+        }
     });
 
     // --- 3D Tilt Effect Helper ---
@@ -110,99 +106,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         element.addEventListener('mouseleave', onMouseLeave);
     };
 
-    // --- Shared Element FLIP Lightbox Logic ---
+    // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
 
-    const openLightbox = (imgElement) => {
+    const openLightbox = (imgElement, setName = 'PHOTOSHOOT') => {
         if (!lightbox || !lightboxImg) return;
         activeOriginImg = imgElement;
+        document.body.classList.add('lightbox-open');
         
-        // Temporarily reset styles to measure target layout
-        lightboxImg.style.transition = 'none';
-        lightboxImg.style.transform = 'none';
-        lightboxImg.style.borderRadius = '';
         lightboxImg.src = imgElement.src;
+        if (lightboxSetName) {
+            lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
+        }
         
         lightbox.style.display = 'flex';
-        lightbox.classList.remove('show');
-        
-        const sourceRect = imgElement.getBoundingClientRect();
-        
         requestAnimationFrame(() => {
-            const targetRect = lightboxImg.getBoundingClientRect();
-            
-            const targetCenterX = targetRect.left + targetRect.width / 2;
-            const targetCenterY = targetRect.top + targetRect.height / 2;
-            
-            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
-            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
-            
-            const deltaX = sourceCenterX - targetCenterX;
-            const deltaY = sourceCenterY - targetCenterY;
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            // Invert: Position exactly over the clicked image
-            lightboxImg.style.transformOrigin = 'center center';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
-            
-            // Play: Grow and zoom out to the viewer in center
-            requestAnimationFrame(() => {
-                lightbox.classList.add('show');
-                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
-                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
-                lightboxImg.style.borderRadius = '12px';
-            });
+            lightbox.classList.add('show');
         });
     };
 
     const closeLightbox = () => {
         if (!lightbox) return;
+        lightbox.classList.remove('show');
+        document.body.classList.remove('lightbox-open');
         
-        if (activeOriginImg && activeOriginImg.isConnected) {
-            const sourceRect = activeOriginImg.getBoundingClientRect();
-            const targetRect = lightboxImg.getBoundingClientRect();
-            
-            const targetCenterX = targetRect.left + targetRect.width / 2;
-            const targetCenterY = targetRect.top + targetRect.height / 2;
-            
-            const sourceCenterX = sourceRect.left + sourceRect.width / 2;
-            const sourceCenterY = sourceRect.top + sourceRect.height / 2;
-            
-            const deltaX = sourceCenterX - targetCenterX;
-            const deltaY = sourceCenterY - targetCenterY;
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            // Animate back to original thumbnail location
-            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
-            
-            lightbox.classList.remove('show');
-            
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                lightboxImg.style.transform = '';
-                lightboxImg.style.transition = '';
-                activeOriginImg = null;
-            }, 400);
-        } else {
-            lightbox.classList.remove('show');
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                activeOriginImg = null;
-            }, 300);
-        }
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+            if (lightboxImg) lightboxImg.src = '';
+            activeOriginImg = null;
+        }, 300);
     };
 
-    if (closeBtn) closeBtn.addEventListener('click', closeLightbox);
-    if (lightbox) lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeLightbox();
+        });
+    }
+    
+    if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
+                closeLightbox();
+            }
+        });
+    }
+    
     document.addEventListener('keydown', (e) => {
-        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
+        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
+            closeLightbox();
+        }
     });
 
     // --- Fetch Data ---
@@ -210,8 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadPhotos = async () => {
         const currentReqId = ++loadPhotosReqId;
-        const isAdult = getAgeVerificationStatus() === true;
-        const cacheKey = `photoshoots_list_adult_${isAdult}_admin_${isAdmin}`;
+        const cacheKey = `photoshoots_list_admin_${isAdmin}`;
 
         // 1. Instant SWR Render from Local Memory / Storage
         const cached = getCachedData(cacheKey);
@@ -258,7 +210,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             singleSnap.forEach(doc => {
                 const data = doc.data();
-                if (!isAdult && data.isAdult === true) return; // Hide 18+ single shots for non-adults
                 if (!isAdmin && data.archived === true) return; // Hide archived single shots for non-admins
                 singleItems.push(data);
                 if (data.date && data.date > latestSingleDate) {
@@ -308,18 +259,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         visibleUrls = visibleUrls.filter(url => !archivedUrls.includes(url));
                         if (visibleUrls.length === 0) {
                             return; // All images in this set are archived, hide set
-                        }
-                    }
-
-                    if (!isAdult) {
-                        const adultUrls = data.adultUrls || [];
-                        if (data.isAdult === true && adultUrls.length === 0) {
-                            // Entire set was marked 18+ on upload
-                            return; // Do not show set if it completely consists of 18+ images
-                        }
-                        visibleUrls = visibleUrls.filter(url => !adultUrls.includes(url));
-                        if (visibleUrls.length === 0) {
-                            return; // All images in this set are 18+, hide set completely
                         }
                     }
 
@@ -614,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 img.addEventListener('click', () => {
-                    openLightbox(img);
+                    openLightbox(img, cat.categoryName || 'PHOTOSHOOT');
                 });
                 
                 // Attach 3D Magnetic Tilt
@@ -689,8 +628,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderGallery();
     });
 
-    // Initial Load - Age gate check first
-    await ensureAgeVerification();
+    // Initial Load
     await loadPhotos();
 });
 

@@ -221,8 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetBoardFromUrl = getBoardIdFromUrl();
 
         if (user) {
-            loginBtn.classList.add('hidden');
-            logoutBtn.classList.remove('hidden');
             localStorage.setItem('zhukov_logged_in', 'true');
 
             try {
@@ -234,11 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentIsAdmin = false;
             }
 
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(user, currentIsAdmin);
+            }
+
             if (currentIsAdmin) {
-                if (uploadLink) uploadLink.classList.remove('hidden');
                 btnCreateBoard.classList.remove('hidden');
             } else {
-                if (uploadLink) uploadLink.classList.add('hidden');
                 btnCreateBoard.classList.add('hidden');
             }
 
@@ -250,12 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadDashboardBoards();
             }
         } else {
-            loginBtn.classList.remove('hidden');
-            logoutBtn.classList.add('hidden');
-            if (uploadLink) uploadLink.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
             currentUser = null;
             currentIsAdmin = false;
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(null, false);
+            }
             btnCreateBoard.classList.add('hidden');
             
             // Show auth notice on dashboard
@@ -271,19 +271,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loginBtn.addEventListener('click', () => {
-        localStorage.setItem('zhukov_logged_in', 'true');
-        signInWithPopup(auth, provider).catch(console.error);
-    });
-    if (btnAuthNoticeLogin) {
-        btnAuthNoticeLogin.addEventListener('click', () => {
+    // Delegated click listeners for header and dashboard auth buttons
+    document.addEventListener('click', (e) => {
+        const loginTarget = e.target.closest('#login-btn-header') || e.target.closest('#btn-auth-notice-login');
+        if (loginTarget) {
             localStorage.setItem('zhukov_logged_in', 'true');
             signInWithPopup(auth, provider).catch(console.error);
-        });
-    }
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('zhukov_logged_in');
-        signOut(auth).catch(console.error);
+        }
+
+        const logoutTarget = e.target.closest('#logout-btn');
+        if (logoutTarget) {
+            localStorage.removeItem('zhukov_logged_in');
+            signOut(auth).catch(console.error);
+        }
     });
 
     // --- User-Scoped Action-Based History (Undo / Redo) ---

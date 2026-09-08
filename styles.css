@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap');
 
 :root {
     --bg-color: #000000;
@@ -23,10 +23,10 @@ body {
     background-attachment: fixed;
     color: var(--text-color);
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
-header {
+header:not(.vogue-header) {
     text-align: center;
     padding: 2.5rem 2rem;
     position: sticky;
@@ -529,22 +529,25 @@ body:has(.picker-overlay.show) header {
     }
 }
 
-/* Lightbox Modal with Shared Element FLIP Zoom */
+/* Lightbox Modal with Editorial Fine-Art White Frame */
 .lightbox {
     display: none;
     position: fixed;
     z-index: 100000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(10, 15, 30, 0.94);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.76);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     opacity: 0;
-    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     align-items: center;
     justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    user-select: none;
+    cursor: zoom-out;
 }
 
 .lightbox.show {
@@ -559,14 +562,86 @@ body:has(.lightbox.show) header {
     pointer-events: none !important;
 }
 
-.lightbox-content {
-    max-width: 90%;
+/* White Art Gallery Frame */
+.lightbox-frame {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: #ffffff;
+    padding: 16px 16px 14px 16px;
+    border-radius: 3px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    max-width: 90vw;
     max-height: 90vh;
-    border-radius: 12px;
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 50px rgba(56, 189, 248, 0.15);
-    object-fit: contain;
-    will-change: transform, border-radius;
+    box-sizing: border-box;
     cursor: default;
+    transform: scale(0.95) translateY(12px);
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.lightbox.show .lightbox-frame {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.lightbox-img-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: calc(90vh - 65px);
+    background: #f8f8f8;
+    overflow: hidden;
+}
+
+.lightbox-content {
+    display: block;
+    max-width: calc(90vw - 32px);
+    max-height: calc(90vh - 65px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: default;
+}
+
+/* Bottom Metadata Bar */
+.lightbox-caption-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #eaeaea;
+    margin-top: 14px;
+    padding-top: 10px;
+    padding-bottom: 2px;
+    box-sizing: border-box;
+    gap: 16px;
+}
+
+.lightbox-author {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #111111;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.lightbox-set-name {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: #555555;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
 }
 
 /* 3D Magnetic Cursor Tilt */
@@ -580,22 +655,24 @@ body:has(.lightbox.show) header {
     transition: transform 0.08s ease-out;
 }
 
+.lightbox .close,
 .close {
-    position: absolute;
-    top: 30px;
-    right: 40px;
-    color: #94a3b8;
-    font-size: 45px;
-    font-weight: 300;
-    transition: color 0.3s ease, transform 0.3s ease;
+    position: fixed;
+    top: 24px;
+    right: 32px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 38px;
+    font-weight: 200;
+    transition: color 0.25s ease, transform 0.25s ease;
     cursor: pointer;
-    z-index: 1000;
+    z-index: 100005;
     line-height: 1;
 }
 
+.lightbox .close:hover,
 .close:hover {
-    color: var(--accent-color);
-    transform: scale(1.1);
+    color: #ffffff;
+    transform: scale(1.15);
 }
 
 /* Utilities */
@@ -1121,15 +1198,46 @@ body:has(.lightbox.show) header {
         padding: 2rem 0 1.5rem;
     }
 
-    .lightbox-content {
-        max-width: 94%;
-        max-height: 85vh;
+    .lightbox {
+        padding: 12px;
     }
 
+    .lightbox-frame {
+        padding: 10px 10px 8px 10px;
+        max-width: 95vw;
+        max-height: 94vh;
+    }
+
+    .lightbox-img-wrapper {
+        max-height: calc(94vh - 50px);
+    }
+
+    .lightbox-content {
+        max-width: calc(95vw - 20px);
+        max-height: calc(94vh - 50px);
+    }
+
+    .lightbox-caption-bar {
+        margin-top: 8px;
+        padding-top: 6px;
+        gap: 10px;
+    }
+
+    .lightbox-author {
+        font-size: 0.64rem;
+        letter-spacing: 0.1em;
+    }
+
+    .lightbox-set-name {
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+    }
+
+    .lightbox .close,
     .close {
-        top: 20px;
-        right: 25px;
-        font-size: 38px;
+        top: 16px;
+        right: 20px;
+        font-size: 32px;
     }
 
     .age-gate-card {
@@ -1688,4 +1796,1468 @@ img,
     -moz-user-select: none;
     -ms-user-select: none;
     -webkit-touch-callout: none;
+}
+
+/* ==========================================================================
+   Vogue Editorial Magazine Design System (1-to-1 Header & Hero + Full Home Page)
+   ========================================================================== */
+
+/* ── Base Theme for Editorial Page ─────────────────────────────────────── */
+body.editorial-body {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #111111 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    padding-top: 178px;
+    overflow-x: clip;
+    min-height: 100vh;
+    transition: padding-top 0.28s cubic-bezier(0.2, 0, 0, 1);
+}
+
+body.editorial-body.header-is-scrolled {
+    padding-top: 50px;
+}
+
+@media (max-width: 768px) {
+    body.editorial-body,
+    body.editorial-body.header-is-scrolled {
+        padding-top: 60px !important;
+        transition: none !important;
+    }
+}
+
+body.editorial-body main.vogue-main {
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    background-color: #ffffff;
+}
+
+/* ── 1. Vogue Top Editorial Bar ────────────────────────────────────────── */
+.vogue-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.45rem 3.5vw;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    color: #8c8c8c;
+    text-transform: uppercase;
+    border-bottom: 1px solid #f0f0f0;
+    background: #ffffff;
+    width: 100%;
+    position: relative;
+    z-index: 1001;
+    max-height: 40px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease, border-color 0.25s ease;
+}
+
+.vogue-top-bar.is-scrolled,
+.vogue-header.is-scrolled .vogue-top-bar {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-bottom-color: transparent;
+    pointer-events: none;
+}
+
+.top-bar-left,
+.top-bar-center,
+.top-bar-right {
+    white-space: nowrap;
+}
+
+/* ── 2. Vogue Masthead Header & Fixed Behavior ────────────────────────── */
+#site-header-slot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    width: 100%;
+    background: #ffffff;
+    display: block;
+}
+
+.vogue-header {
+    background: #ffffff;
+    position: relative;
+    z-index: 10000;
+    width: 100%;
+    border-bottom: 1px solid #e5e5e5;
+    text-align: center;
+    padding: 0;
+    margin: 0;
+    transition: background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.vogue-masthead-container {
+    padding: 1.1rem 2rem 0.8rem 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: #ffffff;
+    max-height: 120px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+}
+
+/* Original Brand Logo Styling for Light / Editorial Page */
+.vogue-header .brand-name,
+body.editorial-body .brand-name,
+body.moodboard-body .vogue-header .brand-name {
+    color: #000000 !important;
+}
+
+.vogue-header .brand-subtitle,
+body.editorial-body .brand-subtitle,
+body.moodboard-body .vogue-header .brand-subtitle {
+    color: #222222 !important;
+}
+
+.vogue-masthead-logo {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    text-decoration: none;
+}
+
+.vogue-masthead-logo .brand-name {
+    font-size: clamp(2.8rem, 5.5vw, 3.8rem) !important;
+    letter-spacing: 2px !important;
+    line-height: 0.85 !important;
+    margin: 0 !important;
+    text-align: left !important;
+}
+
+.vogue-masthead-logo .brand-subtitle {
+    font-size: 0.95rem !important;
+    letter-spacing: 1px !important;
+    margin: 0 !important;
+    margin-left: 2px !important;
+    margin-top: 4px !important;
+    text-transform: lowercase;
+    text-align: left !important;
+    align-self: flex-start !important;
+}
+
+/* Mini Scrolled Logo (Left side of nav on same height level as nav items) */
+.vogue-scrolled-logo {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-decoration: none;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-15px);
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.25s ease, transform 0.25s ease, width 0.25s ease;
+}
+
+.vogue-scrolled-logo .brand-name.scrolled-name {
+    font-family: 'Instrument Serif', serif !important;
+    font-size: 2.1rem !important;
+    font-weight: 400 !important;
+    color: #000000 !important;
+    line-height: 0.8 !important;
+    letter-spacing: 2px !important;
+    margin: 0 !important;
+}
+
+.vogue-scrolled-logo .brand-subtitle.scrolled-sub {
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 300 !important;
+    font-size: 0.72rem !important;
+    color: #333333 !important;
+    letter-spacing: 1px !important;
+    margin: 0 !important;
+    margin-left: 2px !important;
+    margin-top: 2px !important;
+    text-transform: lowercase;
+}
+
+/* Mobile Toggle */
+.vogue-mobile-menu-btn {
+    display: none;
+    position: absolute;
+    right: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1002;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.vogue-mobile-menu-btn .hamburger-line {
+    display: block;
+    width: 24px;
+    height: 1.5px;
+    background: #000000;
+    transition: all 0.3s ease;
+}
+
+/* ── 3. Hairline Divider & Navigation Row ──────────────────────────────── */
+.vogue-nav-bar {
+    border-top: 1px solid #e5e5e5;
+    padding: 0.85rem 3.5vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: #ffffff;
+    transition: padding 0.25s ease, border-color 0.25s ease;
+}
+
+.vogue-nav-links {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(1.2rem, 3vw, 3.2rem);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.vogue-nav-link {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: capitalize !important;
+    color: #1a1a1a !important;
+    text-decoration: none !important;
+    position: relative;
+    padding: 0.25rem 0;
+    transition: color 0.25s ease;
+}
+
+.vogue-nav-link:hover,
+.vogue-nav-link.active {
+    color: #b32d2e !important;
+}
+
+.vogue-nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0%;
+    height: 1.5px;
+    background: #b32d2e;
+    transition: width 0.3s ease;
+}
+
+.vogue-nav-link:hover::after,
+.vogue-nav-link.active::after {
+    width: 100%;
+}
+
+.vogue-nav-actions {
+    position: absolute;
+    right: 3.5vw;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.vogue-auth-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: capitalize;
+    padding: 0.38rem 0.95rem;
+    border: 1px solid #111111;
+    background: transparent;
+    color: #111111;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.25s ease;
+}
+
+.vogue-auth-btn:hover {
+    background: #111111;
+    color: #ffffff;
+}
+
+.vogue-auth-btn.hidden {
+    display: none !important;
+}
+
+/* ── Fixed Scrolled State (Binary switch when scrolling down) ─────────── */
+.vogue-header.is-scrolled {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.vogue-header.is-scrolled .vogue-masthead-container {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.vogue-header.is-scrolled .vogue-nav-bar {
+    border-top-color: transparent;
+    padding: 0.65rem 3.5vw;
+    justify-content: space-between;
+}
+
+.vogue-header.is-scrolled .vogue-scrolled-logo {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+    width: auto;
+    margin-right: 2rem;
+}
+
+.vogue-header.is-scrolled .vogue-nav-links {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ── 4. 1-to-1 Vogue Hero Section with Diagonal Cutout Image ───────────── */
+.editorial-hero {
+    position: relative;
+    width: 100%;
+    min-height: calc(100vh - 165px);
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.hero-text-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 5rem 2rem 5rem 4vw;
+    pointer-events: auto;
+}
+
+.hero-editorial-card {
+    max-width: 520px;
+    text-align: left;
+    position: relative;
+    z-index: 11;
+}
+
+.hero-issue-tag {
+    display: inline-block;
+    color: #b32d2e;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    margin-bottom: 1.8rem;
+}
+
+.hero-main-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(3.4rem, 6vw, 5.8rem);
+    line-height: 0.94;
+    font-weight: 400;
+    text-transform: uppercase;
+    color: #050505;
+    margin: 0 0 2rem 0;
+    letter-spacing: 0.01em;
+}
+
+.hero-main-title .line-plain {
+    display: block;
+    letter-spacing: 0.02em;
+}
+
+.hero-main-title .line-italic {
+    display: block;
+    font-style: italic;
+    font-family: 'Instrument Serif', Georgia, serif;
+    text-transform: none; /* "Elegance &" as in reference */
+    letter-spacing: 0.01em;
+    font-weight: 400;
+    color: #000000;
+}
+
+.hero-subdeck {
+    border-left: 2px solid #111111;
+    padding-left: 1.25rem;
+    margin: 0 0 2.5rem 0;
+    max-width: 440px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    line-height: 1.65;
+    color: #666666;
+    text-transform: uppercase;
+}
+
+.hero-action-btn {
+    display: inline-block;
+    background: #000000;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 1.1rem 2.4rem;
+    border: none;
+    border-radius: 0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-action-btn:hover {
+    background: #222222;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+/* Diagonal Image Filling ONLY the Cutout Area on the Right */
+.hero-diagonal-cut-wrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 40%;
+    width: 60%;
+    height: 100%;
+    clip-path: polygon(23.33% 0, 100% 0, 100% 100%, 0% 100%);
+    z-index: 2;
+    overflow: hidden;
+    pointer-events: none;
+    background-color: #f5f5f5;
+}
+
+.hero-diagonal-cut-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 20%;
+    display: block;
+}
+
+/* Seam gradient for editorial depth */
+.hero-diagonal-cut-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.08) 0%, transparent 14%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* ── 5. Vogue Section Common Styles ────────────────────────────────────── */
+.vogue-section {
+    padding: 6rem 4vw;
+    max-width: 1440px;
+    margin: 0 auto;
+    position: relative;
+    background: #ffffff;
+}
+
+.vogue-section-header {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 4rem auto;
+}
+
+.section-meta-tag {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+.section-editorial-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2.6rem, 4.5vw, 4.2rem);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #000000;
+    margin: 0 0 1rem 0;
+    line-height: 1.05;
+}
+
+.section-editorial-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: #666666;
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* ── 6. Vogue The Studio / Profile Feature (Full Width) ─────────────────── */
+.vogue-profile-spread {
+    border-top: 1px solid #ebebeb;
+    border-bottom: 1px solid #ebebeb;
+    background: #fafafa;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 3.5rem 4vw !important;
+    margin: 0 !important;
+}
+
+.profile-spread-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.profile-image-column {
+    width: 100%;
+    max-width: none;
+}
+
+.profile-image-frame {
+    position: relative;
+    border: 1px solid #e0e0e0;
+    background: #ffffff;
+    padding: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    width: 100%;
+}
+
+.profile-image-frame img {
+    width: 100%;
+    aspect-ratio: 16 / 11;
+    min-height: 380px;
+    max-height: 460px;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+}
+
+.profile-image-caption {
+    margin-top: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    color: #777777;
+    text-transform: uppercase;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 0.65rem;
+}
+
+.caption-name {
+    font-weight: 600;
+    color: #111111;
+}
+
+.profile-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+}
+
+.profile-main-heading {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2rem, 3.2vw, 2.8rem);
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #000000;
+    line-height: 1.05;
+    margin: 0 0 1rem 0;
+}
+
+.profile-body-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #444444;
+    margin-bottom: 1.5rem;
+}
+
+.profile-body-text p {
+    margin-bottom: 0.75rem;
+}
+
+.lead-dropcap::first-letter {
+    float: left;
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 3rem;
+    line-height: 0.85;
+    padding-top: 2px;
+    padding-right: 10px;
+    padding-bottom: 0px;
+    color: #000000;
+    font-weight: 400;
+}
+
+.profile-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.2rem;
+    border-top: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+}
+
+.profile-stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2rem;
+    line-height: 1;
+    color: #000000;
+    margin-bottom: 0.2rem;
+}
+
+.stat-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: #777777;
+    text-transform: uppercase;
+}
+
+.vogue-outline-btn {
+    display: inline-block;
+    padding: 0.75rem 1.6rem;
+    border: 1px solid #000000;
+    background: transparent;
+    color: #000000;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.vogue-outline-btn:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+/* ── 7. Areas of Expertise / Services Section ─────────────────────────── */
+.disciplines-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
+
+.discipline-card {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    padding: 2.8rem 2.2rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.discipline-card:hover {
+    border-color: #000000;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+}
+
+.discipline-num {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.5rem;
+    color: #cccccc;
+    line-height: 1;
+    margin-bottom: 1.2rem;
+}
+
+.discipline-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.85rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: #000000;
+    margin: 0 0 0.85rem 0;
+    line-height: 1.15;
+}
+
+.discipline-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    color: #555555;
+    line-height: 1.7;
+    margin: 0;
+    font-weight: 400;
+}
+
+/* ── 8. Curated Archive Gallery Wrapper & Action (Full Width) ─────────── */
+.vogue-archive-section {
+    border-top: 1px solid #ebebeb;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 6rem 2.5vw 5rem 2.5vw !important;
+    margin: 0 !important;
+}
+
+body.editorial-body .gallery {
+    gap: 1.2rem;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+body.editorial-body .gallery-item {
+    border-radius: 0 !important;
+    border: 1px solid #ebebeb;
+    background: #f5f5f5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+body.editorial-body .gallery-item:hover {
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+}
+
+body.editorial-body .gallery-item img {
+    filter: brightness(0.92) contrast(1.04);
+}
+
+body.editorial-body .gallery-item:hover img {
+    filter: brightness(1.02) contrast(1.06);
+}
+
+.vogue-archive-action {
+    text-align: center;
+    margin-top: 4rem;
+}
+
+.vogue-solid-btn {
+    display: inline-block;
+    background: #000000;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 1.15rem 2.6rem;
+    border: none;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s ease;
+}
+
+.vogue-solid-btn:hover {
+    background: #222222;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+
+/* ── 9. Vogue Editorial Footer ────────────────────────────────────────── */
+.vogue-footer {
+    background: #000000;
+    color: #ffffff;
+    padding: 2.2rem 4vw 1.5rem 4vw;
+    width: 100%;
+}
+
+.vogue-footer-container {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.footer-columns-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #222222;
+}
+
+.footer-col-heading {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    margin: 0 0 0.85rem 0;
+}
+
+.footer-info-list,
+.footer-links-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-info-list li {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: #999999;
+    line-height: 1.6;
+    margin-bottom: 0.35rem;
+}
+
+.footer-info-list li strong {
+    color: #ffffff;
+    letter-spacing: 0.08em;
+}
+
+.footer-links-list li {
+    margin-bottom: 0.35rem;
+}
+
+.footer-links-list a {
+    color: #cccccc;
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    transition: color 0.25s ease;
+}
+
+.footer-links-list a:hover {
+    color: #ffffff;
+}
+
+.footer-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.2rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    color: #666666;
+    text-transform: uppercase;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* ── 10. Responsive Breakpoints ───────────────────────────────────────── */
+@media (max-width: 1024px) {
+    .editorial-hero {
+        min-height: auto;
+        flex-direction: column;
+    }
+
+    .hero-text-container {
+        padding: 3.5rem 2rem 2.5rem 2rem;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .hero-diagonal-cut-wrapper {
+        position: relative;
+        left: 0 !important;
+        right: 0;
+        bottom: auto;
+        width: 100%;
+        height: 480px;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 92%);
+        background-color: #f5f5f5;
+    }
+
+    .hero-diagonal-cut-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 20%;
+        display: block;
+    }
+
+    .profile-spread-container {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+    }
+
+    .disciplines-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .footer-columns-row {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    /* ── Mobile Header: Always visible, same size, logo on left, reduced height ── */
+    #site-header-slot {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        z-index: 10000 !important;
+        height: 56px !important;
+        background: #ffffff !important;
+        transform: none !important;
+        filter: none !important;
+        overflow: visible !important;
+    }
+
+    .vogue-header,
+    .vogue-header.is-scrolled {
+        position: relative !important;
+        width: 100% !important;
+        height: 56px !important;
+        background: #ffffff !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        filter: none !important;
+        transform: none !important;
+        border-bottom: 1px solid #e5e5e5 !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* Hide top editorial bar on mobile to keep header slim & consistent */
+    .vogue-top-bar,
+    .vogue-top-bar.is-scrolled,
+    .vogue-header.is-scrolled .vogue-top-bar {
+        display: none !important;
+    }
+
+    /* Masthead container: always visible, same size, logo on left */
+    .vogue-masthead-container,
+    .vogue-header.is-scrolled .vogue-masthead-container {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        height: 56px !important;
+        max-height: 56px !important;
+        padding: 0 1.25rem !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Logo placed on the left */
+    .vogue-masthead-logo {
+        display: inline-flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        margin: 0 !important;
+        text-decoration: none !important;
+    }
+
+    .vogue-masthead-logo .brand-name {
+        font-size: 1.85rem !important;
+        letter-spacing: 1.5px !important;
+        line-height: 0.85 !important;
+        margin: 0 !important;
+        color: #000000 !important;
+    }
+
+    .vogue-masthead-logo .brand-subtitle {
+        font-size: 0.65rem !important;
+        letter-spacing: 0.8px !important;
+        margin: 0 !important;
+        margin-left: 1px !important;
+        margin-top: 2px !important;
+        color: #333333 !important;
+        text-transform: lowercase !important;
+    }
+
+    /* Hamburger menu button placed on the right */
+    .vogue-mobile-menu-btn {
+        display: flex !important;
+        position: static !important;
+        transform: none !important;
+        background: transparent !important;
+        border: none !important;
+        cursor: pointer !important;
+        padding: 0.5rem !important;
+        margin: 0 !important;
+        margin-right: -0.5rem !important;
+        z-index: 100001 !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+
+    .vogue-mobile-menu-btn .hamburger-line {
+        display: block !important;
+        width: 22px !important;
+        height: 1.5px !important;
+        background: #000000 !important;
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+        transform-origin: center !important;
+    }
+
+    .vogue-mobile-menu-btn.active .hamburger-line:nth-child(1) {
+        transform: translateY(6.5px) rotate(45deg) !important;
+    }
+
+    .vogue-mobile-menu-btn.active .hamburger-line:nth-child(2) {
+        opacity: 0 !important;
+        transform: scaleX(0) !important;
+    }
+
+    .vogue-mobile-menu-btn.active .hamburger-line:nth-child(3) {
+        transform: translateY(-6.5px) rotate(-45deg) !important;
+    }
+
+    /* Scrolled logo inside nav is hidden on mobile because the main logo is already on left */
+    .vogue-scrolled-logo {
+        display: none !important;
+    }
+
+    /* Full-screen opaque solid white mobile navigation dropdown */
+    .vogue-nav-bar,
+    .vogue-header.is-scrolled .vogue-nav-bar {
+        position: fixed !important;
+        top: 56px !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: calc(100vh - 56px) !important;
+        height: calc(100dvh - 56px) !important;
+        min-height: calc(100vh - 56px) !important;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        z-index: 99999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        padding: 3rem 1.5rem 4rem 1.5rem !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-top: 1px solid #f0f0f0 !important;
+        border-bottom: none !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
+        
+        opacity: 0 !important;
+        visibility: hidden !important;
+        transform: translateY(-8px) !important;
+        pointer-events: none !important;
+        transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    visibility 0.25s !important;
+    }
+
+    .vogue-nav-bar.open,
+    .vogue-header.is-scrolled .vogue-nav-bar.open {
+        opacity: 1 !important;
+        visibility: visible !important;
+        transform: translateY(0) !important;
+        pointer-events: auto !important;
+    }
+
+    .vogue-nav-links {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 1.65rem !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .vogue-nav-link {
+        font-family: 'Inter', sans-serif !important;
+        font-size: 1.15rem !important;
+        font-weight: 500 !important;
+        letter-spacing: 0.12em !important;
+        text-transform: uppercase !important;
+        color: #111111 !important;
+        text-decoration: none !important;
+        padding: 0.35rem 1rem !important;
+        text-align: center !important;
+        display: inline-block !important;
+        position: relative !important;
+        transition: color 0.2s ease !important;
+    }
+
+    .vogue-nav-link:hover,
+    .vogue-nav-link.active {
+        color: #b32d2e !important;
+    }
+
+    .vogue-nav-link::after {
+        content: '' !important;
+        position: absolute !important;
+        bottom: -2px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 0% !important;
+        height: 1.5px !important;
+        background: #b32d2e !important;
+        transition: width 0.25s ease !important;
+    }
+
+    .vogue-nav-link.active::after {
+        width: 24px !important;
+    }
+
+    .vogue-nav-actions {
+        position: static !important;
+        margin-top: 2.2rem !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 0.85rem !important;
+    }
+
+    .vogue-auth-btn {
+        padding: 0.75rem 2.2rem !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.82rem !important;
+        letter-spacing: 0.12em !important;
+        text-transform: uppercase !important;
+        font-weight: 600 !important;
+        background: #000000 !important;
+        color: #ffffff !important;
+        border: 1px solid #000000 !important;
+        border-radius: 2px !important;
+        cursor: pointer !important;
+        transition: all 0.25s ease !important;
+    }
+
+    .vogue-auth-btn:hover {
+        background: #b32d2e !important;
+        border-color: #b32d2e !important;
+    }
+
+    body.mobile-menu-open {
+        overflow: hidden !important;
+    }
+
+    /* Mobile Hero Refinements */
+    .editorial-hero {
+        min-height: auto;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .hero-text-container {
+        padding: 2.5rem 1.5rem 2rem 1.5rem;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .hero-editorial-card {
+        max-width: 100%;
+    }
+
+    .hero-issue-tag {
+        font-size: 0.68rem;
+        letter-spacing: 0.22em;
+        margin-bottom: 1rem;
+    }
+
+    .hero-main-title {
+        font-size: clamp(2.4rem, 9.5vw, 3.4rem);
+        line-height: 0.95;
+        margin-bottom: 1.25rem;
+        letter-spacing: 0.01em;
+    }
+
+    .hero-subdeck {
+        font-size: 0.72rem;
+        line-height: 1.6;
+        letter-spacing: 0.14em;
+        padding-left: 1rem;
+        margin-bottom: 1.75rem;
+        max-width: 100%;
+    }
+
+    .hero-action-btn {
+        display: inline-block;
+        padding: 0.9rem 2rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+    }
+
+    .hero-diagonal-cut-wrapper {
+        position: relative;
+        left: 0 !important;
+        right: 0;
+        bottom: auto;
+        width: 100%;
+        height: clamp(320px, 46vh, 440px);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 94%);
+        background-color: #f5f5f5;
+    }
+
+    .hero-diagonal-cut-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 15%;
+        display: block;
+    }
+
+    .hero-diagonal-cut-wrapper::before {
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, transparent 15%);
+    }
+
+    .vogue-section {
+        padding: 4rem 1.5rem;
+    }
+
+    .footer-bottom-row {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-text-container {
+        padding: 2rem 1.25rem 1.5rem 1.25rem;
+    }
+
+    .hero-main-title {
+        font-size: clamp(2.1rem, 9vw, 2.7rem);
+        line-height: 0.94;
+        margin-bottom: 1.1rem;
+    }
+
+    .hero-subdeck {
+        font-size: 0.68rem;
+        line-height: 1.55;
+        margin-bottom: 1.4rem;
+        padding-left: 0.85rem;
+    }
+
+    .hero-action-btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 0.95rem 1.5rem;
+        box-sizing: border-box;
+    }
+
+    .hero-diagonal-cut-wrapper {
+        height: 310px;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 95%);
+    }
+}
+
+/* ── 5. Necessary Cookie Consent Banner (Vogue Editorial Aesthetic) ────── */
+.cookie-consent-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 999999;
+    max-width: 420px;
+    width: calc(100vw - 4rem);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cookie-consent-container.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.cookie-consent-container.hide {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
+
+.cookie-consent-card {
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    padding: 1.4rem 1.5rem;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.cookie-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.cookie-tag {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #8c8c8c;
+}
+
+.cookie-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.35rem;
+    line-height: 1;
+    color: #888888;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.cookie-close-btn:hover {
+    color: #000000;
+}
+
+.cookie-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.45rem;
+    font-weight: 400;
+    color: #000000;
+    margin: 0 0 0.45rem 0;
+    letter-spacing: 0.02em;
+}
+
+.cookie-desc {
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: #555555;
+    margin: 0 0 1.2rem 0;
+}
+
+.cookie-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cookie-btn-accept {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #000000;
+    padding: 0.65rem 1.4rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.cookie-btn-accept:hover {
+    background: #b32d2e;
+    border-color: #b32d2e;
+}
+
+.cookie-link-btn {
+    background: transparent;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #777777;
+    cursor: pointer;
+    padding: 0.4rem 0.2rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+}
+
+.cookie-link-btn:hover {
+    color: #000000;
+}
+
+.cookie-details-content {
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #f0f0f0;
+    font-size: 0.72rem;
+    color: #666666;
+    line-height: 1.6;
+}
+
+.cookie-details-content ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.cookie-details-content li {
+    margin-bottom: 0.35rem;
+}
+
+@media (max-width: 768px) {
+    .cookie-consent-container {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+        max-width: 100%;
+    }
+
+    .cookie-consent-card {
+        padding: 1.25rem 1.25rem;
+    }
+
+    .cookie-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.6rem;
+    }
+
+    .cookie-btn-accept {
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem 1.2rem;
+    }
+
+    .cookie-link-btn {
+        text-align: center;
+    }
 }

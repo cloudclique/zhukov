@@ -3,106 +3,86 @@
 
 <head>
     <meta charset="UTF-8">
-    <style>
-        html,
-        body {
-            background: #0f172a
-        }
-
-        button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #f8fafc;
-            border-radius: 8px
-        }
-    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | Contact</title>
+    <title>ZHUKOV — Bookings & Impressum</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="contact.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js"></script>
 </head>
 
-<body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
+<body class="editorial-body">
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
 
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
+    <main id="app-content" class="vogue-contact-main">
+        <!-- Contact & Bookings Spread -->
+        <section class="vogue-contact-hero">
+            <div class="contact-header-block">
+                <span class="contact-meta-tag">THE ATELIER / COMMISSIONS</span>
+                <h2 class="contact-editorial-title">BOOK A SESSION</h2>
+                <p class="contact-editorial-subtitle">
+                    Available worldwide for high-fashion editorials, agency lookbooks, private portraits, and commercial
+                    campaigns.
+                </p>
+            </div>
 
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/">Home</a>
-                    <a href="/photoshoots/">Photoshoots</a>
-                    <a href="/moodboard/">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/" class="active">Contact</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
+            <div class="contact-cards-grid">
+                <!-- Direct Booking Card -->
+                <div class="contact-card">
+                    <span class="card-kicker">DIRECT ENQUIRIES</span>
+                    <h3 class="card-title">Editorial & Private Bookings</h3>
+                    <p class="card-desc">
+                        For availability, production rates, or custom creative concepts, contact our atelier directly:
+                    </p>
+                    <a href="mailto:contact@zhukov.studio" class="vogue-solid-btn">EMAIL ATELIER &rarr;</a>
+                </div>
+
+                <!-- Studio Locations Card -->
+                <div class="contact-card">
+                    <span class="card-kicker">PRIMARY STUDIO</span>
+                    <h3 class="card-title">no Atelier</h3>
+                    <p class="card-address">
+                        <strong>no:</strong> some streeet
+                    </p>
+                    <p class="card-desc">
+                        Commissions accepted across nowhere now on-location globally.
+                    </p>
                 </div>
             </div>
-        </div>
-        <script>
-            (function() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
+        </section>
 
-    <main id="app-content">
-        <div class="contact-container">
-            <h2>Let's Work Together</h2>
-            <p class="contact-text">
-                I'm currently available for freelance work and collaborations.
-            </p>
-            <a href="mailto:contact@zhukov.studio" class="contact-button">Email Me</a>
-        </div>
+        <!-- Impressum Section -->
+        <section class="vogue-impressum-section" id="impressum">
+            <div class="impressum-container">
+                <span class="contact-meta-tag">LEGAL NOTICE</span>
+                <h3 class="impressum-title">IMPRESSUM</h3>
+                <div class="impressum-content-grid">
+                    <div class="impressum-block">
+                        <h4>Studio Information</h4>
+                        <p><strong>Entity:</strong> ZHUKOV Photography Studio</p>
+                        <p><strong>Principal:</strong> Stanislav Zhukov</p>
+                        <p><strong>Location:</strong> some street</p>
+                        <p><strong>Email:</strong> contact@zhukov.studio</p>
+                    </div>
+                    <div class="impressum-block">
+                        <h4>Copyright & Rights</h4>
+                        <p>All imagery, editorial concepts, and materials published on this platform are protected under
+                            international copyright laws.</p>
+                        <p>Unauthorized duplication, reproduction, syndication, or digital redistribution without
+                            written consent is strictly prohibited.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
+
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
 
     <script type="module" src="/script.js"></script>
 </body>

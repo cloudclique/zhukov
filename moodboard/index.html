@@ -1,87 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <style>html,body{background:#0b0f19}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZHUKOV.s | Moodboard Studio</title>
+    <title>ZHUKOV — Moodboard Studio</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="moodboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js"></script>
 </head>
+
 <body class="moodboard-body">
 
-    <!-- Header Navigation (Matches all pages) -->
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
-
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
-
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/">Home</a>
-                    <a href="/photoshoots/">Photoshoots</a>
-                    <a href="/moodboard/" class="active">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/">Contact</a>
-                    <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
 
     <!-- Main App Container -->
     <main class="moodboard-app-container">
@@ -90,35 +27,42 @@
              VIEW 1: Dashboard (List of boards / Create)
              ============================================== -->
         <div id="dashboard-view" class="dashboard-view">
-            <div class="dashboard-hero">
-                <h2>Moodboard Studio</h2>
-                <p>Curate visual concepts, arrange photoshoot references, sketch creative ideas, and collaborate seamlessly in real time.</p>
-                
-            <div class="dashboard-controls">
-                    <button id="btn-create-board" class="mb-btn-primary">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
-                        <span>Create New Moodboard</span>
-                    </button>
+            <div class="dashboard-main-content">
+                <div class="dashboard-hero vogue-dashboard-hero">
+                    <h2 class="editorial-page-title">MOODBOARD STUDIO</h2>
+                    <p class="editorial-page-subtitle">Curate visual concepts, arrange photoshoot references, sketch creative ideas, and collaborate seamlessly in real time.</p>
+                    
+                    <div class="dashboard-controls">
+                        <button id="btn-create-board" class="vogue-pill-btn">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
+                            <span>Create New Moodboard</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Boards Grid -->
+                <div id="boards-grid" class="boards-grid">
+                    <!-- Dynamically injected board cards -->
+                </div>
+
+                <!-- Non-logged in state -->
+                <div id="auth-notice" class="auth-notice-card hidden">
+                    <div class="editorial-section-tag">COLLABORATIVE ATELIER</div>
+                    <h3>Sign In to Access Moodboards</h3>
+                    <p>Sign in with your Google account to create persistent concept boards and collaborate with clients and models.</p>
+                    <button id="btn-auth-notice-login" class="vogue-pill-btn">Sign In with Google</button>
+                </div>
+
+                <!-- Empty boards state for logged in user with 0 boards -->
+                <div id="empty-boards-notice" class="auth-notice-card hidden">
+                    <div class="editorial-section-tag">CURATION ARCHIVE</div>
+                    <h3>No Moodboards Created</h3>
+                    <p>You have no saved moodboards yet. Click "Create New Moodboard" to begin arranging your visual concepts.</p>
                 </div>
             </div>
 
-            <!-- Boards Grid -->
-            <div id="boards-grid" class="boards-grid">
-                <!-- Dynamically injected board cards -->
-            </div>
-
-            <!-- Non-logged in state -->
-            <div id="auth-notice" class="auth-notice-card hidden">
-                <h3>Collaborative Studio</h3>
-                <p>Sign in with your Google account to create persistent boards and collaborate with clients or models.</p>
-                <button id="btn-auth-notice-login" class="mb-btn-primary">Sign In with Google</button>
-            </div>
-
-            <!-- Empty boards state for logged in user with 0 boards -->
-            <div id="empty-boards-notice" class="auth-notice-card hidden">
-                <h3>Create Your First Moodboard</h3>
-                <p>You have no saved moodboards yet. Click "Create New Moodboard" above to start designing your concepts.</p>
-            </div>
+            <!-- Dynamic Site Footer Slot (Full Bleed at bottom of dashboard) -->
+            <div id="site-footer-slot"></div>
         </div>
 
         <!-- ==============================================

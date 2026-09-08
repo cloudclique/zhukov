@@ -1,119 +1,237 @@
-.sort-bar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin: 2rem 0;
-    padding: 0 1rem;
-}
-.sort-select, .sort-btn {
-    padding: 0.8rem 1.5rem;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-.sort-select:focus, .sort-btn:hover {
-    outline: none;
-    border-color: rgba(255,255,255,0.5);
-    background: rgba(255,255,255,0.1);
-}
-.sort-select option {
-    background: #1a1a1a;
-    color: #fff;
+/* ==========================================================================
+   ZHUKOV — Photoshoots Archive (Vogue Editorial Magazine Style)
+   ========================================================================== */
+
+.vogue-page-main {
+    background: #fafafa;
+    min-height: 80vh;
+    padding: 0 0 6rem 0;
+    max-width: 100% !important;
+    margin: 0 !important;
 }
 
-/* Category Rows */
-.category-row {
-    margin-bottom: 3rem;
-    padding-left: 2rem;
-    padding-right: 0;
+.vogue-subpage-header {
+    text-align: center;
+    padding: 2.75rem 4vw 2.2rem 4vw;
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
 }
+
+.subpage-meta-tag {
+    display: inline-block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+.subpage-editorial-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #000000;
+    line-height: 1.05;
+    margin: 0 0 0.8rem 0;
+}
+
+.subpage-editorial-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: #666666;
+    line-height: 1.6;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
+/* ── Sort Controls Bar ─────────────────────────────────────────────────── */
+.sort-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 2.5rem auto 1.5rem auto;
+    padding: 0.8rem 1.6rem;
+    background: #ffffff;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.sort-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sort-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #888888;
+    text-transform: uppercase;
+}
+
+.sort-select {
+    padding: 0.45rem 1rem;
+    background: #ffffff;
+    border: 1px solid #d4d4d4;
+    color: #111111;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: border-color 0.25s ease;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+.sort-btn {
+    padding: 0.5rem 1.2rem;
+    background: #000000;
+    border: 1px solid #000000;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.sort-btn:hover {
+    background: #222222;
+    color: #ffffff;
+}
+
+/* ── Category Rows ─────────────────────────────────────────────────────── */
+.vogue-categories-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.category-row {
+    margin-bottom: 0;
+    padding: 3rem 4vw;
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
+}
+
+.category-row:nth-child(even) {
+    background: #fdfdfd;
+}
+
 .category-header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding-bottom: 0.5rem;
-    padding-right: 2rem;
+    align-items: flex-end;
+    margin-bottom: 1.8rem;
+    border-bottom: none;
+    padding-bottom: 0;
+    padding-right: 0;
 }
+
 .category-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.2rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     margin: 0;
-    color: #ffffff;
+    color: #000000;
 }
+
 .category-title a {
-    font-family: 'Inter', sans-serif;
-    color: #ffffff;
+    font-family: 'Instrument Serif', Georgia, serif;
+    color: #000000;
     text-decoration: none;
     display: inline-block;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease;
 }
+
 .category-title a:hover {
-    opacity: 0.8;
-    color: #ffffff;
-    transform: translateX(2px);
+    opacity: 0.65;
+    transform: translateX(3px);
 }
+
 .category-meta {
-    font-size: 0.9rem;
-    color: #94a3b8;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    color: #777777;
+    text-transform: uppercase;
 }
+
 .scrollable-row-wrapper {
     position: relative;
 }
+
 .scrollable-row {
     display: flex;
-    gap: 1rem;
-    overflow: hidden; /* Prevent scrolling */
-    padding-bottom: 0;
-    -webkit-mask-image: linear-gradient(to right, black 60%, transparent 95%);
-    mask-image: linear-gradient(to right, black 60%, transparent 95%);
+    gap: 1.2rem;
+    overflow: hidden;
+    padding-bottom: 0.5rem;
+    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 98%);
+    mask-image: linear-gradient(to right, black 70%, transparent 98%);
 }
+
 .scrollable-row.expanded-grid {
     flex-wrap: wrap;
     overflow: visible;
     -webkit-mask-image: none;
     mask-image: none;
 }
+
 .scrollable-row .img-container {
-    height: 250px;
-    min-width: 180px;
+    height: 270px;
+    min-width: 190px;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 0;
+    border: 1px solid #ebebeb;
+    background: #f5f5f5;
     overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
 }
+
 .scrollable-row .img-container.is-sized {
     min-width: auto;
 }
+
 .row-img {
-    height: 250px;
+    height: 270px;
     width: auto;
     max-width: 90vw;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 0;
     flex-shrink: 0;
     cursor: pointer;
     opacity: 0;
-    transform: scale(0.96);
-    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: scale(0.97);
+    filter: brightness(0.94) contrast(1.02);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
     display: block;
 }
+
 .row-img.is-revealed {
     opacity: 1;
     transform: scale(1);
 }
+
 .row-img.is-revealed:hover {
-    filter: brightness(1.08);
+    transform: scale(1.04);
+    filter: brightness(1.02) contrast(1.05);
 }
 
 .fade-overlay {
@@ -121,8 +239,8 @@
     right: 0;
     top: 0;
     bottom: 0;
-    width: 250px;
-    background: transparent;
+    width: 220px;
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -132,19 +250,17 @@
 }
 
 .fade-btn-text {
-    color: #fff;
+    color: #000000;
+    font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     transition: transform 0.3s ease;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .fade-overlay:hover .fade-btn-text {
-    transform: translateX(-5px);
-}
-.more-btn:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.5);
+    transform: translateX(-6px);
 }
 
 /* Admin Delete Buttons */

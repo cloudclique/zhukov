@@ -25,9 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingMsg          = document.getElementById('loading-msg');
 
     // Lightbox UI
-    const lightbox    = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightbox-img');
-    const closeBtn    = document.querySelector('.close');
+    const lightbox        = document.getElementById('lightbox');
+    const lightboxImg     = document.getElementById('lightbox-img');
+    const lightboxSetName = document.getElementById('lightbox-set-name');
+    const closeBtn        = document.querySelector('#lightbox-close, .lightbox .close, .close');
 
     // Data State
     let categoriesData = [];
@@ -98,79 +99,56 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('mouseleave', onMouseLeave);
     };
 
-    // --- FLIP Lightbox Logic ---
+    // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
 
-    const openLightbox = (imgElement) => {
+    const openLightbox = (imgElement, setName = 'ARCHIVE') => {
         if (!lightbox || !lightboxImg) return;
         activeOriginImg = imgElement;
+        document.body.classList.add('lightbox-open');
         
-        lightboxImg.style.transition = 'none';
-        lightboxImg.style.transform = 'none';
-        lightboxImg.style.borderRadius = '';
         lightboxImg.src = imgElement.src;
+        if (lightboxSetName) {
+            lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
+        }
         
         lightbox.style.display = 'flex';
-        lightbox.classList.remove('show');
-        
-        const sourceRect = imgElement.getBoundingClientRect();
-        
         requestAnimationFrame(() => {
-            const targetRect = lightboxImg.getBoundingClientRect();
-            const deltaX = (sourceRect.left + sourceRect.width / 2) - (targetRect.left + targetRect.width / 2);
-            const deltaY = (sourceRect.top + sourceRect.height / 2) - (targetRect.top + targetRect.height / 2);
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            lightboxImg.style.transformOrigin = 'center center';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(imgElement).borderRadius || '8px';
-            
-            requestAnimationFrame(() => {
-                lightbox.classList.add('show');
-                lightboxImg.style.transition = 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.5s ease';
-                lightboxImg.style.transform = 'translate(0px, 0px) scale(1, 1)';
-                lightboxImg.style.borderRadius = '12px';
-            });
+            lightbox.classList.add('show');
         });
     };
 
     const closeLightbox = () => {
         if (!lightbox) return;
-        if (activeOriginImg && activeOriginImg.isConnected) {
-            const sourceRect = activeOriginImg.getBoundingClientRect();
-            const targetRect = lightboxImg.getBoundingClientRect();
-            const deltaX = (sourceRect.left + sourceRect.width / 2) - (targetRect.left + targetRect.width / 2);
-            const deltaY = (sourceRect.top + sourceRect.height / 2) - (targetRect.top + targetRect.height / 2);
-            const scaleX = sourceRect.width / targetRect.width;
-            const scaleY = sourceRect.height / targetRect.height;
-            
-            lightboxImg.style.transition = 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease';
-            lightboxImg.style.transform = `translate(${deltaX.toFixed(2)}px, ${deltaY.toFixed(2)}px) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
-            lightboxImg.style.borderRadius = window.getComputedStyle(activeOriginImg).borderRadius || '8px';
-            
-            lightbox.classList.remove('show');
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                lightboxImg.style.transform = '';
-                lightboxImg.style.transition = '';
-                activeOriginImg = null;
-            }, 400);
-        } else {
-            lightbox.classList.remove('show');
-            setTimeout(() => {
-                lightbox.style.display = 'none';
-                lightboxImg.src = '';
-                activeOriginImg = null;
-            }, 300);
-        }
+        lightbox.classList.remove('show');
+        document.body.classList.remove('lightbox-open');
+        
+        setTimeout(() => {
+            lightbox.style.display = 'none';
+            if (lightboxImg) lightboxImg.src = '';
+            activeOriginImg = null;
+        }, 300);
     };
 
-    if (closeBtn) closeBtn.addEventListener('click', closeLightbox);
-    if (lightbox) lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeLightbox();
+        });
+    }
+    
+    if (lightbox) {
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
+                closeLightbox();
+            }
+        });
+    }
+    
     document.addEventListener('keydown', (e) => {
-        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
+        if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
+            closeLightbox();
+        }
     });
 
     // --- Fetch Archived Photo Sets ---
@@ -511,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 img.addEventListener('click', () => {
-                    openLightbox(img);
+                    openLightbox(img, cat.categoryName || 'ARCHIVE');
                 });
                 
                 attachTiltEffect(wrapper);
@@ -564,42 +542,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            if (loginBtn) loginBtn.classList.add('hidden');
-            if (logoutBtn) logoutBtn.classList.remove('hidden');
             localStorage.setItem('zhukov_logged_in', 'true');
-
+            let isAdmin = false;
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    if (uploadLink) uploadLink.classList.remove('hidden');
-                    if (archivedLink) archivedLink.classList.remove('hidden');
+                    isAdmin = true;
+                    if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, true);
                     loadArchivedPhotos();
                 } else {
+                    if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, false);
                     showViewState('denied');
                 }
             } catch (err) {
                 console.error("Auth check error:", err);
+                if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, false);
                 showViewState('error');
             }
         } else {
-            if (loginBtn) loginBtn.classList.remove('hidden');
-            if (logoutBtn) logoutBtn.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
+            if (window.updateHeaderAuthState) window.updateHeaderAuthState(null, false);
             showViewState('denied');
         }
     });
 
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
+    // Delegated click listeners for header auth buttons
+    document.addEventListener('click', (e) => {
+        const loginTarget = e.target.closest('#login-btn-header');
+        if (loginTarget) {
             localStorage.setItem('zhukov_logged_in', 'true');
             signInWithPopup(auth, provider).catch(err => console.error(err));
-        });
-    }
+        }
 
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        const logoutTarget = e.target.closest('#logout-btn');
+        if (logoutTarget) {
             localStorage.removeItem('zhukov_logged_in');
             signOut(auth).catch(err => console.error(err));
-        });
-    }
+        }
+    });
 });

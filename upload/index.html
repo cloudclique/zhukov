@@ -1,103 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | Upload</title>
+    <title>ZHUKOV — Upload Portal</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="upload.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js"></script>
 </head>
-<body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
 
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
+<body class="editorial-body">
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
 
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/">Home</a>
-                    <a href="/photoshoots/">Photoshoots</a>
-                    <a href="/moodboard/">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/">Contact</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
-    
-    <main id="app-content">
-        <div id="auth-warning">
+    <main id="app-content" class="vogue-upload-main">
+        <div id="auth-warning" class="vogue-auth-warning">
+            <span class="auth-kicker">AUTHENTICATION REQUIRED</span>
             <h2>Admin Access Required</h2>
-            <p>Please log in with an administrator account to access this page.</p>
+            <p>Please log in with an authorized studio account to access the upload portal.</p>
         </div>
 
         <div id="upload-section" class="upload-container hidden">
-            <h2>Upload a New Photo</h2>
-            <p class="upload-section-desc">Select an image to upload directly to ImgBB and save to Firestore.</p>
-            
+            <span class="upload-kicker">STUDIO CMS / INGESTION</span>
+            <h2 class="upload-title">UPLOAD EDITORIAL ASSETS</h2>
+            <p class="upload-section-desc">Select master images to upload directly to ImgBB and catalog in Firestore.</p>
+
             <div class="upload-area" id="drop-zone">
-                <p>Drag & Drop images here or click to browse</p>
+                <p>Drag & drop master files here or click to browse</p>
                 <input type="file" id="image-input" accept="image/*" multiple>
                 <div id="preview-container"></div>
             </div>
 
             <div class="input-group">
-                <label for="category-input" class="input-label">Photo set Name</label>
-                <input type="text" id="category-input" list="category-list" placeholder="e.g. Single Shots or Summer Collection" class="input-field">
+                <label for="category-input" class="input-label">Photo Set Name</label>
+                <input type="text" id="category-input" list="category-list" placeholder="e.g. Autumn Editorial or Paris Collection" class="input-field">
                 <datalist id="category-list">
                     <option value="Single Shots"></option>
                 </datalist>
@@ -111,30 +53,34 @@
 
             <div class="input-group">
                 <label for="theme-input" class="input-label">Theme (Optional)</label>
-                <input type="text" id="theme-input" list="theme-list" placeholder="e.g. Cyberpunk" class="input-field">
+                <input type="text" id="theme-input" list="theme-list" placeholder="e.g. Noir Elegance" class="input-field">
                 <datalist id="theme-list"></datalist>
             </div>
 
             <div class="input-group">
-                <label for="desc-input" class="input-label">Description & Links (Optional)</label>
-                <textarea id="desc-input" placeholder="e.g. Studio portrait session with @model. Instagram: https://instagram.com/..." class="input-field" rows="2" style="resize: vertical; font-family: inherit;"></textarea>
+                <label for="desc-input" class="input-label">Description & Credits (Optional)</label>
+                <textarea id="desc-input" placeholder="e.g. Studio session with @model. Stylist: @stylist..." class="input-field" rows="2" style="resize: vertical; font-family: inherit;"></textarea>
             </div>
 
             <div class="input-group checkbox-group last">
                 <label class="checkbox-container">
                     <input type="checkbox" id="adult-input">
-                    <span class="checkbox-label-text">Mark as Adult Content (18+)</span>
+                    <span class="checkbox-label-text">Mark as Sensitive Editorial Content (18+)</span>
                 </label>
-                <p class="checkbox-hint">If selected, all uploaded images in this batch will be tagged as 18+ and hidden from visitors under 18.</p>
+                <p class="checkbox-hint">If selected, all uploaded images in this batch will be tagged as 18+ and age-gated.</p>
             </div>
-            
-            <button id="upload-btn" class="btn" disabled>Upload Photo</button>
+
+            <button id="upload-btn" class="vogue-solid-btn" style="width:100%; border:none; cursor:pointer;" disabled>UPLOAD ASSETS &rarr;</button>
             <div id="status-msg"></div>
         </div>
     </main>
 
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
+
     <!-- Import Firebase modules and our custom upload script -->
     <script type="module" src="upload.js"></script>
 </body>
+
 </html>
 

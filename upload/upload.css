@@ -1,107 +1,167 @@
-.upload-container {
-    max-width: 600px;
-    margin: 4rem auto;
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+/* ==========================================================================
+   ZHUKOV — Upload Portal (Vogue Editorial Magazine Style)
+   ========================================================================== */
+
+.vogue-upload-main {
+    background: #fafafa;
+    min-height: 80vh;
+    padding: 3rem 4vw 6rem 4vw;
+    max-width: 100% !important;
+    margin: 0 !important;
 }
+
+.vogue-auth-warning {
+    text-align: center;
+    padding: 6rem 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+}
+
+.auth-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 0.8rem;
+}
+
+.vogue-auth-warning h2 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    color: #000000;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+.vogue-auth-warning p {
+    font-family: 'Inter', sans-serif;
+    color: #666666;
+    font-size: 0.95rem;
+}
+
+/* ── Upload Container Card ─────────────────────────────────────────────── */
+.upload-container {
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 3rem 2.5rem;
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    text-align: left;
+}
+
+.upload-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 0.6rem;
+}
+
+.upload-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.4rem;
+    font-weight: 400;
+    color: #000000;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+
+.upload-section-desc {
+    font-family: 'Inter', sans-serif;
+    color: #666666;
+    font-size: 0.92rem;
+    margin-bottom: 2.2rem;
+}
+
 .upload-area {
-    border: 2px dashed rgba(255, 255, 255, 0.2);
-    padding: 3rem 1rem;
-    border-radius: 8px;
+    border: 1px dashed #cccccc;
+    background: #fafafa;
+    padding: 3rem 1.5rem;
+    text-align: center;
     margin-bottom: 2rem;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
 }
-.upload-area:hover, .upload-area.dragover {
-    border-color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.02);
+
+.upload-area:hover,
+.upload-area.dragover {
+    border-color: #000000;
+    background: #f0f0f0;
 }
+
+.upload-area p {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    letter-spacing: 0.08em;
+    color: #555555;
+    text-transform: uppercase;
+}
+
 #image-input {
     display: none;
 }
-.btn {
-    background: #fff;
-    color: #000;
-    border: none;
-    padding: 0.8rem 2rem;
-    font-size: 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: 600;
-    transition: opacity 0.3s ease;
-}
-.btn:hover {
-    opacity: 0.8;
-}
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-#preview {
-    max-width: 100%;
-    max-height: 300px;
-    margin-top: 1rem;
-    display: none;
-    border-radius: 4px;
-}
-#status-msg {
-    margin-top: 1rem;
-    font-size: 0.9rem;
-}
-.error { color: #ff6b6b; }
-.success { color: #51cf66; }
 
-#auth-warning {
-    text-align: center;
-    padding: 4rem;
-}
-#auth-warning p {
-    color: #94a3b8;
-    margin-top: 1rem;
-}
-.upload-section-desc {
-    color: #94a3b8;
-    margin-bottom: 2rem;
-}
 #preview-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 1rem;
+    gap: 12px;
+    margin-top: 1.2rem;
     justify-content: center;
 }
+
 .input-group {
-    margin-bottom: 1rem;
-    text-align: left;
+    margin-bottom: 1.4rem;
 }
+
 .input-group.last {
     margin-bottom: 2rem;
 }
+
 .input-label {
     display: block;
-    margin-bottom: 0.5rem;
-    color: #94a3b8;
-}
-.input-field {
-    width: 100%;
-    padding: 0.8rem;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(0,0,0,0.5);
-    color: #fff;
+    margin-bottom: 0.4rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: #333333;
+    text-transform: uppercase;
 }
 
-/* Adult content checkbox */
+.input-field {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1px solid #d4d4d4;
+    background: #ffffff;
+    color: #111111;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+/* ── Adult / Sensitive Content Box ── */
 .checkbox-group {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
+    background: #fffafa;
+    border: 1px solid #fecaca;
+    padding: 1.2rem;
+    margin-bottom: 2rem;
 }
 
 .checkbox-container {
@@ -110,39 +170,40 @@
     gap: 0.75rem;
     cursor: pointer;
     user-select: none;
-    font-weight: 500;
-    color: #f87171;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #b32d2e;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .checkbox-container input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    accent-color: #ef4444;
+    width: 16px;
+    height: 16px;
+    accent-color: #b32d2e;
     cursor: pointer;
 }
 
-.checkbox-label-text {
-    font-size: 0.95rem;
+.checkbox-hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    color: #777777;
+    margin-top: 0.4rem;
+    margin-left: 1.75rem;
 }
 
-.checkbox-hint {
-    font-size: 0.8rem;
-    color: #94a3b8;
-    margin-top: 0.4rem;
-    margin-left: 1.85rem;
+#status-msg {
+    margin-top: 1.2rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
 }
+
+.error { color: #b32d2e; font-weight: 600; }
+.success { color: #15803d; font-weight: 600; }
 
 @media (max-width: 480px) {
     .upload-container {
-        margin: 1.5rem 0.75rem;
-        padding: 1.25rem 1rem;
-    }
-
-    .upload-area {
-        padding: 2rem 0.75rem;
-    }
-
-    .btn {
-        width: 100%;
+        padding: 2rem 1.25rem;
     }
 }

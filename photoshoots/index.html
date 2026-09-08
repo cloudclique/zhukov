@@ -1,137 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
-    <!-- Slide-from-bottom transition when arriving via overscroll portal -->
-    <script>
-    (function() {
-        if (sessionStorage.getItem('zhukov_overscroll_nav') === '1') {
-            sessionStorage.removeItem('zhukov_overscroll_nav');
-            // Inject initial off-screen state before first paint
-            var s = document.createElement('style');
-            s.id = 'slide-in-init';
-            s.textContent = 'html, body { transform: translateY(60px); opacity: 0 !important; }';
-            document.head.appendChild(s);
-            window.addEventListener('DOMContentLoaded', function() {
-                requestAnimationFrame(function() {
-                    requestAnimationFrame(function() {
-                        s.textContent = 'html, body { transform: translateY(0); opacity: 1 !important; transition: transform 0.72s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease; }';
-                        // Clean up after animation
-                        setTimeout(function() { if (s.parentNode) s.parentNode.removeChild(s); }, 800);
-                    });
-                });
-            });
-        }
-    })();
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | Photoshoots</title>
+    <title>ZHUKOV — Photoshoots Archive</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="photoshoots.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js"></script>
 </head>
-<body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
 
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
+<body class="editorial-body">
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
 
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/">Home</a>
-                    <a href="/photoshoots/" class="active">Photoshoots</a>
-                    <a href="/moodboard/">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/">Contact</a>
-                    <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
-                    <a href="/photoshoots/archived.html" id="archived-nav-link" class="hidden">Archived</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
-    
-    <main id="app-content">
+    <main id="app-content" class="vogue-page-main">
+        <!-- Editorial Section Header -->
+        <section class="vogue-subpage-header">
+            <span class="subpage-meta-tag">CURATED PORTFOLIO</span>
+            <h2 class="subpage-editorial-title">PHOTOSHOOTS ARCHIVE</h2>
+            <p class="subpage-editorial-subtitle">Complete series, high-fashion editorials, and artistic studio studies organized by thematic collection.</p>
+        </section>
+
         <!-- Sort Bar -->
         <div class="sort-bar">
-            <select id="sort-select" class="sort-select">
-                <option value="category">Sort by Photo set</option>
-                <option value="date">Sort by Date</option>
-                <option value="model">Sort by Model</option>
-                <option value="theme">Sort by Theme</option>
-            </select>
-            <button id="sort-order-btn" class="sort-btn" data-order="asc">A-Z ↓</button>
+            <div class="sort-group">
+                <label for="sort-select" class="sort-label">ORDER BY</label>
+                <select id="sort-select" class="sort-select">
+                    <option value="category">Photo Set</option>
+                    <option value="date">Date</option>
+                    <option value="model">Model</option>
+                    <option value="theme">Theme</option>
+                </select>
+            </div>
+            <button id="sort-order-btn" class="sort-btn" data-order="asc">A–Z &darr;</button>
         </div>
 
         <!-- Gallery Categories -->
-        <div id="categories-container">
+        <div id="categories-container" class="vogue-categories-container">
             <!-- Categories will be injected here by JS -->
         </div>
-        
-        <div id="no-results">
+
+        <div id="no-results" class="vogue-no-results">
             <p>No photoshoots match your filters.</p>
         </div>
     </main>
 
-    <!-- Lightbox Modal -->
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
+
+    <!-- Lightbox Modal with Editorial Fine-Art White Frame -->
     <div id="lightbox" class="lightbox">
-        <span class="close">&times;</span>
-        <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+        <span class="close" id="lightbox-close">&times;</span>
+        <div class="lightbox-frame" id="lightbox-frame">
+            <div class="lightbox-img-wrapper">
+                <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+            </div>
+            <div class="lightbox-caption-bar">
+                <span class="lightbox-author">STANISLAV ZHUKOV</span>
+                <span class="lightbox-set-name" id="lightbox-set-name">PHOTOSHOOT</span>
+            </div>
+        </div>
     </div>
 
     <!-- We use a custom script for this page -->
     <script type="module" src="script.js"></script>
 </body>
+
 </html>

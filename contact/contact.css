@@ -1,46 +1,177 @@
-.contact-container {
-    max-width: 800px;
-    margin: 0 auto;
+/* ==========================================================================
+   ZHUKOV — Contact & Impressum (Vogue Editorial Magazine Style)
+   ========================================================================== */
+
+.vogue-contact-main {
+    background: #fafafa;
+    min-height: 80vh;
+    padding: 0 0 6rem 0;
+    max-width: 100% !important;
+    margin: 0 !important;
+}
+
+/* ── Contact Hero & Cards ──────────────────────────────────────────────── */
+.vogue-contact-hero {
     text-align: center;
+    padding: 4.5rem 4vw 3.5rem 4vw;
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
 }
 
-.contact-text {
-    color: #94a3b8;
-    margin-top: 1rem;
-    margin-bottom: 2rem;
-}
-
-.contact-button {
+.contact-meta-tag {
     display: inline-block;
-    padding: 12px 24px;
-    background: var(--accent-color);
-    color: #0f172a;
-    text-decoration: none;
-    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
     font-weight: 600;
-    transition: background-color 0.3s ease;
+    letter-spacing: 0.24em;
+    color: #b32d2e;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
 }
 
-.contact-button:hover {
-    background-color: #7dd3fc;
+.contact-editorial-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2.6rem, 5vw, 4.4rem);
+    font-weight: 400;
+    color: #000000;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    line-height: 1.05;
+    letter-spacing: 0.04em;
 }
 
-@media (max-width: 480px) {
-    .contact-container {
-        padding: 0 0.5rem;
+.contact-editorial-subtitle {
+    font-family: 'Inter', sans-serif;
+    color: #666666;
+    font-size: 0.95rem;
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.contact-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+    max-width: 1100px;
+    margin: 3.5rem auto 0 auto;
+    text-align: left;
+}
+
+.contact-card {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    padding: 2.8rem 2.2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-card:hover {
+    border-color: #000000;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+.card-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #777777;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+}
+
+.card-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.2rem;
+    font-weight: 400;
+    color: #000000;
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.card-desc {
+    font-family: 'Inter', sans-serif;
+    color: #555555;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    margin-bottom: 1.5rem;
+}
+
+.card-address {
+    font-family: 'Inter', sans-serif;
+    color: #222222;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+}
+
+/* ── Impressum Section ─────────────────────────────────────────────────── */
+.vogue-impressum-section {
+    max-width: 1100px;
+    margin: 4rem auto 0 auto;
+    padding: 3.5rem 4vw;
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+}
+
+.impressum-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 2.4rem;
+    font-weight: 400;
+    color: #000000;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.04em;
+}
+
+.impressum-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+}
+
+.impressum-block h4 {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #000000;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid #ebebeb;
+    padding-bottom: 0.5rem;
+}
+
+.impressum-block p {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    color: #555555;
+    line-height: 1.65;
+    margin-bottom: 0.5rem;
+}
+
+.impressum-block p strong {
+    color: #111111;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .contact-cards-grid,
+    .impressum-content-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
     }
 
-    .contact-container h2 {
-        font-size: 1.8rem;
-    }
-
-    .contact-text {
-        font-size: 0.95rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .contact-button {
-        width: 100%;
-        padding: 12px 16px;
+    .vogue-contact-hero,
+    .vogue-impressum-section {
+        padding: 3rem 1.5rem;
     }
 }

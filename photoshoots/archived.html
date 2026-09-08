@@ -1,185 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <style>html,body{background:#0f172a}button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#f8fafc;border-radius:8px}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s | Archived Photoshoots</title>
+    <title>ZHUKOV — Archived Photoshoots</title>
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="photoshoots.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
     <style>
         .archived-banner {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin: 2rem auto 0.5rem;
-            padding: 0 2rem;
-            max-width: 1600px;
+            margin: 2.5rem auto 1rem;
+            padding: 2rem 4vw;
+            background: #ffffff;
+            border-bottom: 1px solid #ebebeb;
+            max-width: 1400px;
         }
+
         .archived-banner-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #f59e0b;
+            font-family: 'Instrument Serif', Georgia, serif;
+            font-size: 2.4rem;
+            font-weight: 400;
+            color: #b32d2e;
             display: flex;
             align-items: center;
             gap: 0.6rem;
             margin: 0 0 0.35rem 0;
+            text-transform: uppercase;
         }
+
         .archived-banner-subtitle {
-            color: #94a3b8;
-            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            color: #666666;
+            font-size: 0.9rem;
             margin: 0;
         }
+
         .access-denied {
             text-align: center;
             padding: 6rem 2rem;
-            color: #94a3b8;
+            color: #666666;
+            font-family: 'Inter', sans-serif;
         }
+
         .access-denied h2 {
-            color: #ef4444;
+            font-family: 'Instrument Serif', Georgia, serif;
+            color: #b32d2e;
             margin-bottom: 0.75rem;
-            font-size: 1.8rem;
+            font-size: 2.4rem;
+            text-transform: uppercase;
         }
+
         .archived-empty {
             text-align: center;
             padding: 6rem 2rem;
-            color: #64748b;
+            color: #777777;
+            font-family: 'Inter', sans-serif;
         }
+
         .archived-empty-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
+
         @media (max-width: 768px) {
             .archived-banner {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 1rem;
-                padding: 0 1.25rem;
-                margin: 1.5rem auto 0.5rem;
+                padding: 1.5rem 1.25rem;
             }
+
             .archived-banner-title {
-                font-size: 1.6rem;
+                font-size: 1.8rem;
             }
         }
     </style>
+    <script src="/site-components.js"></script>
 </head>
-<body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
 
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
+<body class="editorial-body">
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
 
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/">Home</a>
-                    <a href="/photoshoots/">Photoshoots</a>
-                    <a href="/moodboard/">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/">Contact</a>
-                    <a href="/upload/" id="upload-nav-link" class="hidden">Upload</a>
-                    <a href="/photoshoots/archived.html" id="archived-nav-link" class="active">Archived</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
-                </div>
-            </div>
-        </div>
-        <script>
-            (function() {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
-
-    <main id="app-content">
+    <main id="app-content" class="vogue-page-main">
         <div class="archived-banner" id="archived-banner" style="display:none;">
             <div>
                 <h1 class="archived-banner-title">📦 Archived Photoshoots</h1>
                 <p class="archived-banner-subtitle">Fully archived sets and sets with all photos archived. Unarchive to restore.</p>
             </div>
-            <a href="/photoshoots/" class="back-link" style="margin:0;">← Back to Photoshoots</a>
+            <a href="/photoshoots/" class="vogue-back-link" style="margin:0;">&larr; Back to Photoshoots</a>
         </div>
 
         <!-- Sort Bar (Matches Photoshoots) -->
         <div class="sort-bar" id="sort-bar" style="display:none;">
-            <select id="sort-select" class="sort-select">
-                <option value="category">Sort by Photo set</option>
-                <option value="date">Sort by Date</option>
-                <option value="model">Sort by Model</option>
-                <option value="theme">Sort by Theme</option>
-            </select>
-            <button id="sort-order-btn" class="sort-btn" data-order="asc">A-Z ↓</button>
+            <div class="sort-group">
+                <label for="sort-select" class="sort-label">ORDER BY</label>
+                <select id="sort-select" class="sort-select">
+                    <option value="category">Photo Set</option>
+                    <option value="date">Date</option>
+                    <option value="model">Model</option>
+                    <option value="theme">Theme</option>
+                </select>
+            </div>
+            <button id="sort-order-btn" class="sort-btn" data-order="asc">A–Z &darr;</button>
         </div>
 
-        <div id="loading-msg" style="text-align:center;padding:5rem;color:#94a3b8;font-size:1.1rem;">Checking access...</div>
+        <div id="loading-msg" style="text-align:center;padding:5rem;color:#777777;font-family:'Inter',sans-serif;font-size:1rem;letter-spacing:0.1em;text-transform:uppercase;">Checking access...</div>
 
         <div id="access-denied" class="access-denied" style="display:none;">
             <h2>Access Denied</h2>
             <p>You must be an administrator to view archived photo sets.</p>
-            <a href="/photoshoots/" style="color:#60a5fa;display:inline-block;margin-top:1rem;">← Back to Photoshoots</a>
+            <a href="/photoshoots/" style="color:#000000;font-weight:600;display:inline-block;margin-top:1.5rem;text-transform:uppercase;letter-spacing:0.1em;">&larr; Back to Photoshoots</a>
         </div>
 
         <!-- Categories Container (Matches Photoshoots Row Layout) -->
-        <div id="categories-container" style="display:none;"></div>
+        <div id="categories-container" class="vogue-categories-container" style="display:none;"></div>
 
         <div id="archived-empty" class="archived-empty" style="display:none;">
             <div class="archived-empty-icon">📭</div>
-            <p style="font-size: 1.2rem; color: #94a3b8; margin-bottom: 0.5rem;">No archived photoshoots.</p>
-            <p style="font-size: 0.95rem; color: #64748b;">Fully archived sets will appear here.</p>
+            <p style="font-size: 1.2rem; color: #111111; margin-bottom: 0.5rem; font-family:'Instrument Serif',Georgia,serif; text-transform:uppercase;">No archived photoshoots.</p>
+            <p style="font-size: 0.9rem; color: #777777;">Fully archived sets will appear here.</p>
         </div>
     </main>
 
-    <!-- Lightbox Modal -->
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
+
+    <!-- Lightbox Modal with Editorial Fine-Art White Frame -->
     <div id="lightbox" class="lightbox">
-        <span class="close">&times;</span>
-        <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+        <span class="close" id="lightbox-close">&times;</span>
+        <div class="lightbox-frame" id="lightbox-frame">
+            <div class="lightbox-img-wrapper">
+                <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+            </div>
+            <div class="lightbox-caption-bar">
+                <span class="lightbox-author">STANISLAV ZHUKOV</span>
+                <span class="lightbox-set-name" id="lightbox-set-name">ARCHIVE</span>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="archived.js"></script>
 </body>
+
 </html>

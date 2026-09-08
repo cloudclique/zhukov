@@ -3,192 +3,166 @@
 
 <head>
     <meta charset="UTF-8">
-    <style>
-        html,
-        body {
-            background: #0f172a
-        }
-
-        button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #f8fafc;
-            border-radius: 8px
-        }
-    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZHUKOV.s</title>
+    <title>ZHUKOV.studio</title>
     <link rel="stylesheet" href="/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js"></script>
 </head>
 
-<body>
-    <header>
-        <div class="header-content">
-            <a href="/" class="brand-logo">
-                <h1 class="brand-name">ZHUKOV</h1>
-                <p class="brand-subtitle">studio</p>
-            </a>
+<body class="editorial-body">
+    <!-- Modular Shared Header Component -->
+    <div id="site-header-slot"></div>
 
-            <!-- Mobile Hamburger Button (Top Right on Mobile) -->
-            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle navigation menu"
-                aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
-
-            <!-- Navigation Container (Desktop Row / Mobile Glass Drawer) -->
-            <div class="header-nav-container" id="header-nav-container">
-                <nav class="header-nav">
-                    <a href="/" class="active">Home</a>
-                    <a href="/photoshoots/">Photoshoots</a>
-                    <a href="/moodboard/">Moodboard</a>
-                    <a href="/about/">About Me</a>
-                    <a href="/contact/">Contact</a>
-                </nav>
-                <div class="header-actions">
-                    <button id="login-btn-header" class="login-btn-header hidden">Login</button>
-                    <button id="logout-btn" class="logout-btn hidden">Logout</button>
-                    <script>
-                        if (localStorage.getItem('zhukov_logged_in') === 'true') {
-                            document.getElementById('logout-btn').classList.remove('hidden');
-                        } else {
-                            document.getElementById('login-btn-header').classList.remove('hidden');
-                        }
-                    </script>
+    <main id="app-content" class="vogue-main">
+        <!-- 1-to-1 Vogue Hero Section with Full Bleed Diagonal Cut Image -->
+        <section class="editorial-hero">
+            <div class="hero-text-container">
+                <div class="hero-editorial-card">
+                    <span class="hero-issue-tag">EXCLUSIVE COVER STORY</span>
+                    <h2 class="hero-main-title">
+                        <span class="line-plain">THE ART OF</span>
+                        <span class="line-italic">Elegance &</span>
+                        <span class="line-plain">DRAMA</span>
+                    </h2>
+                    <p class="hero-subdeck">
+                        A STUDY IN BOLD CONTRAST, REFINED LIGHTING, AND STRIKING FASHION PORTRAITURE.
+                    </p>
+                    <a href="/photoshoots/" class="hero-action-btn">EXPLORE PHOTOSHOOTS</a>
                 </div>
             </div>
-        </div>
-        <script>
-            (function () {
-                const btn = document.getElementById('mobile-menu-btn');
-                const nav = document.getElementById('header-nav-container');
-                if (!btn || !nav) return;
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isOpen = nav.classList.toggle('open');
-                    btn.classList.toggle('active', isOpen);
-                    btn.setAttribute('aria-expanded', isOpen);
-                });
-                nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    nav.classList.remove('open');
-                    btn.classList.remove('active');
-                    btn.setAttribute('aria-expanded', 'false');
-                }));
-                document.addEventListener('click', (e) => {
-                    if (!nav.contains(e.target) && !btn.contains(e.target)) {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        nav.classList.remove('open');
-                        btn.classList.remove('active');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            })();
-        </script>
-    </header>
 
-    <main id="app-content">
-        <!-- Hero Section -->
-        <section class="hero-section">
-            <div class="hero-text">
-                <h2>Capturing moments <br>that last a lifetime.</h2>
-                <p>I am a professional photographer specializing in portrait, fashion, and glamour photography. My
-                    mission is to tell your story through stunning visual art.</p>
-                <div class="hero-buttons">
-                    <a href="/photoshoots/" class="btn-primary">View Photoshoots</a>
-                    <a href="/contact/" class="btn-secondary">Book a Session</a>
-                </div>
+            <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right -->
+            <div class="hero-diagonal-cut-wrapper">
+                <img src="https://i.ibb.co/8n4hhJhK/image-11.webp" alt="High Fashion Vogue Editorial Cover"
+                    loading="eager">
             </div>
-            <div class="hero-image-placeholder">
-                <div class="placeholder-box">
-                    <span><img src="https://i.ibb.co/HDL1gWfY/image-0.webp
-                        " alt=""></span>
+        </section>
+
+        <!-- Vogue The Studio / Profile Feature (Full Width) -->
+        <section class="vogue-section vogue-profile-spread" id="studio">
+            <div class="profile-spread-container">
+                <div class="profile-image-column">
+                    <div class="profile-image-frame">
+                        <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp" alt="Stanislav Zhukov Portrait"
+                            loading="lazy">
+                        <div class="profile-image-caption">
+                            <span class="caption-name">STANISLAV ZHUKOV</span>
+                            <span class="caption-title">PRINCIPAL PHOTOGRAPHER & CREATIVE DIRECTOR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-text-column">
+                    <div class="profile-kicker">THE STUDIO / PROFILE</div>
+                    <h3 class="profile-main-heading">ABOUT STANISLAV ZHUKOV</h3>
+                    <div class="profile-body-text">
+                        <p class="lead-dropcap">
+                            Photography is not merely the capture of light—it is the deliberate orchestration of
+                            shadows, form, and tension. Over the past decade, Stanislav Zhukov has developed a
+                            distinctive aesthetic combining high-fashion precision with raw cinematic vulnerability.
+                        </p>
+                        <p>
+                            From Paris Fashion Week to private editorial commissions in Milan and New York, our studio
+                            collaborates with international fashion houses, magazines, and visionary models to craft
+                            timeless visual legacies.
+                        </p>
+                    </div>
+
+                    <div class="profile-stats-row">
+                        <div class="profile-stat-item">
+                            <span class="stat-number">1</span>
+                            <span class="stat-label">COVER ISSUES</span>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-number">2</span>
+                            <span class="stat-label">YEARS MASTERY</span>
+                        </div>
+                        <div class="profile-stat-item">
+                            <span class="stat-number">0</span>
+                            <span class="stat-label">GLOBAL HUBS</span>
+                        </div>
+                    </div>
+
+                    <div class="profile-cta-group">
+                        <a href="/about/" class="vogue-outline-btn">READ FULL BIOGRAPHY &rarr;</a>
+                    </div>
                 </div>
             </div>
         </section>
 
+        <!-- Areas of Expertise Section -->
+        <section class="vogue-section vogue-disciplines-section" id="services">
+            <div class="vogue-section-header">
+                <div class="section-meta-tag">SPECIALIZED FIELDS</div>
+                <h3 class="section-editorial-title">AREAS OF EXPERTISE</h3>
+                <p class="section-editorial-subtitle">Tailored creative photography crafted with elegant lighting,
+                    beauty, and captivating confidence.</p>
+            </div>
 
+            <div class="disciplines-grid">
+                <div class="discipline-card">
+                    <span class="discipline-num">01</span>
+                    <h4 class="discipline-title">Portraiture</h4>
+                    <p class="discipline-desc">Professional headshots, personal branding, and creative portraits
+                        tailored to your unique personality.</p>
+                </div>
 
-        <!-- About Snippet -->
-        <section class="home-about">
-            <div class="home-about-img">
-                <div class="placeholder-box square">
-                    <span><img src="https://i.ibb.co/JRNhSXJ2/image-0.webp" alt=""></span>
+                <div class="discipline-card featured-discipline">
+                    <span class="discipline-num">02</span>
+                    <h4 class="discipline-title">Fashion & Editorial</h4>
+                    <p class="discipline-desc">High-end fashion shoots with a focus on lighting, mood, and striking
+                        compositions.</p>
+                </div>
+
+                <div class="discipline-card">
+                    <span class="discipline-num">03</span>
+                    <h4 class="discipline-title">Glamour</h4>
+                    <p class="discipline-desc">Sophisticated, alluring photography crafted with elegant lighting,
+                        beauty, and captivating confidence.</p>
                 </div>
             </div>
-            <div class="home-about-text">
-                <h3>Hi, I'm Stanislav</h3>
-                <p>Based in your city, I've spent the last decade perfecting the craft of visual storytelling. Whether
-                    we're shooting in a studio or on location, my goal is to make you feel comfortable and look your
-                    absolute best.</p>
-                <a href="/about/" class="text-link">Read my full story &rarr;</a>
-            </div>
         </section>
 
-        <!-- Services/Focus -->
-        <section class="home-services">
-            <div class="service-card">
-                <h4>Portraiture</h4>
-                <p>Professional headshots, personal branding, and creative portraits tailored to your unique
-                    personality.</p>
+        <!-- Featured Curated Works (Dynamic Firestore Gallery - Full Width) -->
+        <section class="vogue-section vogue-archive-section" id="portraits">
+            <div class="vogue-section-header">
+                <div class="section-meta-tag">CURATED SELECTION</div>
+                <h3 class="section-editorial-title">SELECTED ARCHIVE</h3>
+                <p class="section-editorial-subtitle">A curated presentation of recent fashion commissions, runway
+                    studies, and fine art portraits.</p>
             </div>
-            <div class="service-card">
-                <h4>Fashion & Editorial</h4>
-                <p>High-end fashion shoots with a focus on lighting, mood, and striking compositions.</p>
-            </div>
-            <div class="service-card">
-                <h4>Glamour</h4>
-                <p>Sophisticated, alluring photography crafted with elegant lighting, beauty, and captivating
-                    confidence.</p>
-            </div>
-        </section>
 
-        <!-- Gallery / Recent Work -->
-        <section class="home-gallery">
-            <h3 class="section-title">Recent Work</h3>
-            <p class="section-subtitle">A quick glance at my latest projects.</p>
+            <!-- Dynamic 8-slot gallery managed by script.js -->
             <div class="gallery" id="gallery">
-                <!-- Images will be injected here by JS -->
-            </div>
-            <div class="view-all-container">
-                <a href="/photoshoots/" class="btn-outline">Explore Full Gallery</a>
+                <!-- Injected dynamically by script.js -->
             </div>
 
-            <!-- Scroll cue — teases the overscroll cloth effect -->
-            <div id="scroll-cue" class="scroll-cue" aria-hidden="true">
-                <div class="scroll-cue-line">
-                    <div class="scroll-cue-drop"></div>
-                </div>
-                <svg class="scroll-cue-chevrons" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L10 9L19 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                    <path d="M1 6L10 14L19 6" stroke="currentColor" stroke-width="1" stroke-linecap="round"
-                        stroke-linejoin="round" opacity="0.45" />
-                </svg>
+            <div class="vogue-archive-action">
+                <a href="/photoshoots/" class="vogue-solid-btn">EXPLORE FULL PORTFOLIO ARCHIVE</a>
             </div>
         </section>
     </main>
 
-    <!-- Cloth overscroll portal to Photoshoots -->
-    <div id="overscroll-portal" class="overscroll-portal" aria-hidden="true">
-        <canvas id="overscroll-canvas" class="overscroll-canvas"></canvas>
-        <div id="overscroll-label" class="overscroll-label-floating">
-            <span class="overscroll-arrow-icon">↑</span>
-            <span class="overscroll-label-text">Photoshoots</span>
-        </div>
-    </div>
+    <!-- Modular Shared Footer Component -->
+    <div id="site-footer-slot"></div>
 
-    <!-- Lightbox Modal -->
+    <!-- Lightbox Modal with Editorial Fine-Art White Frame -->
     <div id="lightbox" class="lightbox">
-        <span class="close">&times;</span>
-        <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+        <span class="close" id="lightbox-close">&times;</span>
+        <div class="lightbox-frame" id="lightbox-frame">
+            <div class="lightbox-img-wrapper">
+                <img class="lightbox-content" id="lightbox-img" alt="Fullscreen View">
+            </div>
+            <div class="lightbox-caption-bar">
+                <span class="lightbox-author">STANISLAV ZHUKOV</span>
+                <span class="lightbox-set-name" id="lightbox-set-name">EDITORIAL ARCHIVE</span>
+            </div>
+        </div>
     </div>
 
     <!-- Admin Image Picker Popup -->

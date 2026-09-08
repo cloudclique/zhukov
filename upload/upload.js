@@ -98,19 +98,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Firebase Authentication & Role Check ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            if (!loginBtn.classList.contains('hidden')) loginBtn.classList.add('hidden');
-            if (logoutBtn.classList.contains('hidden')) logoutBtn.classList.remove('hidden');
             localStorage.setItem('zhukov_logged_in', 'true');
-
+            let isAdmin = false;
             try {
                 const userRef = doc(db, 'users', user.uid);
                 const userSnap = await getDoc(userRef);
 
                 if (userSnap.exists() && userSnap.data().role === 'admin') {
+                    isAdmin = true;
+                    if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, true);
                     authWarning.classList.add('hidden');
                     uploadSection.classList.remove('hidden');
                     loadMetadata();
                 } else {
+                    if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, false);
                     authWarning.classList.remove('hidden');
                     authWarning.innerHTML = `
                         <h2>Access Denied</h2>
@@ -120,19 +121,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error("Error checking role:", error);
+                if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, false);
                 authWarning.innerHTML = `<p style="color: #ff6b6b;">Error checking permissions.</p>`;
             }
         } else {
-            if (loginBtn.classList.contains('hidden')) loginBtn.classList.remove('hidden');
-            if (!logoutBtn.classList.contains('hidden')) logoutBtn.classList.add('hidden');
             localStorage.removeItem('zhukov_logged_in');
+            if (window.updateHeaderAuthState) window.updateHeaderAuthState(null, false);
             authWarning.classList.remove('hidden');
             uploadSection.classList.add('hidden');
         }
     });
 
-    loginBtn.addEventListener('click', () => { localStorage.setItem('zhukov_logged_in', 'true'); signInWithPopup(auth, provider).catch(console.error); });
-    logoutBtn.addEventListener('click', () => { localStorage.removeItem('zhukov_logged_in'); signOut(auth).catch(console.error); });
+    // Delegated click listeners for header auth buttons
+    document.addEventListener('click', (e) => {
+        const loginTarget = e.target.closest('#login-btn-header');
+        if (loginTarget) {
+            localStorage.setItem('zhukov_logged_in', 'true');
+            signInWithPopup(auth, provider).catch(console.error);
+        }
+
+        const logoutTarget = e.target.closest('#logout-btn');
+        if (logoutTarget) {
+            localStorage.removeItem('zhukov_logged_in');
+            signOut(auth).catch(console.error);
+        }
+    });
 
     // --- Image Processing (Resize & WebP) ---
     const processImage = (file) => {
