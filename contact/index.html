@@ -23,35 +23,147 @@
         <!-- Contact & Bookings Spread -->
         <section class="vogue-contact-hero">
             <div class="contact-header-block">
-                <span class="contact-meta-tag">THE ATELIER / COMMISSIONS</span>
                 <h2 class="contact-editorial-title">BOOK A SESSION</h2>
                 <p class="contact-editorial-subtitle">
-                    Available worldwide for high-fashion editorials, agency lookbooks, private portraits, and commercial
-                    campaigns.
+                    Available worldwide for high-fashion editorials and private photoshoots.
                 </p>
             </div>
 
             <div class="contact-cards-grid">
                 <!-- Direct Booking Card -->
-                <div class="contact-card">
-                    <span class="card-kicker">DIRECT ENQUIRIES</span>
-                    <h3 class="card-title">Editorial & Private Bookings</h3>
+                <div class="contact-card direct-booking-card">
+                    <h3 class="card-title">get in touch</h3>
                     <p class="card-desc">
-                        For availability, production rates, or custom creative concepts, contact our atelier directly:
+                        For availability, production rates, or custom creative concepts, contact me directly:
                     </p>
-                    <a href="mailto:contact@zhukov.studio" class="vogue-solid-btn">EMAIL ATELIER &rarr;</a>
+
+                    <p class="card-desc">
+                        Fell free to edit the e-mail text to your needs. Please do not change the e-mail subject!!!
+                    </p>
+
+                    <div class="booking-direct-details">
+                        <div class="direct-detail-item">
+                            <span class="detail-label">LOCATED IN</span>
+                            <span class="detail-val">Germany · Available Worldwide</span>
+                        </div>
+                        <div class="direct-detail-item">
+                            <span class="detail-label">RESPONSE TIME</span>
+                            <span class="detail-val">Within 24 Hours</span>
+                        </div>
+                    </div>
+                    <button type="button" class="vogue-solid-btn booking-cta-btn" id="contact-cta-btn">contact
+                        &rarr;</button>
                 </div>
 
-                <!-- Studio Locations Card -->
-                <div class="contact-card">
-                    <span class="card-kicker">PRIMARY STUDIO</span>
-                    <h3 class="card-title">no Atelier</h3>
-                    <p class="card-address">
-                        <strong>no:</strong> some streeet
-                    </p>
-                    <p class="card-desc">
-                        Commissions accepted across nowhere now on-location globally.
-                    </p>
+                <!-- Studio Availability Calendar Card -->
+                <div class="contact-card calendar-card" id="calendar-card">
+                    <div class="calendar-card-header">
+                        <div>
+                            <h3 class="card-title">AVAILABILITY</h3>
+                        </div>
+                        <div class="calendar-admin-badge hidden" id="calendar-admin-badge"
+                            title="Studio Administrator Mode Active">
+                            <span class="admin-pulse-dot"></span>
+                            <span>ADMIN MODE</span>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Widget -->
+                    <div class="calendar-widget" id="calendar-widget">
+                        <!-- Navigation Header -->
+                        <div class="cal-nav-bar">
+                            <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="Previous Month"
+                                title="Previous Month">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="15 18 9 12 15 6"></polyline>
+                                </svg>
+                            </button>
+                            <div class="cal-month-heading" id="cal-month-heading">OCTOBER 2026</div>
+                            <div class="cal-nav-actions">
+                                <button type="button" class="cal-today-btn" id="cal-today-btn"
+                                    title="Jump to Current Month">TODAY</button>
+                                <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="Next Month"
+                                    title="Next Month">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Admin Recurring Weekday Schedule Toolbar (Visible in Admin Mode) -->
+                        <div class="cal-recurring-bar hidden" id="cal-recurring-bar">
+                            <div class="recurring-header">
+                                <span class="recurring-title">PERMANENT WEEKDAYS (RECURRING)</span>
+                                <span class="recurring-sub">Click a weekday to set closed / open permanently:</span>
+                            </div>
+                            <div class="recurring-weekday-toggles" id="recurring-weekday-toggles">
+                                <button type="button" class="cal-day-pill" data-day="1"
+                                    title="Toggle all Mondays">MON</button>
+                                <button type="button" class="cal-day-pill" data-day="2"
+                                    title="Toggle all Tuesdays">TUE</button>
+                                <button type="button" class="cal-day-pill" data-day="3"
+                                    title="Toggle all Wednesdays">WED</button>
+                                <button type="button" class="cal-day-pill" data-day="4"
+                                    title="Toggle all Thursdays">THU</button>
+                                <button type="button" class="cal-day-pill" data-day="5"
+                                    title="Toggle all Fridays">FRI</button>
+                                <button type="button" class="cal-day-pill" data-day="6"
+                                    title="Toggle all Saturdays">SAT</button>
+                                <button type="button" class="cal-day-pill" data-day="0"
+                                    title="Toggle all Sundays">SUN</button>
+                            </div>
+                        </div>
+
+                        <!-- Weekdays Header -->
+                        <div class="cal-weekdays" id="cal-weekdays">
+                            <button type="button" class="cal-weekday-col" data-day="1">MON</button>
+                            <button type="button" class="cal-weekday-col" data-day="2">TUE</button>
+                            <button type="button" class="cal-weekday-col" data-day="3">WED</button>
+                            <button type="button" class="cal-weekday-col" data-day="4">THU</button>
+                            <button type="button" class="cal-weekday-col" data-day="5">FRI</button>
+                            <button type="button" class="cal-weekday-col" data-day="6">SAT</button>
+                            <button type="button" class="cal-weekday-col" data-day="0">SUN</button>
+                        </div>
+
+                        <!-- Days Grid (Rendered dynamically) -->
+                        <div class="cal-days-grid" id="cal-days-grid" role="grid"
+                            aria-label="Studio Availability Calendar">
+                            <!-- Populated dynamically by contact.js -->
+                        </div>
+
+                        <!-- Footer: Legend & Admin Hint -->
+                        <div class="cal-footer">
+                            <div class="cal-legend">
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-dot is-open"></span>
+                                    <span>Open</span>
+                                </div>
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-dot is-booked"></span>
+                                    <span>Booked</span>
+                                </div>
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-dot is-past"></span>
+                                    <span>Past</span>
+                                </div>
+                            </div>
+                            <div class="cal-admin-hint hidden" id="cal-admin-hint">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span>Hold &amp; drag over dates to bulk edit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toast Notification for Admin Actions -->
+                    <div class="cal-toast hidden" id="cal-toast" role="status" aria-live="polite"></div>
                 </div>
             </div>
         </section>
@@ -62,19 +174,80 @@
                 <span class="contact-meta-tag">LEGAL NOTICE</span>
                 <h3 class="impressum-title">IMPRESSUM</h3>
                 <div class="impressum-content-grid">
+                    <!-- 1. Angaben gemäß § 5 DDG -->
                     <div class="impressum-block">
-                        <h4>Studio Information</h4>
-                        <p><strong>Entity:</strong> ZHUKOV Photography Studio</p>
-                        <p><strong>Principal:</strong> Stanislav Zhukov</p>
-                        <p><strong>Location:</strong> some street</p>
-                        <p><strong>Email:</strong> contact@zhukov.studio</p>
+                        <h4>Angaben gemäß § 5 DDG</h4>
+                        <p><strong>Name / Anbieter:</strong> Stanislav Zhukov</p>
+                        <p><strong>Studio / Bezeichnung:</strong> ZHUKOV Photography Studio</p>
+                        <p><strong>Anschrift:</strong> [Straße und Hausnummer]</p>
+                        <p>[PLZ Ort], Deutschland</p>
                     </div>
+
+                    <!-- 2. Kontakt -->
                     <div class="impressum-block">
-                        <h4>Copyright & Rights</h4>
-                        <p>All imagery, editorial concepts, and materials published on this platform are protected under
-                            international copyright laws.</p>
-                        <p>Unauthorized duplication, reproduction, syndication, or digital redistribution without
-                            written consent is strictly prohibited.</p>
+                        <h4>Kontakt</h4>
+                        <p><strong>Telefon:</strong> [+49 (0) 123 4567890]</p>
+                        <p><strong>E-Mail:</strong> <a href="mailto:contact@zhukov.studio">contact@zhukov.studio</a></p>
+                        <p><strong>Website:</strong> <a href="https://zhukov.studio">www.zhukov.studio</a></p>
+                    </div>
+
+                    <!-- 3. Umsatzsteuer-ID -->
+                    <div class="impressum-block">
+                        <h4>Umsatzsteuer-Identifikationsnummer</h4>
+                        <p>Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz (UStG):</p>
+                        <p><strong>USt-IdNr.:</strong> [DE XXX XXX XXX]</p>
+                        <p><small>(Hinweis falls Kleinunternehmer: Gemäß § 19 UStG wird keine Umsatzsteuer
+                                berechnet.)</small></p>
+                    </div>
+
+                    <!-- 4. Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV -->
+                    <div class="impressum-block">
+                        <h4>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h4>
+                        <p><strong>Stanislav Zhukov</strong></p>
+                        <p>[Straße und Hausnummer]</p>
+                        <p>[PLZ Ort], Deutschland</p>
+                    </div>
+
+                    <!-- 5. Berufsbezeichnung & Berufsrecht -->
+                    <div class="impressum-block">
+                        <h4>Berufsbezeichnung & Kammer</h4>
+                        <p><strong>Berufsbezeichnung:</strong> Fotograf / Visual Artist (verliehen in Deutschland)</p>
+                        <p><strong>Zuständige Kammer:</strong> [Handwerkskammer / IHK Ort, falls eingetragen]</p>
+                    </div>
+
+                    <!-- 6. EU-Streitschlichtung & Verbraucherstreitbeilegung -->
+                    <div class="impressum-block">
+                        <h4>Streitbeilegung & Verbraucherschlichtung</h4>
+                        <p><strong>EU-Streitschlichtung:</strong> Die Europäische Kommission stellt eine Plattform zur
+                            Online-Streitbeilegung (OS) bereit:
+                            <a href="https://ec.europa.eu/consumers/odr/" target="_blank"
+                                rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>
+                        </p>
+                        <p><strong>Verbraucherstreitbeilegung (§ 36 VSBG):</strong> Wir sind weder bereit noch
+                            verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+                            teilzunehmen.</p>
+                    </div>
+
+                    <!-- 7. Haftung für Inhalte & Links -->
+                    <div class="impressum-block">
+                        <h4>Haftung für Inhalte & Links</h4>
+                        <p><strong>Haftung für Inhalte:</strong> Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für
+                            eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis
+                            10 DDG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder
+                            gespeicherte fremde Informationen zu überwachen.</p>
+                        <p><strong>Haftung für Links:</strong> Unser Angebot enthält Links zu externen Websites Dritter,
+                            auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte
+                            auch keine Gewähr übernehmen.</p>
+                    </div>
+
+                    <!-- 8. Urheberrecht & Bildrechte -->
+                    <div class="impressum-block">
+                        <h4>Urheberrecht & Bildrechte</h4>
+                        <p>Die durch die Seitenbetreiber erstellten Inhalte, Fotografien und Werke auf diesen Seiten
+                            unterliegen dem deutschen Urheberrecht.</p>
+                        <p>Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der
+                            Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw.
+                            Erstellers.</p>
                     </div>
                 </div>
             </div>
@@ -84,7 +257,158 @@
     <!-- Dynamic Site Footer Slot -->
     <div id="site-footer-slot"></div>
 
-    <script type="module" src="/script.js"></script>
+    <!-- Interactive Contact Topic & Booking Popup Modal -->
+    <div class="vogue-modal-backdrop hidden" id="contact-modal" role="dialog" aria-modal="true"
+        aria-labelledby="contact-modal-title">
+        <div class="vogue-modal-dialog">
+            <!-- Modal Navigation Bar -->
+            <div class="modal-top-bar">
+                <button type="button" class="modal-nav-back hidden" id="contact-modal-back" aria-label="Go Back">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <span>Back</span>
+                </button>
+                <div class="modal-step-indicator" id="modal-step-indicator">CONTACT INQUIRY</div>
+                <button type="button" class="modal-close-btn" id="contact-modal-close"
+                    aria-label="Close Modal">&times;</button>
+            </div>
+
+            <!-- View 1: Topic Selection View -->
+            <div class="modal-view-panel" id="modal-topics-view">
+                <div class="modal-header-block">
+                    <span class="card-kicker">DIRECT COMMUNICATION</span>
+                    <h3 class="card-title modal-title" id="contact-modal-title">WHAT WOULD YOU LIKE TO DISCUSS?</h3>
+                    <p class="modal-subtext">
+                        Select a matter below to generate a tailored email template or choose an available photoshoot
+                        date:
+                    </p>
+                </div>
+
+                <div class="topic-options-grid">
+                    <!-- Option 1: Get Information -->
+                    <button type="button" class="topic-card-btn" data-topic="info">
+                        <div class="topic-card-top">
+                            <span class="topic-num">01</span>
+                            <span class="topic-arrow">&rarr;</span>
+                        </div>
+                        <h4 class="topic-card-title">Get Information</h4>
+                        <p class="topic-card-desc">Commercial rates, editorial concepts, location scouting, or general
+                            creative inquiries.</p>
+                    </button>
+
+                    <!-- Option 2: Book a Photoshoot -->
+                    <button type="button" class="topic-card-btn topic-card-featured" data-topic="booking">
+                        <div class="topic-card-top">
+                            <span class="topic-num">02</span>
+                            <span class="topic-badge">CALENDAR PICKER</span>
+                            <span class="topic-arrow">&rarr;</span>
+                        </div>
+                        <h4 class="topic-card-title">Book a Photoshoot</h4>
+                        <p class="topic-card-desc">Pick an open date from the live studio calendar and draft a session
+                            booking.</p>
+                    </button>
+
+                    <!-- Option 3: Bug Report -->
+                    <button type="button" class="topic-card-btn" data-topic="bug">
+                        <div class="topic-card-top">
+                            <span class="topic-num">03</span>
+                            <span class="topic-arrow">&rarr;</span>
+                        </div>
+                        <h4 class="topic-card-title">Bug Report</h4>
+                        <p class="topic-card-desc">Report a website glitch, broken link, layout problem, or visual
+                            artifact.</p>
+                    </button>
+
+                    <!-- Option 4: Legal Request -->
+                    <button type="button" class="topic-card-btn" data-topic="legal">
+                        <div class="topic-card-top">
+                            <span class="topic-num">04</span>
+                            <span class="topic-arrow">&rarr;</span>
+                        </div>
+                        <h4 class="topic-card-title">Legal Request</h4>
+                        <p class="topic-card-desc">Impressum § 5 DDG, copyright permissions, image licensing, or data
+                            protection.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- View 2: Photoshoot Calendar Date Chooser View -->
+            <div class="modal-view-panel hidden" id="modal-calendar-view">
+                <div class="modal-header-block">
+                    <span class="card-kicker">DATE SELECTION</span>
+                    <h3 class="card-title modal-title">CHOOSE A SESSION DATE</h3>
+                    <p class="modal-subtext">
+                        Select an open date from the live studio schedule for your private or editorial shoot:
+                    </p>
+                </div>
+
+                <!-- In-Modal Calendar Widget -->
+                <div class="modal-calendar-widget">
+                    <div class="cal-nav-bar">
+                        <button type="button" class="cal-nav-btn" id="modal-cal-prev-btn" aria-label="Previous Month">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                        </button>
+                        <div class="cal-month-heading" id="modal-cal-month-heading">OCTOBER 2026</div>
+                        <div class="cal-nav-actions">
+                            <button type="button" class="cal-today-btn" id="modal-cal-today-btn">TODAY</button>
+                            <button type="button" class="cal-nav-btn" id="modal-cal-next-btn" aria-label="Next Month">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="cal-weekdays">
+                        <span>MON</span>
+                        <span>TUE</span>
+                        <span>WED</span>
+                        <span>THU</span>
+                        <span>FRI</span>
+                        <span>SAT</span>
+                        <span>SUN</span>
+                    </div>
+
+                    <div class="cal-days-grid modal-days-grid" id="modal-cal-days-grid" role="grid"
+                        aria-label="Choose photoshoot date">
+                        <!-- Populated dynamically by contact.js -->
+                    </div>
+
+                    <div class="cal-legend modal-cal-legend">
+                        <div class="cal-legend-item">
+                            <span class="cal-legend-dot is-open"></span>
+                            <span>Open</span>
+                        </div>
+                        <div class="cal-legend-item">
+                            <span class="cal-legend-dot is-booked"></span>
+                            <span>Booked / Closed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Selection Action Bar -->
+                <div class="modal-date-action-bar">
+                    <div class="selected-date-display">
+                        <span class="selected-date-label">SELECTED DATE:</span>
+                        <span class="selected-date-value" id="modal-selected-date-text">None selected</span>
+                    </div>
+                    <button type="button" class="vogue-solid-btn modal-proceed-btn" id="modal-confirm-date-btn"
+                        disabled>
+                        OPEN EMAIL WITH THIS DATE &rarr;
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="contact.js"></script>
 </body>
 
 </html>

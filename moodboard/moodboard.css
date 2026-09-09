@@ -172,7 +172,7 @@ body.moodboard-body.inside-board #site-footer-slot {
 
 .editorial-page-title {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.6rem, 5vw, 4.2rem);
+    font-size: clamp(2.6rem, 5vw, 3rem);
     font-weight: 400;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -515,18 +515,22 @@ body.moodboard-body.inside-board #site-footer-slot {
     cursor: grabbing !important;
 }
 
-.canvas-viewport.is-viewer-mode ~ .floating-toolbar,
-.canvas-viewport.is-viewer-mode ~ .tool-options-drawer,
-.canvas-viewport.is-viewer-mode ~ .selection-toolbar,
-.canvas-viewport.is-viewer-mode ~ .note-style-panel,
-.canvas-viewport.is-viewer-mode ~ .selection-marquee,
-.canvas-viewport.is-viewer-mode ~ .eraser-cursor-indicator,
+.canvas-viewport.is-viewer-mode~.floating-toolbar,
+.canvas-viewport.is-viewer-mode~.tool-options-drawer,
+.canvas-viewport.is-viewer-mode~.selection-toolbar,
+.canvas-viewport.is-viewer-mode~.note-style-panel,
+.canvas-viewport.is-viewer-mode~.selection-marquee,
+.canvas-viewport.is-viewer-mode~.eraser-cursor-indicator,
+body.is-viewer-mode .top-history-btns,
+body.is-viewer-mode #btn-board-settings,
 body.is-viewer-mode .floating-toolbar,
 body.is-viewer-mode .tool-options-drawer,
 body.is-viewer-mode .selection-toolbar,
 body.is-viewer-mode .note-style-panel,
 body.is-viewer-mode .selection-marquee,
-body.is-viewer-mode .eraser-cursor-indicator {
+body.is-viewer-mode .eraser-cursor-indicator,
+.top-history-btns.hidden,
+#btn-board-settings.hidden {
     display: none !important;
 }
 
@@ -955,13 +959,21 @@ body.is-viewer-mode .eraser-cursor-indicator {
 }
 
 @keyframes fadeInTags {
-    from { opacity: 0; transform: translateX(12px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .groups-sidebar-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.45rem;
     padding: 0.25rem 0.5rem;
     font-size: 0.72rem;
@@ -969,6 +981,62 @@ body.is-viewer-mode .eraser-cursor-indicator {
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--mb-text-muted);
+}
+
+.groups-sidebar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.groups-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--mb-text-muted);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.groups-close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.groups-count-pill {
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    margin-left: 0.2rem;
+}
+
+.groups-empty-tip {
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.85rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #94a3b8;
+}
+
+.groups-empty-tip small {
+    display: block;
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.75rem;
 }
 
 .groups-tags-list {
@@ -1353,6 +1421,7 @@ body.is-viewer-mode .eraser-cursor-indicator {
 
 /* Responsive: Collapse text labels to icons on narrower screens */
 @media (max-width: 900px) {
+
     .floating-toolbar .tool-btn span,
     .selection-toolbar .sel-btn span {
         display: none !important;
@@ -1850,6 +1919,7 @@ select.form-input option:hover {
    Responsive Design for Mobile & Slim Screens
    ============================================ */
 @media (max-width: 768px) {
+
     /* --- Dashboard View --- */
     .dashboard-main-content {
         padding: 2rem 1.25rem 3.5rem;
@@ -1928,11 +1998,13 @@ select.form-input option:hover {
         flex-shrink: 0;
     }
 
+    #btn-toggle-groups,
     #btn-board-settings {
         padding: 0.4rem 0.55rem;
         border-radius: 10px;
     }
 
+    #btn-toggle-groups span,
     #btn-board-settings span {
         display: none !important;
     }
@@ -2131,6 +2203,7 @@ select.form-input option:hover {
 }
 
 @media (max-width: 480px) {
+
     /* Slim Smartphones */
     .dashboard-main-content {
         padding: 1.5rem 0.85rem 3rem;

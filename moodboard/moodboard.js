@@ -9,9 +9,10 @@ const provider = new GoogleAuthProvider();
 
 // Global Application State
 let currentUser = null;
-let currentIsAdmin = false;
+let currentIsAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
 let activeBoardId = null;
 let activeBoardData = null;
+let activeBoardCanEdit = false;
 let unsubscribeBoardSnapshot = null;
 
 // Infinite Canvas & Viewport State
@@ -80,6 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const groupSep = document.getElementById('group-sep');
     const groupsSidebar = document.getElementById('groups-sidebar');
     const groupsTagsList = document.getElementById('groups-tags-list');
+    const btnToggleGroups = document.getElementById('btn-toggle-groups');
+    const btnCloseGroups = document.getElementById('btn-close-groups');
+    const groupsCountBadge = document.getElementById('groups-count-badge');
+    let isGroupsSidebarManuallyClosed = false;
     const btnUndoAction = document.getElementById('btn-undo-action');
     const btnRedoAction = document.getElementById('btn-redo-action');
     const btnDeleteSelected = document.getElementById('btn-delete-selected');
@@ -232,6 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentIsAdmin = false;
             }
 
+            localStorage.setItem('zhukov_is_admin', currentIsAdmin ? 'true' : 'false');
+
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(user, currentIsAdmin);
             }
@@ -244,13 +251,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             authNotice.classList.add('hidden');
 
-            if (targetBoardFromUrl && !activeBoardId) {
+            // If a board is currently open, immediately re-sync permissions with resolved admin/collaborator state!
+            if (activeBoardId && activeBoardData) {
+                syncBoardPermissions();
+            } else if (targetBoardFromUrl && !activeBoardId) {
                 openMoodboard(targetBoardFromUrl);
             } else if (!activeBoardId) {
                 loadDashboardBoards();
             }
         } else {
             localStorage.removeItem('zhukov_logged_in');
+            localStorage.removeItem('zhukov_is_admin');
             currentUser = null;
             currentIsAdmin = false;
             if (window.updateHeaderAuthState) {
@@ -263,7 +274,9 @@ document.addEventListener('DOMContentLoaded', () => {
             authNotice.classList.remove('hidden');
             emptyBoardsNotice.classList.add('hidden');
 
-            if (targetBoardFromUrl) {
+            if (activeBoardId && activeBoardData) {
+                syncBoardPermissions();
+            } else if (targetBoardFromUrl) {
                 openMoodboard(targetBoardFromUrl);
             } else {
                 exitBoardToDashboard();
@@ -310,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const performUndo = async () => {
-        if (undoStack.length === 0 || !activeBoardData) return;
+        if (!activeBoardCanEdit || undoStack.length === 0 || !activeBoardData) return;
         const action = undoStack.pop();
         redoStack.push(action);
 
@@ -502,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const performRedo = async () => {
-        if (redoStack.length === 0 || !activeBoardData) return;
+        if (!activeBoardCanEdit || redoStack.length === 0 || !activeBoardData) return;
         const action = redoStack.pop();
         undoStack.push(action);
 
@@ -778,13 +791,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderGroupTags = () => {
         if (!groupsSidebar || !groupsTagsList) return;
         const groups = (activeBoardData && activeBoardData.groups) || [];
-        if (groups.length === 0 || canvasView.style.display === 'none') {
+        const count = groups.length;
+
+        // Update button badge
+        if (groupsCountBadge) {
+            if (count > 0) {
+                groupsCountBadge.textContent = count;
+                groupsCountBadge.style.display = 'inline-block';
+            } else {
+                groupsCountBadge.style.display = 'none';
+            }
+        }
+
+        if (canvasView.style.display === 'none') {
             groupsSidebar.style.display = 'none';
             groupsTagsList.innerHTML = '';
             return;
         }
 
-        groupsSidebar.style.display = 'flex';
+        if (count === 0) {
+            if (!isGroupsSidebarManuallyClosed && groupsSidebar.style.display === 'flex') {
+                groupsTagsList.innerHTML = `
+                    <div class="groups-empty-tip">
+                        No groups created yet.
+                        <small>Select multiple elements with the Select tool (V) and click "Group" in the selection toolbar.</small>
+                    </div>
+                `;
+            } else {
+                groupsSidebar.style.display = 'none';
+                groupsTagsList.innerHTML = '';
+            }
+            return;
+        }
+
+        if (!isGroupsSidebarManuallyClosed) {
+            groupsSidebar.style.display = 'flex';
+        }
         groupsTagsList.innerHTML = '';
 
         groups.forEach((grp, idx) => {
@@ -823,8 +865,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    if (btnToggleGroups) {
+        btnToggleGroups.addEventListener('click', () => {
+            if (!groupsSidebar) return;
+            const isCurrentlyOpen = groupsSidebar.style.display === 'flex';
+            if (isCurrentlyOpen) {
+                groupsSidebar.style.display = 'none';
+                isGroupsSidebarManuallyClosed = true;
+            } else {
+                groupsSidebar.style.display = 'flex';
+                isGroupsSidebarManuallyClosed = false;
+                renderGroupTags();
+            }
+        });
+    }
+
+    if (btnCloseGroups) {
+        btnCloseGroups.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (groupsSidebar) groupsSidebar.style.display = 'none';
+            isGroupsSidebarManuallyClosed = true;
+        });
+    }
+
     const createGroupFromSelection = async () => {
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) return;
         if (selectedElementIds.size <= 1 || !activeBoardData) return;
 
@@ -855,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const ungroupSelected = async () => {
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) return;
         if (!activeBoardData || !activeBoardData.groups || activeBoardData.groups.length === 0) return;
 
@@ -885,7 +950,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateSelectionToolbar() {
         if (!selectionToolbar) return;
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
             selectionToolbar.classList.remove('visible');
             if (noteStylePanel) noteStylePanel.classList.remove('open');
@@ -1296,17 +1361,132 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Centralized Board Permissions Synchronizer ---
+    function syncBoardPermissions() {
+        if (!activeBoardData || !activeBoardId) return;
+
+        const data = activeBoardData;
+        const trustedUsers = data.trustedUsers || [];
+        const trustedEmails = (data.trustedEmails || []).map(e => (e || '').toLowerCase());
+        const userEmail = (currentUser?.email || '').toLowerCase();
+        const isCollaborator = Boolean(currentUser && (trustedUsers.includes(currentUser.uid) || (userEmail && trustedEmails.includes(userEmail))));
+        const isCreator = Boolean(currentUser && (
+            (data.creatorUid && data.creatorUid === currentUser.uid) ||
+            (data.creatorEmail && userEmail && data.creatorEmail.toLowerCase() === userEmail)
+        ));
+
+        // Admin AND collaborating emails can edit the moodboard canvas
+        const canEditCanvas = Boolean(currentUser && (currentIsAdmin || isCreator || isCollaborator));
+        activeBoardCanEdit = canEditCanvas;
+
+        // ONLY admin can change the name of a moodboard, description, and who the collaborators are
+        const canEditSettings = Boolean(currentUser && currentIsAdmin);
+
+        const isPublicView = !canEditCanvas && (data.viewViaUrl === true || data.viewViaUrl === 'true');
+
+        if (!canEditCanvas && !isPublicView) {
+            showToast('This moodboard is private. Please log in with an authorized account.');
+            exitBoardToDashboard();
+            return;
+        }
+
+        // Update role badge
+        if (activeBoardRoleBadge) {
+            if (currentIsAdmin) {
+                activeBoardRoleBadge.textContent = 'Studio Admin';
+                activeBoardRoleBadge.className = 'board-badge admin-badge';
+            } else if (isCreator) {
+                activeBoardRoleBadge.textContent = 'Creator';
+                activeBoardRoleBadge.className = 'board-badge admin-badge';
+            } else if (isCollaborator) {
+                activeBoardRoleBadge.textContent = 'Collaborator';
+                activeBoardRoleBadge.className = 'board-badge';
+            } else {
+                activeBoardRoleBadge.textContent = 'Viewer (Read-Only)';
+                activeBoardRoleBadge.className = 'board-badge';
+            }
+        }
+
+        // Adjust UI for Viewer (Read-Only) Mode vs Editor Mode
+        const floatingTb = document.querySelector('.floating-toolbar');
+        const topHistoryBtns = document.querySelector('.top-history-btns');
+        const penDrawer = document.getElementById('pen-options-drawer');
+        const eraserDrawer = document.getElementById('eraser-options-drawer');
+        const selectionTb = document.getElementById('selection-toolbar');
+        const noteStyle = document.getElementById('note-style-panel');
+
+        if (!canEditCanvas) {
+            if (floatingTb) floatingTb.style.display = 'none';
+            if (topHistoryBtns) {
+                topHistoryBtns.classList.add('hidden');
+                topHistoryBtns.style.display = 'none';
+            }
+            if (penDrawer) penDrawer.classList.remove('show');
+            if (eraserDrawer) eraserDrawer.classList.remove('show');
+            if (selectionTb) selectionTb.classList.remove('visible');
+            if (noteStyle) noteStyle.classList.remove('open');
+            canvasViewport.classList.add('is-viewer-mode');
+            document.body.classList.add('is-viewer-mode');
+            deselectAll();
+            setTool('move');
+        } else {
+            canvasViewport.classList.remove('is-viewer-mode');
+            document.body.classList.remove('is-viewer-mode');
+            if (floatingTb) floatingTb.style.display = 'flex';
+            if (topHistoryBtns) {
+                topHistoryBtns.classList.remove('hidden');
+                topHistoryBtns.style.display = 'flex';
+            }
+            updateUndoRedoButtons();
+        }
+
+        // Settings button is strictly for admin only
+        if (btnBoardSettings) {
+            if (canEditSettings) {
+                btnBoardSettings.classList.remove('hidden');
+                btnBoardSettings.style.display = '';
+            } else {
+                btnBoardSettings.classList.add('hidden');
+                btnBoardSettings.style.display = 'none';
+            }
+        }
+
+        // Ensure text elements textarea state matches permissions
+        if (elementsContainer) {
+            elementsContainer.querySelectorAll('.board-element-text textarea.editable-text').forEach(ta => {
+                ta.readOnly = !canEditCanvas;
+                ta.disabled = !canEditCanvas;
+            });
+        }
+
+        renderGroupTags();
+    }
+
     // --- Open & Realtime Sync of a Moodboard Canvas ---
     const openMoodboard = (boardId) => {
         activeBoardId = boardId;
+        activeBoardCanEdit = false;
+        isGroupsSidebarManuallyClosed = false;
         document.body.classList.add('inside-board');
         dashboardView.style.display = 'none';
         canvasView.style.display = 'flex';
         undoStack = [];
         redoStack = [];
-        updateUndoRedoButtons();
         selectedElementId = null;
+        selectedElementIds.clear();
         updateSelectionToolbar();
+
+        const floatingToolbar = document.querySelector('.floating-toolbar');
+        const undoRedoBtns = document.querySelector('.top-history-btns');
+        if (floatingToolbar) floatingToolbar.style.display = 'none';
+        if (undoRedoBtns) {
+            undoRedoBtns.classList.add('hidden');
+            undoRedoBtns.style.display = 'none';
+        }
+        if (btnBoardSettings) {
+            btnBoardSettings.classList.add('hidden');
+            btnBoardSettings.style.display = 'none';
+        }
 
         // Instant Cache Loading for this board
         const cachedBoard = getCachedData(`moodboard_board_${boardId}`);
@@ -1315,18 +1495,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeBoardTitle) activeBoardTitle.innerText = activeBoardData.title || 'Untitled Moodboard';
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
-            renderGroupsSidebar();
+            renderGroupTags();
+            syncBoardPermissions();
+            // Automatically reset/fit view to framed elements on opening
+            requestAnimationFrame(() => {
+                fitViewToElements(activeBoardData.elements, activeBoardData.drawingPaths, false);
+            });
+        } else {
+            centerViewport();
         }
 
         // Update URL with query param ?id= to support all hosting environments
         const newUrl = boardId.startsWith('local_') ? '/moodboard/' : `/moodboard/?id=${boardId}`;
         history.pushState({ boardId }, '', newUrl);
-
-        // Ensure settings button is always available in board view
-        if (btnBoardSettings) btnBoardSettings.classList.remove('hidden');
-
-        // Center viewport initially
-        centerViewport();
 
         let isFirstLoadForBoard = true;
 
@@ -1342,19 +1523,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = docSnap.data();
-            const trustedUsers = data.trustedUsers || [];
-            const trustedEmails = (data.trustedEmails || []).map(e => e.toLowerCase());
-            const userEmail = (currentUser?.email || '').toLowerCase();
-            const isCollaborator = currentUser && (trustedUsers.includes(currentUser.uid) || trustedEmails.includes(userEmail));
-            const isCreator = currentUser && (data.creatorUid === currentUser.uid || (data.creatorEmail && data.creatorEmail.toLowerCase() === userEmail));
-            const canEdit = currentIsAdmin || isCreator || isCollaborator;
-            const isPublicView = !canEdit && (data.viewViaUrl === true || data.viewViaUrl === 'true');
-
-            if (!canEdit && !isPublicView) {
-                showToast('This moodboard is private. Please log in with a collaborator account.');
-                exitBoardToDashboard();
-                return;
-            }
 
             // Preserve in-progress textarea text if the user is currently typing
             const activeEl = document.activeElement;
@@ -1379,47 +1547,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             activeBoardTitle.textContent = activeBoardData.title || 'Untitled Board';
 
-            if (currentIsAdmin) {
-                activeBoardRoleBadge.textContent = 'Studio Admin';
-                activeBoardRoleBadge.className = 'board-badge admin-badge';
-            } else if (isCreator) {
-                activeBoardRoleBadge.textContent = 'Creator';
-                activeBoardRoleBadge.className = 'board-badge admin-badge';
-            } else if (isCollaborator) {
-                activeBoardRoleBadge.textContent = 'Collaborator';
-                activeBoardRoleBadge.className = 'board-badge';
-            } else {
-                activeBoardRoleBadge.textContent = 'Viewer (Read-Only)';
-                activeBoardRoleBadge.className = 'board-badge';
-            }
-
-            // Adjust UI for Viewer (Read-Only) Mode vs Editor Mode
-            const floatingToolbar = document.querySelector('.floating-toolbar');
-            const undoRedoBtns = document.querySelector('.top-history-btns');
-            const penDrawer = document.getElementById('pen-options-drawer');
-            const eraserDrawer = document.getElementById('eraser-options-drawer');
-            const selectionTb = document.getElementById('selection-toolbar');
-            const noteStyle = document.getElementById('note-style-panel');
-
-            if (isPublicView) {
-                if (floatingToolbar) floatingToolbar.style.display = 'none';
-                if (undoRedoBtns) undoRedoBtns.style.display = 'none';
-                if (btnBoardSettings) btnBoardSettings.style.display = 'none';
-                if (penDrawer) penDrawer.classList.remove('show');
-                if (eraserDrawer) eraserDrawer.classList.remove('show');
-                if (selectionTb) selectionTb.classList.remove('visible');
-                if (noteStyle) noteStyle.classList.remove('open');
-                canvasViewport.classList.add('is-viewer-mode');
-                document.body.classList.add('is-viewer-mode');
-                deselectAll();
-                setTool('move');
-            } else {
-                if (floatingToolbar) floatingToolbar.style.display = 'flex';
-                if (undoRedoBtns) undoRedoBtns.style.display = 'flex';
-                if (btnBoardSettings) btnBoardSettings.style.display = '';
-                canvasViewport.classList.remove('is-viewer-mode');
-                document.body.classList.remove('is-viewer-mode');
-            }
+            // Sync role badge, toolbar, settings visibility, and view mode
+            syncBoardPermissions();
 
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
@@ -1428,9 +1557,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isFirstLoadForBoard) {
                 isFirstLoadForBoard = false;
+                // Automatically perform "reset view" to fit all elements cleanly into view
                 setTimeout(() => {
-                    fitViewToElements(activeBoardData.elements, activeBoardData.drawingPaths);
-                }, 60);
+                    fitViewToElements(activeBoardData?.elements, activeBoardData?.drawingPaths, false);
+                }, 80);
+                setTimeout(() => {
+                    fitViewToElements(activeBoardData?.elements, activeBoardData?.drawingPaths, false);
+                }, 250);
             }
         }, (error) => {
             console.error("Realtime sync error:", error);
@@ -1440,13 +1573,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const exitBoardToDashboard = async () => {
-        if (activeBoardId && activeBoardData) {
+        if (activeBoardId && activeBoardData && activeBoardCanEdit) {
             await cleanAndSaveBoard();
         }
         if (unsubscribeBoardSnapshot) {
             unsubscribeBoardSnapshot();
             unsubscribeBoardSnapshot = null;
         }
+        activeBoardCanEdit = false;
         document.body.classList.remove('inside-board', 'is-viewer-mode');
         canvasViewport.classList.remove('is-viewer-mode');
         activeBoardId = null;
@@ -1792,7 +1926,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Keyboard Shortcuts (skip when typing in text fields)
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        // Toggle Groups menu shortcut works for both viewers and editors
+        if (!e.ctrlKey && !e.metaKey && (e.key === 'g' || e.key === 'G')) {
+            if (btnToggleGroups) btnToggleGroups.click();
+            return;
+        }
+
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
             // View-Only mode: block all edit & tool switch shortcuts
             return;
@@ -1909,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Toolbar & Tool Selection ---
     function setTool(tool) {
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
             tool = 'move';
         }
@@ -1994,6 +2134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Clear Drawings
     btnClearDrawing.addEventListener('click', async () => {
+        if (!activeBoardCanEdit) return;
         if (!activeBoardData) {
             activeBoardData = getOrCreateLocalBoard();
             activeBoardId = activeBoardData.id;
@@ -2155,6 +2296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const startStroke = (e) => {
+        if (!activeBoardCanEdit) return;
         if (activeTool !== 'pen' && activeTool !== 'eraser') return;
         isDrawingStroke = true;
         const pos = screenToWorld(e.clientX, e.clientY);
@@ -2179,7 +2321,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const drawStroke = (e) => {
-        if (!isDrawingStroke) return;
+        if (!activeBoardCanEdit || !isDrawingStroke) return;
         const pos = screenToWorld(e.clientX, e.clientY);
 
         if (activeTool === 'eraser') {
@@ -2199,7 +2341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const endStroke = async () => {
-        if (!isDrawingStroke) return;
+        if (!activeBoardCanEdit || !isDrawingStroke) return;
         isDrawingStroke = false;
 
         if (activeStrokePath) {
@@ -2326,7 +2468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const isViewer = canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
+        const isViewer = !activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode');
         if (isViewer) {
             // View-Only mode: every drag interaction pans the canvas (move tool)
             isPanning = true;
@@ -2532,7 +2674,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     groupSelectionBox.addEventListener('pointerdown', (e) => {
-        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
+        if (!activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTool !== 'select') return;
         if (e.button !== 0) return;
         if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
@@ -2649,7 +2791,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             el.addEventListener('pointerdown', (e) => {
-                if (activeTool !== 'select') return;
+                if (!activeBoardCanEdit || activeTool !== 'select') return;
                 if (e.button !== 0) return;
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) return;
 
@@ -2709,10 +2851,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (item.type === 'text') {
                     const textarea = el.querySelector('.editable-text');
-                    if (textarea && textarea !== activeEl) {
-                        if (textarea.value !== (item.content || '')) {
+                    if (textarea) {
+                        if (textarea !== activeEl && textarea.value !== (item.content || '')) {
                             textarea.value = item.content || '';
                         }
+                        textarea.readOnly = !activeBoardCanEdit;
+                        textarea.disabled = !activeBoardCanEdit;
                     }
                     const noteBody = el.querySelector('.note-body');
                     if (noteBody) {
@@ -2795,6 +2939,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const textarea = el.querySelector('.editable-text');
                 textarea.value = item.content || '';
+                textarea.readOnly = !activeBoardCanEdit;
+                textarea.disabled = !activeBoardCanEdit;
 
                 if (bodyColor) textarea.style.color = bodyColor;
                 if (bodyFontSize) textarea.style.fontSize = bodyFontSize;
@@ -2803,9 +2949,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let initialTextContent = null;
                 textarea.addEventListener('focus', () => {
+                    if (!activeBoardCanEdit) return;
                     initialTextContent = textarea.value;
                 });
                 textarea.addEventListener('blur', () => {
+                    if (!activeBoardCanEdit) return;
                     if (initialTextContent !== null && initialTextContent !== textarea.value) {
                         const liveItem = (activeBoardData?.elements || []).find(it => it.id === item.id);
                         if (liveItem) {
@@ -2823,6 +2971,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 textarea.addEventListener('input', () => {
+                    if (!activeBoardCanEdit) return;
                     const liveItem = (activeBoardData?.elements || []).find(it => it.id === item.id);
                     if (liveItem) {
                         liveItem.content = textarea.value;
@@ -2833,7 +2982,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Selection & Drag Initiation
             el.addEventListener('pointerdown', (e) => {
-                if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
+                if (!activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
                 if (activeTool !== 'select') return;
                 if (e.button !== 0) return;
                 if (activeTouches.size >= 2 || (e.pointerType === 'touch' && activeTouches.size > 1)) {
@@ -2946,7 +3095,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragRafId = null;
 
     const startElementDrag = (item, e) => {
-        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
+        if (!activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         if (e && e.button !== undefined && e.button !== 0) return;
         isDraggingElement = true;
@@ -3095,7 +3244,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let transformRafId = null;
 
     const startElementTransform = (item, handleType, e) => {
-        if (canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
+        if (!activeBoardCanEdit || canvasViewport.classList.contains('is-viewer-mode') || document.body.classList.contains('is-viewer-mode')) return;
         if (activeTouches.size >= 2) return;
         if (e && e.button !== undefined && e.button !== 0) return;
         isTransformingElement = true;
@@ -3503,6 +3652,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add New Text Note
     const addNewTextElement = () => {
+        if (!activeBoardCanEdit) return;
         if (!activeBoardData) {
             activeBoardData = getOrCreateLocalBoard();
             activeBoardId = activeBoardData.id;
@@ -3536,7 +3686,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toolAddText.addEventListener('click', addNewTextElement);
 
     const deleteSelectedElements = async () => {
-        if (!activeBoardData) return;
+        if (!activeBoardCanEdit || !activeBoardData) return;
         if (selectedElementIds.size === 0 && selectedElementId) {
             selectedElementIds.add(selectedElementId);
         }
@@ -3689,6 +3839,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Photoshoot Library & Image Inserter Modal ---
     toolAddPhoto.addEventListener('click', () => {
+        if (!activeBoardCanEdit) return;
         openModal(modalAddPhoto);
         loadPhotoshootPicker();
     });
@@ -3846,24 +3997,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Helper: Check if current user is board creator or admin
-    const isBoardCreatorOrAdmin = () => {
-        if (currentIsAdmin) return true;
-        if (!currentUser || !activeBoardData) return false;
-        const uidMatch = activeBoardData.creatorUid && activeBoardData.creatorUid === currentUser.uid;
-        const emailMatch = activeBoardData.creatorEmail && currentUser.email &&
-            activeBoardData.creatorEmail.toLowerCase() === currentUser.email.toLowerCase();
-        return !!(uidMatch || emailMatch);
+    // Helper: Check if current user is admin (only admin can change settings, title, desc, collaborators, and viewViaUrl)
+    const isBoardAdmin = () => {
+        return Boolean(currentUser && currentIsAdmin);
     };
 
     // --- Moodboard Settings Modal (Title, Description, Collaborators & View via URL) ---
     if (btnBoardSettings) {
         btnBoardSettings.addEventListener('click', () => {
+            if (!activeBoardCanEdit || !isBoardAdmin()) {
+                showToast('Only administrators can access and edit moodboard settings.');
+                return;
+            }
             if (!activeBoardData) {
                 activeBoardData = getOrCreateLocalBoard();
                 activeBoardId = activeBoardData.id;
             }
-            const canEdit = isBoardCreatorOrAdmin();
+            const canEdit = isBoardAdmin();
             if (settingsBoardTitle) {
                 settingsBoardTitle.value = activeBoardData.title || '';
                 settingsBoardTitle.disabled = !canEdit;
@@ -3893,8 +4043,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (settingViewViaUrl) {
-        settingViewViaUrl.addEventListener('change', () => {
-            if (shareLinkBox) shareLinkBox.style.display = settingViewViaUrl.checked ? 'block' : 'none';
+        settingViewViaUrl.addEventListener('change', async () => {
+            const isChecked = settingViewViaUrl.checked;
+            if (shareLinkBox) shareLinkBox.style.display = isChecked ? 'block' : 'none';
+            if (activeBoardData && isBoardAdmin()) {
+                activeBoardData.viewViaUrl = isChecked;
+                if (activeBoardId && !activeBoardId.startsWith('local_')) {
+                    try {
+                        const boardRef = doc(db, 'moodboards', activeBoardId);
+                        await updateDoc(boardRef, {
+                            viewViaUrl: isChecked,
+                            updatedAt: new Date().toISOString()
+                        });
+                        showToast(isChecked ? 'View via URL enabled!' : 'View via URL disabled.');
+                    } catch (err) {
+                        console.error("Error toggling viewViaUrl:", err);
+                    }
+                }
+            } else if (!isBoardAdmin()) {
+                showToast('Only administrators can change URL sharing.');
+                settingViewViaUrl.checked = !isChecked;
+            }
         });
     }
 
@@ -3911,8 +4080,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnSaveBoardSettings) {
         btnSaveBoardSettings.addEventListener('click', async () => {
             if (!activeBoardData) return;
-            if (!isBoardCreatorOrAdmin()) {
-                showToast('Only the moodboard creator can change settings.');
+            if (!isBoardAdmin()) {
+                showToast('Only administrators can change moodboard name, description, or collaborators.');
                 return;
             }
             const newTitle = settingsBoardTitle ? settingsBoardTitle.value.trim() : '';
@@ -3945,7 +4114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const renderCollabChips = (canEdit = isBoardCreatorOrAdmin()) => {
+    const renderCollabChips = (canEdit = isBoardAdmin()) => {
         if (!collabChipsContainer) return;
         collabChipsContainer.innerHTML = '';
         const emails = (activeBoardData && activeBoardData.trustedEmails) || [];
@@ -3969,7 +4138,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     removeBtn.addEventListener('click', async () => {
                         activeBoardData.trustedEmails = activeBoardData.trustedEmails.filter(e => e !== email);
                         renderCollabChips(canEdit);
-                        await queueSaveBoard();
+                        if (activeBoardId && !activeBoardId.startsWith('local_')) {
+                            try {
+                                const boardRef = doc(db, 'moodboards', activeBoardId);
+                                await updateDoc(boardRef, {
+                                    trustedEmails: activeBoardData.trustedEmails || [],
+                                    updatedAt: new Date().toISOString()
+                                });
+                            } catch (err) {
+                                console.error("Error updating collaborators:", err);
+                            }
+                        } else {
+                            await queueSaveBoard();
+                        }
                         showToast(`Removed ${email}`);
                     });
                 }
@@ -3981,8 +4162,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnAddCollabEmail) {
         btnAddCollabEmail.addEventListener('click', async () => {
-            if (!isBoardCreatorOrAdmin()) {
-                showToast('Only the creator can add collaborators.');
+            if (!isBoardAdmin()) {
+                showToast('Only administrators can add collaborators.');
                 return;
             }
             const email = inputAddCollabEmail.value.trim().toLowerCase();
@@ -4000,7 +4181,19 @@ document.addEventListener('DOMContentLoaded', () => {
             activeBoardData.trustedEmails.push(email);
             inputAddCollabEmail.value = '';
             renderCollabChips(true);
-            await queueSaveBoard();
+            if (activeBoardId && !activeBoardId.startsWith('local_')) {
+                try {
+                    const boardRef = doc(db, 'moodboards', activeBoardId);
+                    await updateDoc(boardRef, {
+                        trustedEmails: activeBoardData.trustedEmails || [],
+                        updatedAt: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Error persisting new collaborator:", err);
+                }
+            } else {
+                await queueSaveBoard();
+            }
             showToast(`Added ${email} to collaborators!`);
         });
     }
@@ -4008,6 +4201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Clean Non-Existent/Empty Drawings and Firestore Persistence ---
     const cleanAndSaveBoard = async () => {
         if (!activeBoardId || !activeBoardData) return;
+        if (!activeBoardCanEdit) return;
         // Clean out any empty strokes (< 2 points) or invalid drawings
         if (activeBoardData.drawingPaths) {
             activeBoardData.drawingPaths = activeBoardData.drawingPaths.filter(
@@ -4020,13 +4214,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             const boardRef = doc(db, 'moodboards', activeBoardId);
-            await updateDoc(boardRef, {
+            const updatePayload = {
                 elements: activeBoardData.elements || [],
                 drawingPaths: activeBoardData.drawingPaths || [],
                 groups: activeBoardData.groups || [],
-                trustedEmails: activeBoardData.trustedEmails || [],
                 updatedAt: new Date().toISOString()
-            });
+            };
+            // Collaborators only modify canvas elements; admin can also update trustedEmails
+            if (currentIsAdmin && activeBoardData.trustedEmails) {
+                updatePayload.trustedEmails = activeBoardData.trustedEmails;
+            }
+            await updateDoc(boardRef, updatePayload);
         } catch (err) {
             console.error("Error persisting cleaned moodboard:", err);
         }
@@ -4041,6 +4239,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const queueSaveBoard = async () => {
         if (!activeBoardId || !activeBoardData) return;
+        if (!activeBoardCanEdit) return;
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(async () => {
             await cleanAndSaveBoard();

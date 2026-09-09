@@ -3,8 +3,19 @@
 // Loads /header.html and /footer.html into placeholder slots with 0ms cache
 // =========================================================================
 
+// =========================================================================
+// BANNER CONFIGURATION (Under Header)
+// Paste your banner image URL into BANNER_IMAGE_URL below.
+// Example: const BANNER_IMAGE_URL = 'https://example.com/banner.jpg';
+// Leave as '' (empty) if no banner should be displayed.
+// =========================================================================
+const BANNER_IMAGE_URL = 'https://i.ibb.co/Q3Wg3KM3/image-0.webp';
+
+// Optional: Link to open when the banner is clicked (leave '' if none)
+const BANNER_DESTINATION_URL = '';
+
 (function () {
-    const HEADER_CACHE_KEY = 'zhukov_cached_header_v18';
+    const HEADER_CACHE_KEY = 'zhukov_cached_header_v19';
     const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v18';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
 
@@ -375,16 +386,88 @@
         }
     }
 
+    // Synchronize banner height into CSS variable --site-banner-height
+    let bannerResizeObserver = null;
+
+    function syncBannerHeight() {
+        let maxBannerHeight = 0;
+        document.querySelectorAll('.site-banner-container').forEach(container => {
+            if (container.style.display !== 'none') {
+                const h = container.offsetHeight || 0;
+                if (h > maxBannerHeight) maxBannerHeight = h;
+            }
+        });
+        document.documentElement.style.setProperty('--site-banner-height', `${maxBannerHeight}px`);
+        document.body.classList.toggle('has-site-banner', maxBannerHeight > 0);
+        return maxBannerHeight;
+    }
+
+    // Universal Header Banner Handler: applies BANNER_IMAGE_URL if set, or HTML src
+    function updateBannerSlots() {
+        let hasActiveBanner = false;
+
+        document.querySelectorAll('.site-banner-container').forEach(container => {
+            const img = container.querySelector('.site-banner-img');
+            const link = container.querySelector('.site-banner-link');
+
+            // Determine target image URL: constant at top of file takes priority, then img src
+            const targetUrl = (typeof BANNER_IMAGE_URL === 'string' && BANNER_IMAGE_URL.trim() !== '')
+                ? BANNER_IMAGE_URL.trim()
+                : (img ? (img.getAttribute('src') || '').trim() : '');
+
+            if (!img || !targetUrl) {
+                container.style.display = 'none';
+                if (img) img.removeAttribute('src');
+            } else {
+                hasActiveBanner = true;
+                if (img.getAttribute('src') !== targetUrl) {
+                    img.src = targetUrl;
+                }
+                if (link && typeof BANNER_DESTINATION_URL === 'string' && BANNER_DESTINATION_URL.trim() !== '') {
+                    link.href = BANNER_DESTINATION_URL.trim();
+                    link.style.pointerEvents = 'auto';
+                    link.style.cursor = 'pointer';
+                }
+                container.style.display = 'block';
+
+                if (img.complete && img.naturalHeight > 0) {
+                    syncBannerHeight();
+                } else {
+                    img.onload = () => syncBannerHeight();
+                }
+
+                if (window.ResizeObserver && !bannerResizeObserver) {
+                    bannerResizeObserver = new ResizeObserver(() => {
+                        syncBannerHeight();
+                    });
+                    bannerResizeObserver.observe(container);
+                }
+            }
+        });
+
+        if (!hasActiveBanner) {
+            document.documentElement.style.setProperty('--site-banner-height', '0px');
+            document.body.classList.remove('has-site-banner');
+        } else {
+            syncBannerHeight();
+        }
+    }
+
+    window.addEventListener('resize', syncBannerHeight);
+    window.addEventListener('load', syncBannerHeight);
+
     // Auto-mount when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            loadHeader();
+            loadHeader().then(updateBannerSlots);
             loadFooter();
             initCookieConsent();
+            updateBannerSlots();
         });
     } else {
-        loadHeader();
+        loadHeader().then(updateBannerSlots);
         loadFooter();
         initCookieConsent();
+        updateBannerSlots();
     }
 })();

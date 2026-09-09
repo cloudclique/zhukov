@@ -5,6 +5,7 @@
     --text-color: #f8fafc;
     --accent-color: #38bdf8;
     --card-bg: rgba(30, 41, 59, 0.7);
+    --site-banner-height: 0px;
 }
 
 * {
@@ -1810,20 +1811,20 @@ body.editorial-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
-    padding-top: 178px;
+    padding-top: calc(178px + var(--site-banner-height, 0px));
     overflow-x: clip;
     min-height: 100vh;
     transition: padding-top 0.28s cubic-bezier(0.2, 0, 0, 1);
 }
 
 body.editorial-body.header-is-scrolled {
-    padding-top: 50px;
+    padding-top: calc(50px + var(--site-banner-height, 0px));
 }
 
 @media (max-width: 768px) {
     body.editorial-body,
     body.editorial-body.header-is-scrolled {
-        padding-top: 60px !important;
+        padding-top: calc(60px + var(--site-banner-height, 0px)) !important;
         transition: none !important;
     }
 }
@@ -2101,6 +2102,12 @@ body.moodboard-body .vogue-header .brand-subtitle {
     display: none !important;
 }
 
+.vogue-nav-link.hidden,
+#upload-nav-link.hidden,
+#archived-nav-link.hidden {
+    display: none !important;
+}
+
 /* ── Fixed Scrolled State (Binary switch when scrolling down) ─────────── */
 .vogue-header.is-scrolled {
     background: rgba(255, 255, 255, 0.96);
@@ -2141,7 +2148,7 @@ body.moodboard-body .vogue-header .brand-subtitle {
 .editorial-hero {
     position: relative;
     width: 100%;
-    min-height: calc(100vh - 165px);
+    min-height: calc(100vh - 165px - var(--site-banner-height, 0px));
     background: #ffffff;
     display: flex;
     align-items: center;
@@ -2732,7 +2739,8 @@ body.editorial-body .gallery-item:hover img {
         right: 0 !important;
         width: 100% !important;
         z-index: 10000 !important;
-        height: 56px !important;
+        height: auto !important;
+        min-height: 56px !important;
         background: #ffffff !important;
         transform: none !important;
         filter: none !important;
@@ -2939,6 +2947,12 @@ body.editorial-body .gallery-item:hover img {
 
     .vogue-nav-link.active::after {
         width: 24px !important;
+    }
+
+    .vogue-nav-link.hidden,
+    #upload-nav-link.hidden,
+    #archived-nav-link.hidden {
+        display: none !important;
     }
 
     .vogue-nav-actions {
@@ -3260,4 +3274,56 @@ body.editorial-body .gallery-item:hover img {
     .cookie-link-btn {
         text-align: center;
     }
+}
+
+/* =========================================================================
+   Universal Header Banner Slot (Appears under header when image URL is set)
+   Completely hidden with 0 height/spacing when src is empty or absent.
+   ========================================================================= */
+
+.site-banner-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+    overflow: hidden;
+    position: relative;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+/* Hide container completely when image has no src or empty src */
+.site-banner-container:not(:has(.site-banner-img[src]:not([src=""]))) {
+    display: none !important;
+}
+
+.site-banner-img[src=""],
+.site-banner-img:not([src]) {
+    display: none !important;
+}
+
+.site-banner-link {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    line-height: 0;
+    text-decoration: none;
+}
+
+.site-banner-link:not([href]),
+.site-banner-link[href=""],
+.site-banner-link[href="#"] {
+    cursor: default;
+    pointer-events: none;
+}
+
+.site-banner-img {
+    width: 100%;
+    height: auto;
+    max-height: 420px;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto;
+    border-bottom: 1px solid #ebebeb;
 }

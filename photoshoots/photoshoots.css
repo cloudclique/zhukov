@@ -30,7 +30,7 @@
 
 .subpage-editorial-title {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.4rem, 4.5vw, 4rem);
+    font-size: clamp(2.4rem, 4.5vw, 3rem);
     font-weight: 400;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -269,6 +269,7 @@
     display: inline-block;
     flex-shrink: 0;
 }
+
 .delete-photo-btn {
     position: absolute;
     top: 5px;
@@ -287,10 +288,12 @@
     transition: all 0.3s ease;
     z-index: 10;
 }
+
 .delete-photo-btn:hover {
     background: rgba(255, 0, 0, 1);
     transform: scale(1.1);
 }
+
 .admin-btn-group {
     display: flex;
     align-items: center;
@@ -309,6 +312,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
 }
+
 .delete-category-btn:hover {
     background: rgba(255, 0, 0, 0.2);
     border-color: rgba(255, 0, 0, 0.5);
@@ -324,6 +328,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
 }
+
 .archive-category-btn:hover {
     background: rgba(245, 158, 11, 0.22);
     border-color: rgba(245, 158, 11, 0.6);
@@ -339,6 +344,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
 }
+
 .unarchive-category-btn:hover {
     background: rgba(34, 197, 94, 0.2);
     border-color: rgba(34, 197, 94, 0.5);
@@ -465,6 +471,7 @@
     padding: 4rem;
     display: none;
 }
+
 #no-results p {
     color: #94a3b8;
     font-size: 1.2rem;
@@ -520,7 +527,8 @@
         padding: 0 0.5rem;
     }
 
-    .sort-select, .sort-btn {
+    .sort-select,
+    .sort-btn {
         flex: 1 1 auto;
         padding: 0.6rem 0.9rem;
         font-size: 0.9rem;

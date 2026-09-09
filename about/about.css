@@ -37,7 +37,7 @@
 
 .about-editorial-title {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.6rem, 5vw, 4.4rem);
+    font-size: clamp(2.6rem, 5vw, 3rem);
     font-weight: 400;
     color: #000000;
     line-height: 1.05;
@@ -81,7 +81,7 @@
 
 .process-section-title {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.2rem, 4vw, 3.6rem);
+    font-size: clamp(2.2rem, 4vw, 3rem);
     font-weight: 400;
     color: #000000;
     margin-bottom: 0.6rem;
@@ -749,13 +749,33 @@
         display: contents;
     }
 
-    .step-1 { order: 1; }
-    .step-2 { order: 2; }
-    .step-3 { order: 3; }
-    .step-4 { order: 4; }
-    .step-5 { order: 5; }
-    .step-6 { order: 6; }
-    .step-7 { order: 7; }
+    .step-1 {
+        order: 1;
+    }
+
+    .step-2 {
+        order: 2;
+    }
+
+    .step-3 {
+        order: 3;
+    }
+
+    .step-4 {
+        order: 4;
+    }
+
+    .step-5 {
+        order: 5;
+    }
+
+    .step-6 {
+        order: 6;
+    }
+
+    .step-7 {
+        order: 7;
+    }
 
     .palette-interactive-stage {
         flex-direction: column;
