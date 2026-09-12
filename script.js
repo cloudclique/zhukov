@@ -34,6 +34,17 @@ const fallbackSetNames = [
     'STUDIO SELECTION'
 ];
 
+const defaultSlotAspects = [
+    'landscape', // Slot 1: wide
+    'portrait',  // Slot 2: narrow
+    'landscape', // Slot 3: wide
+    'portrait',  // Slot 4: narrow
+    'portrait',  // Slot 5: narrow
+    'landscape', // Slot 6: wide
+    'portrait',  // Slot 7: narrow
+    'landscape'  // Slot 8: wide (last image)
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     // Register Service Worker for offline asset & image caching
     registerSiteServiceWorker();
@@ -48,6 +59,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxSetName = document.getElementById('lightbox-set-name');
     const closeBtn = document.querySelector('#lightbox-close, .lightbox .close, .close');
+
+    // Hero Image Elements
+    const heroImg = document.getElementById('hero-img') || document.querySelector('.hero-diagonal-cut-wrapper img');
+    const heroEditBtn = document.getElementById('hero-edit-btn');
+
+    // Profile Image Elements
+    const profileImg = document.getElementById('profile-img') || document.querySelector('.profile-image-frame img');
+    const profileEditBtn = document.getElementById('profile-edit-btn');
+
+    // Instant Cache Render for Hero Image (0ms delay)
+    const cachedHero = getCachedData('home_hero_image');
+    if (cachedHero && heroImg) {
+        heroImg.src = cachedHero;
+    }
+
+    // Instant Cache Render for Profile Image (0ms delay)
+    const cachedProfile = getCachedData('home_profile_image');
+    if (cachedProfile && profileImg) {
+        profileImg.src = cachedProfile;
+    }
+
+    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+        if (heroEditBtn) heroEditBtn.style.display = 'flex';
+        if (profileEditBtn) profileEditBtn.style.display = 'flex';
+    }
+
+    if (heroEditBtn) {
+        heroEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPicker('hero');
+        });
+    }
+
+    if (profileEditBtn) {
+        profileEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPicker('profile');
+        });
+    }
 
     // --- Admin state ---
     let currentIsAdmin = false;
@@ -133,9 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (lightbox) {
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
-                closeLightbox();
-            }
+            closeLightbox();
         });
     }
     
@@ -202,6 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Instant Cache Render (0ms delay)
         const cachedSlots = getCachedData('home_gallery_slots');
         if (cachedSlots && Array.isArray(cachedSlots) && cachedSlots.length > 0) {
+            if (cachedSlots[4]) cachedSlots[4].aspectRatio = 'portrait';
+            if (cachedSlots[5]) cachedSlots[5].aspectRatio = 'landscape';
+            if (cachedSlots[6]) cachedSlots[6].aspectRatio = 'portrait';
+            if (cachedSlots[7]) cachedSlots[7].aspectRatio = 'landscape';
             gallerySlots = cachedSlots;
             renderGallerySlots();
         } else {
@@ -217,18 +271,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 freshSlots = settingsDoc.data().slots;
             }
 
+            // Sync Hero Image from Firestore settings
+            if (settingsDoc.exists() && settingsDoc.data().heroImage) {
+                const freshHero = settingsDoc.data().heroImage;
+                setCachedData('home_hero_image', freshHero);
+                if (heroImg && heroImg.src !== freshHero) {
+                    heroImg.src = freshHero;
+                }
+            }
+
+            // Sync Profile Image from Firestore settings
+            if (settingsDoc.exists() && settingsDoc.data().profileImage) {
+                const freshProfile = settingsDoc.data().profileImage;
+                setCachedData('home_profile_image', freshProfile);
+                if (profileImg && profileImg.src !== freshProfile) {
+                    profileImg.src = freshProfile;
+                }
+            }
+
             // Fill any missing slots with fallbacks and set names
             for (let i = 0; i < SLOT_COUNT; i++) {
                 if (!freshSlots[i] || !freshSlots[i].url) {
                     freshSlots[i] = { 
                         url: fallbackImages[i % fallbackImages.length] || '', 
-                        aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait',
+                        aspectRatio: defaultSlotAspects[i] || 'landscape',
                         setName: fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE'
                     };
                 } else if (!freshSlots[i].setName) {
                     freshSlots[i].setName = urlToSetNameMap.get(freshSlots[i].url) || fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE';
                 }
             }
+
+            // Normalize slot 5, 6, 7, 8 orientations
+            if (freshSlots[4]) freshSlots[4].aspectRatio = 'portrait';
+            if (freshSlots[5]) freshSlots[5].aspectRatio = 'landscape';
+            if (freshSlots[6]) freshSlots[6].aspectRatio = 'portrait';
+            if (freshSlots[7]) freshSlots[7].aspectRatio = 'landscape';
 
             if (!isDataEqual(gallerySlots, freshSlots)) {
                 gallerySlots = freshSlots;
@@ -243,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let i = 0; i < SLOT_COUNT; i++) {
                     gallerySlots[i] = { 
                         url: fallbackImages[i % fallbackImages.length] || '', 
-                        aspectRatio: i % 2 === 0 ? 'landscape' : 'portrait',
+                        aspectRatio: defaultSlotAspects[i] || 'landscape',
                         setName: fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE'
                     };
                 }
@@ -262,11 +340,60 @@ document.addEventListener('DOMContentLoaded', () => {
             item.style.animationDelay = `${index * 0.12}s`;
             if (!slot.url) item.classList.add('empty-slot');
 
+            const isLastSlot = (index === gallerySlots.length - 1);
+            if (isLastSlot) {
+                item.classList.add('is-last-slot');
+            }
+
+            // Determine orientation: 5 & 7 vertical, 6 & 8 horizontal
+            let slotAspect = slot.aspectRatio;
+            if (index === 4 || index === 6) {
+                slotAspect = 'portrait';
+            } else if (index === 5 || index === 7 || isLastSlot) {
+                slotAspect = 'landscape';
+            } else if (!slotAspect) {
+                slotAspect = defaultSlotAspects[index] || 'landscape';
+            }
+
+            const isInitiallyVertical = slotAspect === 'portrait';
+            item.classList.add(isInitiallyVertical ? 'is-vertical' : 'is-horizontal');
+            item.classList.add(isInitiallyVertical ? 'is-portrait' : 'is-landscape');
+
             if (slot.url) {
                 const img = document.createElement('img');
                 img.src = slot.url;
                 img.alt = `Featured Image ${index + 1}`;
                 img.loading = 'lazy';
+
+                // Real dimension check to dynamically assign vertical vs horizontal orientation
+                const updateOrientation = () => {
+                    // Slots 5 & 7 are strictly vertical
+                    if (index === 4 || index === 6) {
+                        item.classList.add('is-vertical', 'is-portrait');
+                        item.classList.remove('is-horizontal', 'is-landscape');
+                        return;
+                    }
+                    // Slots 6 & 8 are strictly horizontal
+                    if (index === 5 || index === 7 || isLastSlot) {
+                        item.classList.remove('is-vertical', 'is-portrait');
+                        item.classList.add('is-horizontal', 'is-landscape');
+                        return;
+                    }
+                    if (img.naturalWidth && img.naturalHeight) {
+                        const isVertical = img.naturalHeight > img.naturalWidth;
+                        item.classList.toggle('is-vertical', isVertical);
+                        item.classList.toggle('is-portrait', isVertical);
+                        item.classList.toggle('is-horizontal', !isVertical);
+                        item.classList.toggle('is-landscape', !isVertical);
+                    }
+                };
+
+                if (img.complete && img.naturalWidth) {
+                    updateOrientation();
+                } else {
+                    img.addEventListener('load', updateOrientation, { once: true });
+                }
+
                 item.appendChild(img);
 
                 // Lightbox on click (only if not admin — admin gets edit button)
@@ -312,6 +439,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const openPicker = async (slotIndex) => {
         if (!pickerOverlay) return;
         activeSlotIndex = slotIndex;
+        const pickerTitle = pickerOverlay.querySelector('.picker-title');
+        if (pickerTitle) {
+            if (slotIndex === 'hero') {
+                pickerTitle.textContent = 'Choose hero cover image — hold for 2 seconds to select';
+            } else if (slotIndex === 'profile') {
+                pickerTitle.textContent = 'Choose profile photo — hold for 2 seconds to select';
+            } else {
+                pickerTitle.textContent = 'Choose an image — hold for 2 seconds to select';
+            }
+        }
         document.body.classList.add('picker-open');
         pickerOverlay.style.display = 'flex';
         requestAnimationFrame(() => pickerOverlay.classList.add('show'));
@@ -374,8 +511,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     imagesDiv.classList.toggle('show');
                 });
 
-                // Build thumbnails with origin set name
-                urls.forEach(url => {
+                // Build thumbnails with origin set name (newest to oldest to match gallery display)
+                [...urls].reverse().forEach(url => {
                     const wrap = createPickerThumb(url, setName);
                     imagesDiv.appendChild(wrap);
                 });
@@ -386,7 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // Also add single shots section
-            const singleSnap = await getDocs(collection(db, 'single_shots'));
+            const [singleSnap, orderDoc] = await Promise.all([
+                getDocs(collection(db, 'single_shots')),
+                getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
+            ]);
             if (!singleSnap.empty) {
                 const setDiv = document.createElement('div');
                 setDiv.className = 'picker-set';
@@ -399,8 +539,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     titleEl.classList.toggle('expanded');
                     imagesDiv.classList.toggle('show');
                 });
+
+                const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
+                const orderMap = new Map();
+                customOrder.forEach((url, idx) => orderMap.set(url, idx));
+
+                const singleDocs = [];
                 singleSnap.forEach(d => {
-                    if (d.data().url) imagesDiv.appendChild(createPickerThumb(d.data().url, 'SINGLE SHOTS'));
+                    if (d.data().url) singleDocs.push(d.data());
+                });
+
+                singleDocs.sort((a, b) => {
+                    const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : -1;
+                    const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : -1;
+                    if (idxA !== idxB) {
+                        if (idxA === -1) return -1;
+                        if (idxB === -1) return 1;
+                        return idxA - idxB;
+                    }
+                    return new Date(b.date || 0) - new Date(a.date || 0);
+                });
+
+                singleDocs.forEach(d => {
+                    imagesDiv.appendChild(createPickerThumb(d.url, 'SINGLE SHOTS'));
                 });
                 setDiv.appendChild(titleEl);
                 setDiv.appendChild(imagesDiv);
@@ -477,7 +638,43 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const selectImage = async (url, setName = '') => {
-        if (activeSlotIndex < 0) return;
+        if (activeSlotIndex === 'hero') {
+            try {
+                if (heroImg) {
+                    heroImg.src = url;
+                }
+                setCachedData('home_hero_image', url);
+                closePicker();
+
+                // Save to Firestore in settings/home_gallery
+                const settingsRef = doc(db, 'settings', 'home_gallery');
+                await setDoc(settingsRef, { heroImage: url }, { merge: true });
+            } catch (err) {
+                console.error('Failed to save hero image:', err);
+                alert('Error saving hero image. Please try again.');
+            }
+            return;
+        }
+
+        if (activeSlotIndex === 'profile') {
+            try {
+                if (profileImg) {
+                    profileImg.src = url;
+                }
+                setCachedData('home_profile_image', url);
+                closePicker();
+
+                // Save to Firestore in settings/home_gallery
+                const settingsRef = doc(db, 'settings', 'home_gallery');
+                await setDoc(settingsRef, { profileImage: url }, { merge: true });
+            } catch (err) {
+                console.error('Failed to save profile image:', err);
+                alert('Error saving profile image. Please try again.');
+            }
+            return;
+        }
+
+        if (typeof activeSlotIndex !== 'number' || activeSlotIndex < 0) return;
         try {
             gallerySlots[activeSlotIndex].url = url;
             gallerySlots[activeSlotIndex].setName = setName || urlToSetNameMap.get(url) || 'CURATED SELECTION';
@@ -520,6 +717,12 @@ document.addEventListener('DOMContentLoaded', () => {
             window.updateHeaderAuthState(user, currentIsAdmin);
         }
         renderGallerySlots();
+        if (heroEditBtn) {
+            heroEditBtn.style.display = currentIsAdmin ? 'flex' : 'none';
+        }
+        if (profileEditBtn) {
+            profileEditBtn.style.display = currentIsAdmin ? 'flex' : 'none';
+        }
     });
 
     // Delegated Login / Logout button click handlers

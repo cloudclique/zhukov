@@ -147,9 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (lightbox) {
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
-                closeLightbox();
-            }
+            closeLightbox();
         });
     }
     
@@ -246,9 +244,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 customOrder.forEach((url, idx) => orderMap.set(url, idx));
 
                 singleItems.sort((a, b) => {
-                    const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : 999999;
-                    const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : 999999;
-                    if (idxA !== idxB) return idxA - idxB;
+                    const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : -1;
+                    const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : -1;
+                    if (idxA !== idxB) {
+                        if (idxA === -1) return -1; // New/unranked photos appear at the top
+                        if (idxB === -1) return 1;
+                        return idxA - idxB;
+                    }
                     return new Date(b.date || 0) - new Date(a.date || 0);
                 });
                 urls = singleItems.map(item => item.url);
@@ -640,6 +642,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 date: new Date().toISOString(),
                                 isAdult: false
                             });
+                            try {
+                                const orderRef = doc(db, 'settings', 'single_shots_order');
+                                const orderSnap = await getDoc(orderRef).catch(() => null);
+                                if (orderSnap && orderSnap.exists()) {
+                                    const currentOrder = Array.isArray(orderSnap.data().order) ? orderSnap.data().order : [];
+                                    const newOrder = [photoUrl, ...currentOrder.filter(u => u !== photoUrl)];
+                                    await setDoc(orderRef, { order: newOrder }, { merge: true });
+                                }
+                            } catch (orderErr) {
+                                console.warn("Could not update single_shots_order on move:", orderErr);
+                            }
                         } else {
                             await updateDoc(doc(db, 'photo_sets', targetSetId), {
                                 urls: arrayUnion(photoUrl)
@@ -730,14 +743,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="gallery-title editable" data-field="categoryName" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
-                    <div class="gallery-photo-count" style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">${currentUrls.length} Photos</div>
+                    <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
                 `;
             } else {
                 headerContainer.innerHTML = `
                     <h2 class="gallery-title">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
-                    <div class="gallery-photo-count" style="margin-top: 1rem; color: #94a3b8; font-size: 0.9rem;">${currentUrls.length} Photos</div>
+                    <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
                 `;
             }
             
@@ -885,34 +898,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!img.naturalWidth) return;
                 
                 const ratio = img.naturalWidth / img.naturalHeight;
+                const isMobile = window.innerWidth <= 800;
                 let colSpan = 1;
                 
-                // Stretch horizontal/wide images across 2 columns if viewport is wide enough
-                if (ratio > 1.2 && window.innerWidth > 800) {
-                    colSpan = 2;
+                if (isMobile) {
+                    // On mobile 2-column Pinterest layout:
+                    // If panoramic/ultra-wide (> 1.45), span across both columns
+                    if (ratio > 1.45) {
+                        colSpan = 2;
+                    } else {
+                        colSpan = 1;
+                    }
+                } else {
+                    // Stretch horizontal/wide images across 2 columns if viewport is wide enough
+                    if (ratio > 1.2 && window.innerWidth > 800) {
+                        colSpan = 2;
+                    }
                 }
                 
                 wrapper.style.gridColumn = `span ${colSpan}`;
                 
-                // We use standardized target ratios so that all portraits have the EXACT same row span,
-                // and all landscapes have the EXACT same row span. This prevents micro-gaps and allows
-                // the dense CSS Grid to pack them together flawlessly like a bento box.
                 requestAnimationFrame(() => {
                     const renderedWidth = wrapper.getBoundingClientRect().width;
+                    if (!renderedWidth) return;
                     
-                    let targetRatio;
-                    if (colSpan === 2) {
-                        targetRatio = 3 / 2; // Standard Landscape
-                    } else if (ratio < 0.85) {
-                        targetRatio = 4 / 5; // Standard Portrait
+                    let targetHeight;
+                    if (isMobile) {
+                        // Dynamic Pinterest height according to aspect ratio
+                        if (colSpan === 2) {
+                            targetHeight = renderedWidth / (ratio > 1 ? ratio : 1.6);
+                        } else {
+                            // Clamp ratio between 0.65 (slender portrait) and 1.4 (landscape)
+                            const clampedRatio = Math.max(0.65, Math.min(1.4, ratio));
+                            targetHeight = renderedWidth / clampedRatio;
+                        }
                     } else {
-                        targetRatio = 1 / 1; // Standard Square
+                        let targetRatio;
+                        if (colSpan === 2) {
+                            targetRatio = 3 / 2; // Standard Landscape
+                        } else if (ratio < 0.85) {
+                            targetRatio = 4 / 5; // Standard Portrait
+                        } else {
+                            targetRatio = 1 / 1; // Standard Square
+                        }
+                        targetHeight = renderedWidth / targetRatio;
                     }
                     
-                    const targetHeight = renderedWidth / targetRatio;
-                    
                     const rowHeight = 10;
-                    const gap = 16;
+                    const gap = isMobile ? 8 : 16;
                     const rowSpan = Math.ceil((targetHeight + gap) / (rowHeight + gap));
                     
                     wrapper.style.gridRow = `span ${rowSpan}`;

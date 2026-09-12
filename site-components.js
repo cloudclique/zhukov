@@ -9,7 +9,7 @@
 // Example: const BANNER_IMAGE_URL = 'https://example.com/banner.jpg';
 // Leave as '' (empty) if no banner should be displayed.
 // =========================================================================
-const BANNER_IMAGE_URL = 'https://i.ibb.co/Q3Wg3KM3/image-0.webp';
+const BANNER_IMAGE_URL = '';
 
 // Optional: Link to open when the banner is clicked (leave '' if none)
 const BANNER_DESTINATION_URL = '';
@@ -149,6 +149,18 @@ const BANNER_DESTINATION_URL = '';
                 navContainer.classList.toggle('is-scrolled', isScrolled);
             }
         }
+
+        function syncHeaderHeight() {
+            const slot = document.getElementById('site-header-slot');
+            if (slot && window.innerWidth > 768 && !isScrolled) {
+                const h = slot.offsetHeight;
+                if (h > 150) {
+                    document.documentElement.style.setProperty('--site-header-unscrolled-height', `${h}px`);
+                }
+            }
+        }
+        syncHeaderHeight();
+        window.addEventListener('resize', syncHeaderHeight);
 
         // Wheel interceptor: first scroll from top shrinks header while anchoring content right beneath it
         window.addEventListener('wheel', (e) => {

@@ -3,26 +3,27 @@
    ========================================================================== */
 
 .vogue-gallery-main {
-    background: #fafafa;
+    background: #ffffff;
     min-height: 80vh;
-    padding: 0 0 6rem 0;
+    padding: 0 0 5rem 0;
     max-width: 100% !important;
     margin: 0 !important;
 }
 
 .gallery-nav-breadcrumb {
-    padding: 3rem 4vw 0.4rem 4vw;
+    padding: 1.8rem 4vw 0 4vw;
+    background: #ffffff;
 }
 
 .vogue-back-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    color: #555555;
+    gap: 0.45rem;
+    color: #666666;
     font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 600;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     text-decoration: none;
     transition: all 0.25s ease;
@@ -30,14 +31,14 @@
 
 .vogue-back-link:hover {
     color: #000000;
-    transform: translateX(-4px);
+    transform: translateX(-3px);
 }
 
 .gallery-header {
     text-align: left;
-    margin-top: 0.5rem;
-    margin-bottom: 3.5rem;
-    padding: 1.5rem 4vw 3rem 4vw;
+    margin-top: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0 4vw 1.5rem 4vw;
     background: #ffffff;
     border-bottom: 1px solid #ebebeb;
     display: flex;
@@ -47,25 +48,35 @@
 
 .gallery-title {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.6rem, 5vw, 3rem);
+    font-size: clamp(2.4rem, 5vw, 3.2rem);
     font-weight: 400;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #000000;
-    margin-bottom: 0.75rem;
-    line-height: 1;
+    margin-bottom: 0.5rem;
+    line-height: 1.05;
     text-align: left;
 }
 
 .gallery-meta {
     font-family: 'Inter', sans-serif;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 500;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     color: #777777;
     text-transform: uppercase;
     text-align: left;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+}
+
+.gallery-photo-count {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: #888888;
+    text-transform: uppercase;
+    margin-top: 0.35rem;
 }
 
 /* Gallery Description & Links */
@@ -152,13 +163,17 @@
 
 @media (max-width: 800px) {
     .masonry-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem;
+        padding: 0 1.25rem;
     }
 }
 
 @media (max-width: 500px) {
     .masonry-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem;
+        padding: 0 0.75rem;
     }
 }
 
@@ -182,6 +197,10 @@
     opacity: 0;
     transform: scale(0.97);
     filter: brightness(0.95) contrast(1.02);
+    -webkit-user-drag: none !important;
+    user-drag: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
     transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
 }
 
@@ -628,54 +647,73 @@
    Responsive Design for Mobile & Slim Screens
    ============================================ */
 @media (max-width: 768px) {
-    .back-link {
-        margin: 0.75rem 1.25rem;
-        font-size: 1rem;
+    .gallery-nav-breadcrumb {
+        padding: 1.25rem 1.25rem 0 1.25rem;
     }
 
     .gallery-header {
-        padding: 0 1.25rem;
-        margin-bottom: 2rem;
+        padding: 0 1.25rem 1.2rem 1.25rem;
+        margin-top: 0.5rem;
+        margin-bottom: 1.5rem;
     }
 
     .gallery-title {
         font-size: 2rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .gallery-meta {
+        font-size: 0.68rem;
     }
 
     .masonry-grid {
         padding: 0 1.25rem;
         margin-bottom: 3rem;
-        gap: 12px;
     }
 }
 
 @media (max-width: 480px) {
-    .back-link {
-        margin: 0.5rem 0.85rem;
-        font-size: 0.92rem;
+    .gallery-nav-breadcrumb {
+        padding: 1rem 0.85rem 0 0.85rem;
+    }
+
+    .vogue-back-link {
+        font-size: 0.64rem;
+        letter-spacing: 0.12em;
     }
 
     .gallery-header {
-        padding: 0 0.85rem;
-        margin-bottom: 1.5rem;
+        padding: 0 0.85rem 1rem 0.85rem;
+        margin-top: 0.4rem;
+        margin-bottom: 1rem;
     }
 
     .gallery-title {
-        font-size: 1.6rem;
+        font-size: 1.65rem;
+        line-height: 1.1;
+        margin-bottom: 0.25rem;
     }
 
     .gallery-meta {
-        font-size: 0.95rem;
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+        line-height: 1.4;
+    }
+
+    .gallery-photo-count {
+        font-size: 0.62rem;
+        margin-top: 0.25rem;
     }
 
     .gallery-description {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
     }
 
     .masonry-grid {
-        padding: 0 0.85rem;
+        padding: 0 0.75rem;
         margin-bottom: 2.5rem;
-        gap: 8px;
+        gap: 0.5rem;
     }
 
     .loading-state {

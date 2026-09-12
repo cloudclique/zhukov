@@ -139,9 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (lightbox) {
         lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox || e.target.classList.contains('close') || e.target.id === 'lightbox-close') {
-                closeLightbox();
-            }
+            closeLightbox();
         });
     }
     
@@ -428,14 +426,22 @@ document.addEventListener('DOMContentLoaded', () => {
             meta.className = 'category-meta';
             const displayDate = cat.date !== '1970-01-01T00:00:00.000Z' ? new Date(cat.date).toLocaleDateString() : '';
             meta.innerText = `${cat.modelName} | ${cat.theme} ${displayDate ? '| ' + displayDate : ''}`;
-
-            headerDiv.appendChild(title);
-            headerDiv.appendChild(meta);
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'category-info';
+            infoDiv.appendChild(title);
+            infoDiv.appendChild(meta);
+            headerDiv.appendChild(infoDiv);
             
-            // Admin Action Buttons (Unarchive + Delete)
-            const adminGroup = document.createElement('div');
-            adminGroup.className = 'admin-btn-group';
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'category-actions';
 
+            const viewSetBtn = document.createElement('a');
+            viewSetBtn.className = 'view-set-header-btn';
+            viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
+            actionsDiv.appendChild(viewSetBtn);
+
+            // Admin Action Buttons (Unarchive + Delete)
             const unarchBtn = document.createElement('button');
             unarchBtn.className = 'unarchive-category-btn';
             unarchBtn.title = 'Restore set to public gallery';
@@ -447,15 +453,205 @@ document.addEventListener('DOMContentLoaded', () => {
             delCatBtn.innerText = 'Delete Set';
             delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, rowDiv));
 
-            adminGroup.appendChild(unarchBtn);
-            adminGroup.appendChild(delCatBtn);
-            headerDiv.appendChild(adminGroup);
+            actionsDiv.appendChild(unarchBtn);
+            actionsDiv.appendChild(delCatBtn);
+            headerDiv.appendChild(actionsDiv);
             
             rowDiv.appendChild(headerDiv);
 
             // Images Container
             const scrollRow = document.createElement('div');
             scrollRow.className = 'scrollable-row';
+
+            // --- PC Drag-to-Scroll & Smooth Wheel ---
+            let isMouseDown = false;
+            let startX = 0;
+            let scrollLeftStart = 0;
+            let hasDragged = false;
+
+            scrollRow.setAttribute('draggable', 'false');
+            scrollRow.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            scrollRow.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.row-nav-arrow')) return;
+                e.preventDefault();
+                isMouseDown = true;
+                hasDragged = false;
+                startX = e.pageX - scrollRow.offsetLeft;
+                scrollLeftStart = scrollRow.scrollLeft;
+                scrollRow.classList.add('is-dragging');
+                pauseAutoScroll();
+            });
+
+            const onRowMouseMove = (e) => {
+                if (!isMouseDown) return;
+                e.preventDefault();
+                const x = e.pageX - scrollRow.offsetLeft;
+                const walk = (x - startX) * 1.5;
+                if (Math.abs(walk) > 5) {
+                    hasDragged = true;
+                }
+                scrollRow.scrollLeft = scrollLeftStart - walk;
+                pauseAutoScroll();
+            };
+
+            const onRowMouseUp = () => {
+                if (isMouseDown) {
+                    isMouseDown = false;
+                    scrollRow.classList.remove('is-dragging');
+                    setTimeout(() => {
+                        hasDragged = false;
+                    }, 60);
+                    scheduleAutoScroll();
+                }
+            };
+
+            window.addEventListener('mousemove', onRowMouseMove);
+            window.addEventListener('mouseup', onRowMouseUp);
+
+            // Allow vertical wheel to scroll the page naturally without scrolling the row.
+            // Only pause auto-scroll if user is explicitly scrolling horizontally (e.g. trackpad swipe).
+            scrollRow.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                    pauseAutoScroll();
+                    scheduleAutoScroll();
+                }
+            }, { passive: true });
+
+            // --- Auto-Move / Silky Continuous Drift after 1.3s of Inactivity ---
+            let autoScrollRaf = null;
+            let idleTimer = null;
+            let turnaroundTimer = null;
+            let lastTimestamp = null;
+            const scrollSpeedPxPerSec = 50; // 50px/second smooth continuous drift
+            let autoDir = 1; // 1 = right, -1 = left
+            let isVisible = false;
+            let isInteracting = false;
+            let isProgrammaticScroll = false;
+            let currentScrollLeft = scrollRow.scrollLeft;
+
+            const startAutoScroll = () => {
+                if (autoScrollRaf || !isVisible || isInteracting || isMouseDown) return;
+                if (turnaroundTimer) {
+                    clearTimeout(turnaroundTimer);
+                    turnaroundTimer = null;
+                }
+                lastTimestamp = null;
+                currentScrollLeft = scrollRow.scrollLeft;
+
+                const step = (timestamp) => {
+                    if (!isVisible || isInteracting || isMouseDown) {
+                        autoScrollRaf = null;
+                        lastTimestamp = null;
+                        return;
+                    }
+
+                    if (!lastTimestamp) lastTimestamp = timestamp;
+                    const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+                    lastTimestamp = timestamp;
+
+                    const maxScroll = scrollRow.scrollWidth - scrollRow.clientWidth;
+                    if (maxScroll > 15) {
+                        currentScrollLeft += scrollSpeedPxPerSec * deltaSec * autoDir;
+
+                        // Reached right edge: clamp, pause for 2s, then scroll back
+                        if (currentScrollLeft >= maxScroll - 2 && autoDir === 1) {
+                            currentScrollLeft = maxScroll;
+                            isProgrammaticScroll = true;
+                            scrollRow.scrollLeft = currentScrollLeft;
+                            autoDir = -1;
+                            autoScrollRaf = null;
+                            lastTimestamp = null;
+                            turnaroundTimer = setTimeout(() => {
+                                turnaroundTimer = null;
+                                startAutoScroll();
+                            }, 2000);
+                            return;
+                        }
+
+                        // Reached left edge: clamp, pause for 2s, then scroll forward
+                        if (currentScrollLeft <= 2 && autoDir === -1) {
+                            currentScrollLeft = 0;
+                            isProgrammaticScroll = true;
+                            scrollRow.scrollLeft = currentScrollLeft;
+                            autoDir = 1;
+                            autoScrollRaf = null;
+                            lastTimestamp = null;
+                            turnaroundTimer = setTimeout(() => {
+                                turnaroundTimer = null;
+                                startAutoScroll();
+                            }, 2000);
+                            return;
+                        }
+
+                        isProgrammaticScroll = true;
+                        scrollRow.scrollLeft = currentScrollLeft;
+                    }
+
+                    autoScrollRaf = requestAnimationFrame(step);
+                };
+
+                autoScrollRaf = requestAnimationFrame(step);
+            };
+
+            const pauseAutoScroll = () => {
+                isInteracting = true;
+                if (idleTimer) clearTimeout(idleTimer);
+                if (turnaroundTimer) {
+                    clearTimeout(turnaroundTimer);
+                    turnaroundTimer = null;
+                }
+                if (autoScrollRaf) {
+                    cancelAnimationFrame(autoScrollRaf);
+                    autoScrollRaf = null;
+                    lastTimestamp = null;
+                }
+                currentScrollLeft = scrollRow.scrollLeft;
+            };
+
+            const scheduleAutoScroll = () => {
+                if (idleTimer) clearTimeout(idleTimer);
+                if (turnaroundTimer) {
+                    clearTimeout(turnaroundTimer);
+                    turnaroundTimer = null;
+                }
+                idleTimer = setTimeout(() => {
+                    isInteracting = false;
+                    startAutoScroll();
+                }, 1300);
+            };
+
+            scrollRow.addEventListener('mouseenter', pauseAutoScroll);
+            scrollRow.addEventListener('mouseleave', () => {
+                if (!isMouseDown) scheduleAutoScroll();
+            });
+            scrollRow.addEventListener('touchstart', pauseAutoScroll, { passive: true });
+            scrollRow.addEventListener('touchend', scheduleAutoScroll, { passive: true });
+            scrollRow.addEventListener('scroll', () => {
+                if (isProgrammaticScroll) {
+                    isProgrammaticScroll = false;
+                    return;
+                }
+                currentScrollLeft = scrollRow.scrollLeft;
+                pauseAutoScroll();
+                scheduleAutoScroll();
+            }, { passive: true });
+
+            const rowObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    isVisible = entry.isIntersecting;
+                    if (isVisible) {
+                        scheduleAutoScroll();
+                    } else {
+                        pauseAutoScroll();
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            rowObserver.observe(scrollRow);
 
             const limit = 15;
             const imagesToShow = cat.urls.slice(0, limit);
@@ -464,10 +660,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const createImgElem = (url, waveIndex) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'img-container';
+                wrapper.setAttribute('draggable', 'false');
+                wrapper.addEventListener('dragstart', (e) => {
+                    e.preventDefault();
+                    return false;
+                });
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.src = url;
+                img.draggable = false;
+                img.setAttribute('draggable', 'false');
+                img.addEventListener('dragstart', (e) => {
+                    e.preventDefault();
+                    return false;
+                });
 
                 const reveal = () => {
                     wrapper.classList.add('is-sized');
@@ -489,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 img.addEventListener('click', () => {
+                    if (hasDragged) return;
                     openLightbox(img, cat.categoryName || 'ARCHIVE');
                 });
                 
@@ -501,19 +709,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 scrollRow.appendChild(createImgElem(url, i));
             });
 
+            // Luxury End-Card Tile
+            if (hasMore) {
+                const seeAllCard = document.createElement('a');
+                seeAllCard.className = 'see-all-card';
+                seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                const remaining = cat.urls.length - imagesToShow.length;
+                seeAllCard.innerHTML = `
+                    <div class="see-all-card-inner">
+                        <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
+                        <span class="see-all-label">Full Editorial</span>
+                        <span class="see-all-count">${cat.urls.length} Photos</span>
+                        <span class="see-all-arrow">&rarr;</span>
+                    </div>
+                `;
+                scrollRow.appendChild(seeAllCard);
+            }
+
             const scrollWrapper = document.createElement('div');
             scrollWrapper.className = 'scrollable-row-wrapper';
             scrollWrapper.appendChild(scrollRow);
 
-            if (hasMore) {
-                const fadeBtn = document.createElement('div');
-                fadeBtn.className = 'fade-overlay';
-                fadeBtn.innerHTML = `<span class="fade-btn-text">See All &rarr;</span>`;
-                fadeBtn.addEventListener('click', () => {
-                    window.location.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-                });
-                scrollWrapper.appendChild(fadeBtn);
-            }
+            // Floating Desktop Chevron Arrows
+            const prevArrow = document.createElement('button');
+            prevArrow.className = 'row-nav-arrow nav-prev';
+            prevArrow.setAttribute('aria-label', 'Previous photos');
+            prevArrow.innerHTML = '&lsaquo;';
+            prevArrow.addEventListener('click', (e) => {
+                e.stopPropagation();
+                scrollRow.scrollBy({ left: -450, behavior: 'smooth' });
+                pauseAutoScroll();
+                scheduleAutoScroll();
+            });
+
+            const nextArrow = document.createElement('button');
+            nextArrow.className = 'row-nav-arrow nav-next';
+            nextArrow.setAttribute('aria-label', 'Next photos');
+            nextArrow.innerHTML = '&rsaquo;';
+            nextArrow.addEventListener('click', (e) => {
+                e.stopPropagation();
+                scrollRow.scrollBy({ left: 450, behavior: 'smooth' });
+                pauseAutoScroll();
+                scheduleAutoScroll();
+            });
+
+            scrollWrapper.appendChild(prevArrow);
+            scrollWrapper.appendChild(nextArrow);
 
             rowDiv.appendChild(scrollWrapper);
             categoriesContainer.appendChild(rowDiv);

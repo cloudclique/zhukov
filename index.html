@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV.studio</title>
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=35">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -25,9 +25,8 @@
                 <div class="hero-editorial-card">
                     <span class="hero-issue-tag">EXCLUSIVE COVER STORY</span>
                     <h2 class="hero-main-title">
-                        <span class="line-plain">Photography</span>
-                        <span class="line-italic">that</span>
-                        <span class="line-plain">inspires</span>
+                        <span class="hero-line-top">Photography</span>
+                        <span class="hero-line-bottom"><span class="line-italic">that</span> <span class="line-plain">inspires</span></span>
                     </h2>
                     <p class="hero-subdeck">
                         A STUDY IN BOLD CONTRAST, REFINED LIGHTING, AND STRIKING FASHION PORTRAITURE.
@@ -37,9 +36,10 @@
             </div>
 
             <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right -->
-            <div class="hero-diagonal-cut-wrapper">
-                <img src="https://i.ibb.co/8n4hhJhK/image-11.webp" alt="High Fashion Vogue Editorial Cover"
-                    loading="eager">
+            <div class="hero-diagonal-cut-wrapper" id="hero-img-container">
+                <img src="" alt="High Fashion Vogue Editorial Cover" loading="eager" id="hero-img">
+                <button class="slot-edit-btn hero-edit-btn" id="hero-edit-btn" title="Change hero cover image"
+                    aria-label="Change hero cover image">✏️</button>
             </div>
         </section>
 
@@ -47,34 +47,34 @@
         <section class="vogue-section vogue-profile-spread" id="studio">
             <div class="profile-spread-container">
                 <div class="profile-image-column">
-                    <div class="profile-image-frame">
-                        <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp" alt="Stanislav Zhukov Portrait"
-                            loading="lazy">
-                        <div class="profile-image-caption">
-                            <span class="caption-name">STANISLAV ZHUKOV</span>
-                            <span class="caption-title">PRINCIPAL PHOTOGRAPHER & CREATIVE DIRECTOR</span>
-                        </div>
+                    <div class="profile-image-frame" id="profile-img-container">
+                        <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp" alt="Stanislav Zhukov Studio"
+                            loading="lazy" id="profile-img">
+                        <button class="slot-edit-btn profile-edit-btn" id="profile-edit-btn" title="Change profile photo"
+                            aria-label="Change profile photo">✏️</button>
                     </div>
                 </div>
 
                 <div class="profile-text-column">
-                    <div class="profile-kicker">THE STUDIO / PROFILE</div>
-                    <h3 class="profile-main-heading">ABOUT STANISLAV ZHUKOV</h3>
+                    <div class="profile-kicker">THE STUDIO &bull; PROFILE</div>
+                    <h3 class="profile-main-heading">ABOUT STANISLAV</h3>
                     <div class="profile-body-text">
-                        <p class="lead-dropcap">
-                            Photography is not merely the capture of light—it is the deliberate orchestration of
-                            shadows, form, and tension. Over the past decade, Stanislav Zhukov has developed a
-                            distinctive aesthetic combining high-fashion precision with raw cinematic vulnerability.
+                        <p class="profile-statement">
+                            Photography is not merely the capture of light&mdash;it is the deliberate orchestration of
+                            shadows, form, and emotional tension.
                         </p>
-                        <p>
-                            From Paris Fashion Week to private editorial commissions in Milan and New York, our studio
-                            collaborates with international fashion houses, magazines, and visionary models to craft
-                            timeless visual legacies.
+                        <p class="profile-bio">
+                            Combining high-fashion precision with raw cinematic intimacy, Stanislav Zhukov collaborates
+                            with international fashion houses, editorial publications, and visionary models across Paris,
+                            Milan, and New York to craft timeless visual legacies.
                         </p>
                     </div>
 
                     <div class="profile-cta-group">
-                        <a href="/about/" class="vogue-outline-btn">GET TO KNOW MORE &rarr;</a>
+                        <a href="/about/" class="vogue-outline-btn">
+                            <span>GET TO KNOW MORE</span>
+                            <span class="btn-arrow">&rarr;</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -159,7 +159,7 @@
         </div>
     </div>
 
-    <script type="module" src="/script.js"></script>
+    <script type="module" src="/script.js?v=35"></script>
 </body>
 
 </html>

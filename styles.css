@@ -252,8 +252,40 @@ main {
 }
 
 .gallery-item:hover .slot-edit-btn,
-.gallery-item.empty-slot .slot-edit-btn {
+.gallery-item.empty-slot .slot-edit-btn,
+.editorial-hero:hover .hero-edit-btn,
+.hero-diagonal-cut-wrapper:hover .hero-edit-btn,
+.profile-image-frame:hover .profile-edit-btn {
     opacity: 1;
+}
+
+.hero-edit-btn,
+.profile-edit-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 1.05rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+    z-index: 30;
+    display: none;
+}
+
+.hero-edit-btn {
+    top: 24px;
+    right: 24px;
+}
+
+.profile-edit-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+@media (hover: none) {
+    .hero-edit-btn,
+    .profile-edit-btn {
+        opacity: 0.85;
+    }
 }
 
 .slot-edit-btn:hover {
@@ -458,70 +490,166 @@ body:has(.picker-overlay.show) header {
     border-radius: 10px;
 }
 
-/* Tablet Breakpoint: 4 Rows of 2 Alternating Items */
+/* Tablet Breakpoint: 4 Rows of 2 Alternating Items (Flush, No Gaps) */
 @media (max-width: 1100px) and (min-width: 769px) {
-    .gallery {
-        grid-template-columns: repeat(3, 1fr);
+    .gallery,
+    body.editorial-body .gallery {
+        grid-template-columns: repeat(3, 1fr) !important;
+        grid-template-rows: auto !important;
+        gap: 1.2rem !important;
     }
 
-    .gallery-item:nth-child(1) {
-        grid-column: 1 / 3;
-        grid-row: 1;
-        aspect-ratio: 3 / 2;
+    .gallery-item,
+    body.editorial-body .gallery-item {
+        height: 100% !important;
+        min-height: 0 !important;
     }
 
-    .gallery-item:nth-child(2) {
-        grid-column: 3 / 4;
-        grid-row: 1;
+    /* Row 1: Item 1 Wide (2 cols, 3:2), Item 2 Narrow (1 col, fills row height) */
+    .gallery-item:nth-child(1),
+    body.editorial-body .gallery-item:nth-child(1) {
+        grid-column: 1 / 3 !important;
+        grid-row: 1 !important;
+        aspect-ratio: 3 / 2 !important;
     }
 
-    .gallery-item:nth-child(3) {
-        grid-column: 1 / 2;
-        grid-row: 2;
+    .gallery-item:nth-child(2),
+    body.editorial-body .gallery-item:nth-child(2) {
+        grid-column: 3 / 4 !important;
+        grid-row: 1 !important;
+        aspect-ratio: auto !important;
+        height: 100% !important;
     }
 
-    .gallery-item:nth-child(4) {
-        grid-column: 2 / 4;
-        grid-row: 2;
-        aspect-ratio: 3 / 2;
+    /* Row 2: Item 3 Wide (2 cols, 3:2), Item 4 Narrow (1 col, fills row height) */
+    .gallery-item:nth-child(3),
+    body.editorial-body .gallery-item:nth-child(3) {
+        grid-column: 1 / 3 !important;
+        grid-row: 2 !important;
+        aspect-ratio: 3 / 2 !important;
     }
 
-    .gallery-item:nth-child(5) {
-        grid-column: 1 / 3;
-        grid-row: 3;
-        aspect-ratio: 3 / 2;
+    .gallery-item:nth-child(4),
+    body.editorial-body .gallery-item:nth-child(4) {
+        grid-column: 3 / 4 !important;
+        grid-row: 2 !important;
+        aspect-ratio: auto !important;
+        height: 100% !important;
     }
 
-    .gallery-item:nth-child(6) {
-        grid-column: 3 / 4;
-        grid-row: 3;
+    /* Row 3: Item 5 Narrow (1 col, fills row height), Item 6 Wide (2 cols, 3:2) */
+    .gallery-item:nth-child(5),
+    body.editorial-body .gallery-item:nth-child(5) {
+        grid-column: 1 / 2 !important;
+        grid-row: 3 !important;
+        aspect-ratio: auto !important;
+        height: 100% !important;
     }
 
-    .gallery-item:nth-child(7) {
-        grid-column: 1 / 2;
-        grid-row: 4;
+    .gallery-item:nth-child(6),
+    body.editorial-body .gallery-item:nth-child(6) {
+        grid-column: 2 / 4 !important;
+        grid-row: 3 !important;
+        aspect-ratio: 3 / 2 !important;
     }
 
-    .gallery-item:nth-child(8) {
-        grid-column: 2 / 4;
-        grid-row: 4;
-        aspect-ratio: 3 / 2;
+    /* Row 4: Item 7 Narrow (1 col, fills row height), Item 8 Wide (2 cols, 3:2) */
+    .gallery-item:nth-child(7),
+    body.editorial-body .gallery-item:nth-child(7) {
+        grid-column: 1 / 2 !important;
+        grid-row: 4 !important;
+        aspect-ratio: auto !important;
+        height: 100% !important;
+    }
+
+    .gallery-item:nth-child(8),
+    body.editorial-body .gallery-item:nth-child(8) {
+        grid-column: 2 / 4 !important;
+        grid-row: 4 !important;
+        aspect-ratio: 3 / 2 !important;
     }
 }
 
-/* Mobile Breakpoint: Stacked 1 Column */
+/* Mobile Breakpoint: 2-Column Responsive Flow (Vertical = 1 Col, Horizontal = 2 Cols) */
 @media (max-width: 768px) {
-    .gallery {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-        gap: 1.2rem;
+    .gallery,
+    body.editorial-body .gallery {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        grid-auto-flow: dense !important;
+        grid-template-rows: auto !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
     }
 
-    .gallery-item {
-        grid-column: 1 !important;
+    .gallery-item,
+    body.editorial-body .gallery-item {
         grid-row: auto !important;
-        aspect-ratio: 16 / 10 !important;
         height: auto !important;
+        border-radius: 8px !important;
+    }
+
+    /* Vertical (Portrait) image: 1 Column */
+    .gallery-item.is-vertical,
+    .gallery-item.is-portrait,
+    body.editorial-body .gallery-item.is-vertical,
+    body.editorial-body .gallery-item.is-portrait {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+    }
+
+    /* Horizontal (Landscape) image: Across 2 Columns */
+    .gallery-item.is-horizontal,
+    .gallery-item.is-landscape,
+    body.editorial-body .gallery-item.is-horizontal,
+    body.editorial-body .gallery-item.is-landscape {
+        grid-column: span 2 !important;
+        aspect-ratio: 16 / 10 !important;
+    }
+
+    /* ── Precision Slot Rules for Mobile: 5 & 7 Vertical (side-by-side), 6 & 8 Horizontal (span 2) ── */
+    .gallery-item:nth-child(5),
+    body.editorial-body .gallery-item:nth-child(5) {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+        order: 5 !important;
+    }
+
+    .gallery-item:nth-child(7),
+    body.editorial-body .gallery-item:nth-child(7) {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+        order: 6 !important;
+    }
+
+    .gallery-item:nth-child(6),
+    body.editorial-body .gallery-item:nth-child(6) {
+        grid-column: span 2 !important;
+        aspect-ratio: 16 / 10 !important;
+        order: 7 !important;
+    }
+
+    .gallery-item:nth-child(8),
+    body.editorial-body .gallery-item:nth-child(8),
+    .gallery-item.is-last-slot,
+    .gallery-item:last-child {
+        grid-column: span 2 !important;
+        aspect-ratio: 16 / 10 !important;
+        order: 8 !important;
+    }
+
+    /* Fallback if unclassified (non-last-slot) */
+    .gallery-item:not(.is-vertical):not(.is-horizontal):not(.is-portrait):not(.is-landscape):not(.is-last-slot):not(:last-child) {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+    }
+
+    .slot-edit-btn {
+        width: 32px;
+        height: 32px;
+        top: 8px;
+        right: 8px;
+        font-size: 0.85rem;
     }
 
     .picker-img-wrap {
@@ -575,7 +703,7 @@ body:has(.lightbox.show) header {
     max-width: 90vw;
     max-height: 90vh;
     box-sizing: border-box;
-    cursor: default;
+    cursor: pointer;
     transform: scale(0.95) translateY(12px);
     opacity: 0;
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
@@ -594,6 +722,7 @@ body:has(.lightbox.show) header {
     max-height: calc(90vh - 65px);
     background: #f8f8f8;
     overflow: hidden;
+    cursor: pointer;
 }
 
 .lightbox-content {
@@ -605,7 +734,7 @@ body:has(.lightbox.show) header {
     object-fit: contain;
     border-radius: 0;
     box-shadow: none;
-    cursor: default;
+    cursor: pointer;
 }
 
 /* Bottom Metadata Bar */
@@ -1786,17 +1915,23 @@ body.is-overscrolling {
 img,
 .gallery-item img,
 .fan-card img,
-.process-preview-img {
-    -webkit-user-drag: none;
-    -khtml-user-drag: none;
-    -moz-user-drag: none;
-    -o-user-drag: none;
-    user-drag: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -webkit-touch-callout: none;
+.process-preview-img,
+.scrollable-row,
+.scrollable-row *,
+.img-container,
+.row-img,
+.photo-card,
+.photo-card * {
+    -webkit-user-drag: none !important;
+    -khtml-user-drag: none !important;
+    -moz-user-drag: none !important;
+    -o-user-drag: none !important;
+    user-drag: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    -webkit-touch-callout: none !important;
 }
 
 /* ==========================================================================
@@ -1811,7 +1946,7 @@ body.editorial-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
-    padding-top: calc(178px + var(--site-banner-height, 0px));
+    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px));
     overflow-x: clip;
     min-height: 100vh;
     transition: padding-top 0.28s cubic-bezier(0.2, 0, 0, 1);
@@ -2195,19 +2330,30 @@ body.moodboard-body .vogue-header .brand-subtitle {
     letter-spacing: 0.01em;
 }
 
-.hero-main-title .line-plain {
+.hero-main-title .hero-line-top {
     display: block;
     letter-spacing: 0.02em;
 }
 
-.hero-main-title .line-italic {
+.hero-main-title .hero-line-bottom {
     display: block;
+}
+
+.hero-main-title .line-italic {
+    display: inline-block;
     font-style: italic;
     font-family: 'Instrument Serif', Georgia, serif;
     text-transform: none; /* "Elegance &" as in reference */
     letter-spacing: 0.01em;
     font-weight: 400;
     color: #000000;
+    margin-right: 0.25em;
+}
+
+.hero-main-title .line-plain {
+    display: inline-block;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
 .hero-subdeck {
@@ -2355,39 +2501,27 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 .profile-image-frame {
     position: relative;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #ebebeb;
     background: #ffffff;
-    padding: 1rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    padding: 0;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
     width: 100%;
+    overflow: hidden;
 }
 
 .profile-image-frame img {
     width: 100%;
     aspect-ratio: 16 / 11;
     min-height: 380px;
-    max-height: 460px;
+    max-height: 480px;
     object-fit: cover;
     object-position: center center;
     display: block;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.profile-image-caption {
-    margin-top: 0.85rem;
-    display: flex;
-    justify-content: space-between;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.16em;
-    color: #777777;
-    text-transform: uppercase;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 0.65rem;
-}
-
-.caption-name {
-    font-weight: 600;
-    color: #111111;
+.profile-image-frame:hover img {
+    transform: scale(1.02);
 }
 
 .profile-kicker {
@@ -2402,74 +2536,43 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 .profile-main-heading {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2rem, 3.2vw, 2.8rem);
+    font-size: clamp(2.2rem, 3.4vw, 3rem);
     font-weight: 400;
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: #000000;
     line-height: 1.05;
-    margin: 0 0 1rem 0;
+    margin: 0 0 1.2rem 0;
 }
 
 .profile-body-text {
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    line-height: 1.65;
-    color: #444444;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.8rem;
 }
 
-.profile-body-text p {
-    margin-bottom: 0.75rem;
-}
-
-.lead-dropcap::first-letter {
-    float: left;
+.profile-statement {
     font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 3rem;
-    line-height: 0.85;
-    padding-top: 2px;
-    padding-right: 10px;
-    padding-bottom: 0px;
-    color: #000000;
-    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(1.25rem, 1.8vw, 1.55rem);
+    line-height: 1.4;
+    color: #111111;
+    margin-bottom: 0.9rem;
+    letter-spacing: 0.01em;
 }
 
-.profile-stats-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.2rem;
-    border-top: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 1rem 0;
-    margin-bottom: 1.5rem;
-}
-
-.profile-stat-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-number {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 2rem;
-    line-height: 1;
-    color: #000000;
-    margin-bottom: 0.2rem;
-}
-
-.stat-label {
+.profile-bio {
     font-family: 'Inter', sans-serif;
-    font-size: 0.62rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    color: #777777;
-    text-transform: uppercase;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: #555555;
+    margin-bottom: 0;
 }
 
 .vogue-outline-btn {
-    display: inline-block;
-    padding: 0.75rem 1.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.6rem;
     border: 1px solid #000000;
     background: transparent;
     color: #000000;
@@ -2482,9 +2585,18 @@ body.moodboard-body .vogue-header .brand-subtitle {
     transition: all 0.3s ease;
 }
 
+.vogue-outline-btn .btn-arrow {
+    display: inline-block;
+    transition: transform 0.25s ease;
+}
+
 .vogue-outline-btn:hover {
     background: #000000;
     color: #ffffff;
+}
+
+.vogue-outline-btn:hover .btn-arrow {
+    transform: translateX(4px);
 }
 
 /* ── 7. Areas of Expertise / Services Section ─────────────────────────── */
@@ -2989,15 +3101,17 @@ body.editorial-body .gallery-item:hover img {
         overflow: hidden !important;
     }
 
-    /* Mobile Hero Refinements */
+    /* ── Mobile Homepage Refinements (Clarity, Pacing & Hierarchy) ── */
     .editorial-hero {
         min-height: auto;
         flex-direction: column;
         overflow: hidden;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e5e5;
     }
 
     .hero-text-container {
-        padding: 2.5rem 1.5rem 2rem 1.5rem;
+        padding: 2.75rem 1.25rem 2rem 1.25rem;
         max-width: 100%;
         box-sizing: border-box;
     }
@@ -3007,30 +3121,64 @@ body.editorial-body .gallery-item:hover img {
     }
 
     .hero-issue-tag {
-        font-size: 0.68rem;
+        font-size: 0.65rem;
         letter-spacing: 0.22em;
-        margin-bottom: 1rem;
+        margin-bottom: 0.85rem;
+        color: #b32d2e;
+        display: inline-block;
     }
 
     .hero-main-title {
-        font-size: clamp(2.4rem, 9.5vw, 3.4rem);
-        line-height: 0.95;
-        margin-bottom: 1.25rem;
+        font-size: clamp(2.3rem, 9.4vw, 3.2rem);
+        line-height: 1.04;
+        margin-bottom: 1.15rem;
         letter-spacing: 0.01em;
     }
 
+    .hero-main-title .hero-line-top {
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .hero-main-title .hero-line-bottom {
+        display: block;
+        text-transform: uppercase;
+        margin-top: 0.12rem;
+    }
+
+    .hero-main-title .line-italic {
+        display: inline-block;
+        font-style: italic;
+        font-family: 'Instrument Serif', Georgia, serif;
+        text-transform: none;
+        margin-right: 0.22em;
+        font-weight: 400;
+    }
+
+    .hero-main-title .line-plain {
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
     .hero-subdeck {
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         line-height: 1.6;
-        letter-spacing: 0.14em;
-        padding-left: 1rem;
-        margin-bottom: 1.75rem;
+        letter-spacing: 0.12em;
+        padding-left: 0.9rem;
+        margin-bottom: 1.65rem;
         max-width: 100%;
+        border-left: 2px solid #111111;
+        color: #555555;
     }
 
     .hero-action-btn {
-        display: inline-block;
-        padding: 0.9rem 2rem;
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 1rem 1.5rem;
+        box-sizing: border-box;
         font-size: 0.72rem;
         letter-spacing: 0.18em;
     }
@@ -3041,25 +3189,188 @@ body.editorial-body .gallery-item:hover img {
         right: 0;
         bottom: auto;
         width: 100%;
-        height: clamp(320px, 46vh, 440px);
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 94%);
+        height: clamp(290px, 44vh, 390px);
+        clip-path: none !important;
         background-color: #f5f5f5;
+        border-top: 1px solid #ebebeb;
     }
 
     .hero-diagonal-cut-wrapper img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        object-position: center 15%;
+        object-position: center 20%;
         display: block;
     }
 
     .hero-diagonal-cut-wrapper::before {
-        background: linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, transparent 15%);
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, transparent 20%);
     }
 
+    /* Common Section Header on Mobile */
     .vogue-section {
-        padding: 4rem 1.5rem;
+        padding: 3.2rem 1.25rem !important;
+    }
+
+    .vogue-section-header {
+        margin: 0 auto 2.4rem auto;
+        text-align: center;
+    }
+
+    .section-editorial-title {
+        font-size: clamp(1.9rem, 7.5vw, 2.6rem);
+        line-height: 1.05;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+    }
+
+    .section-editorial-subtitle {
+        font-size: 0.85rem;
+        line-height: 1.55;
+        color: #666666;
+    }
+
+    /* Studio / Profile Section on Mobile */
+    .vogue-profile-spread {
+        padding: 3rem 1.25rem !important;
+        border-top: 1px solid #ebebeb;
+        border-bottom: 1px solid #ebebeb;
+        background: #ffffff;
+    }
+
+    .profile-spread-container {
+        grid-template-columns: 1fr;
+        gap: 1.6rem;
+    }
+
+    .profile-image-frame {
+        padding: 0;
+        border: 1px solid #ececec;
+        background: transparent;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    }
+
+    .profile-image-frame img {
+        aspect-ratio: 16 / 10;
+        min-height: unset !important;
+        max-height: 260px;
+        height: auto;
+        width: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .profile-image-caption {
+        display: none !important;
+    }
+
+    .profile-kicker {
+        font-size: 0.62rem;
+        letter-spacing: 0.22em;
+        margin-bottom: 0.4rem;
+        color: #b32d2e;
+    }
+
+    .profile-main-heading {
+        font-size: clamp(2rem, 7.5vw, 2.5rem);
+        line-height: 1.05;
+        margin-bottom: 0.75rem;
+    }
+
+    .profile-body-text {
+        margin-bottom: 1.25rem;
+    }
+
+    .profile-statement {
+        font-size: 1.15rem;
+        line-height: 1.35;
+        margin-bottom: 0.65rem;
+        color: #111111;
+    }
+
+    .profile-bio {
+        font-size: 0.85rem;
+        line-height: 1.6;
+        color: #555555;
+    }
+
+    .profile-cta-group {
+        margin-top: 1.25rem;
+    }
+
+    .vogue-outline-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: auto;
+        text-align: center;
+        padding: 0.78rem 1.4rem;
+        box-sizing: border-box;
+        font-size: 0.7rem;
+        letter-spacing: 0.16em;
+        background: transparent;
+        color: #111111;
+        border: 1px solid #111111;
+    }
+
+    /* Disciplines Section on Mobile */
+    .vogue-disciplines-section {
+        padding: 3.2rem 1.25rem !important;
+        border-bottom: 1px solid #ebebeb;
+    }
+
+    .disciplines-grid {
+        grid-template-columns: 1fr;
+        gap: 1.2rem;
+    }
+
+    .discipline-card {
+        padding: 1.65rem 1.35rem;
+        border: 1px solid #ebebeb;
+        background: #ffffff;
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    }
+
+    .discipline-num {
+        font-size: 1.7rem;
+        font-family: 'Instrument Serif', Georgia, serif;
+        color: #b32d2e;
+        margin-bottom: 0.35rem;
+        display: block;
+    }
+
+    .discipline-title {
+        font-size: 1.22rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .discipline-desc {
+        font-size: 0.85rem;
+        line-height: 1.55;
+        color: #555555;
+    }
+
+    /* Curated Archive Section on Mobile */
+    .vogue-archive-section {
+        padding: 3.2rem 1.25vw 3rem 1.25vw !important;
+        border-top: 1px solid #ebebeb;
+    }
+
+    .vogue-archive-action {
+        margin-top: 2.5rem;
+        padding: 0 1rem;
+    }
+
+    .vogue-solid-btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 1.05rem 1.5rem;
+        box-sizing: border-box;
+        font-size: 0.74rem;
+        letter-spacing: 0.18em;
     }
 
     .footer-bottom-row {
@@ -3070,33 +3381,28 @@ body.editorial-body .gallery-item:hover img {
 
 @media (max-width: 480px) {
     .hero-text-container {
-        padding: 2rem 1.25rem 1.5rem 1.25rem;
+        padding: 2.2rem 1rem 1.5rem 1rem;
     }
 
     .hero-main-title {
         font-size: clamp(2.1rem, 9vw, 2.7rem);
         line-height: 0.94;
-        margin-bottom: 1.1rem;
+        margin-bottom: 1rem;
     }
 
     .hero-subdeck {
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         line-height: 1.55;
         margin-bottom: 1.4rem;
-        padding-left: 0.85rem;
-    }
-
-    .hero-action-btn {
-        display: block;
-        width: 100%;
-        text-align: center;
-        padding: 0.95rem 1.5rem;
-        box-sizing: border-box;
+        padding-left: 0.8rem;
     }
 
     .hero-diagonal-cut-wrapper {
-        height: 310px;
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 95%);
+        height: 280px;
+    }
+
+    .vogue-section {
+        padding: 2.75rem 1rem !important;
     }
 }
 
@@ -3326,4 +3632,142 @@ body.editorial-body .gallery-item:hover img {
     display: block;
     margin: 0 auto;
     border-bottom: 1px solid #ebebeb;
+}
+
+/* ==========================================================================
+   UNIFIED EDITORIAL PAGE HEADERS & TITLES (All Subpages Except Home)
+   ========================================================================== */
+.vogue-subpage-header,
+.about-hero-section,
+.vogue-contact-hero,
+.vogue-dashboard-hero,
+.archived-banner {
+    text-align: center;
+    padding: 2.75rem 4vw 2.25rem 4vw;
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.subpage-editorial-title,
+.about-editorial-title,
+.contact-editorial-title,
+.editorial-page-title,
+.upload-title,
+.archived-banner-title {
+    font-family: 'Instrument Serif', Georgia, serif !important;
+    font-size: clamp(2.4rem, 4.5vw, 3rem) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    color: #000000 !important;
+    line-height: 1.05 !important;
+    margin: 0 0 0.6rem 0 !important;
+}
+
+.subpage-editorial-subtitle,
+.about-text,
+.contact-editorial-subtitle,
+.editorial-page-subtitle,
+.upload-section-desc,
+.archived-banner-subtitle {
+    font-family: 'Inter', sans-serif !important;
+    font-size: clamp(0.88rem, 1.4vw, 0.96rem) !important;
+    color: #666666 !important;
+    line-height: 1.65 !important;
+    max-width: 620px !important;
+    margin: 0 auto !important;
+    font-weight: 400 !important;
+}
+
+.subpage-meta-tag,
+.about-kicker,
+.contact-meta-tag,
+.editorial-section-tag,
+.upload-kicker {
+    display: inline-block !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.22em !important;
+    color: #b32d2e !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Desktop Photoshoots Page: Page title banner hidden, Order By directly at header */
+@media (min-width: 769px) {
+    body.photoshoots-body .vogue-subpage-header,
+    .photoshoots-page .vogue-subpage-header {
+        display: none !important;
+    }
+
+    body.photoshoots-body .sort-bar,
+    .photoshoots-page .sort-bar {
+        border-top: none;
+        padding: 0.85rem 4vw;
+        background: #ffffff;
+    }
+}
+
+/* Mobile Uniform Page Headers (Compact, elegant, minimal vertical height) */
+@media (max-width: 768px) {
+    .vogue-subpage-header,
+    .about-hero-section,
+    .vogue-contact-hero,
+    .vogue-dashboard-hero,
+    .archived-banner {
+        padding: 1.35rem 1.25rem 1.1rem 1.25rem !important;
+        text-align: center !important;
+    }
+
+    .subpage-editorial-title,
+    .about-editorial-title,
+    .contact-editorial-title,
+    .editorial-page-title,
+    .upload-title,
+    .archived-banner-title {
+        font-size: clamp(1.45rem, 5.8vw, 1.85rem) !important;
+        letter-spacing: 0.05em !important;
+        line-height: 1.1 !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    .subpage-editorial-subtitle,
+    .about-text,
+    .contact-editorial-subtitle,
+    .editorial-page-subtitle,
+    .upload-section-desc,
+    .archived-banner-subtitle {
+        font-size: 0.82rem !important;
+        line-height: 1.5 !important;
+        max-width: 94% !important;
+    }
+
+    .subpage-meta-tag,
+    .about-kicker,
+    .contact-meta-tag,
+    .editorial-section-tag,
+    .upload-kicker {
+        font-size: 0.6rem !important;
+        letter-spacing: 0.18em !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* Mobile Photoshoots Page: Minimal height title block */
+    body.photoshoots-body .vogue-subpage-header {
+        display: block !important;
+        padding: 0.75rem 1rem 0.5rem 1rem !important;
+    }
+
+    body.photoshoots-body .subpage-editorial-title {
+        font-size: clamp(1.35rem, 5vw, 1.65rem) !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+    }
+
+    body.photoshoots-body .sort-bar {
+        padding: 0.55rem 0.85rem !important;
+    }
 }

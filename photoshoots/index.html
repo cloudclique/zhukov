@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — Photoshoots Archive</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="photoshoots.css">
+    <link rel="stylesheet" href="/styles.css?v=36">
+    <link rel="stylesheet" href="photoshoots.css?v=36">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -15,20 +15,19 @@
     <script src="/site-components.js"></script>
 </head>
 
-<body class="editorial-body">
+<body class="editorial-body photoshoots-body">
     <!-- Dynamic Site Header Slot -->
     <div id="site-header-slot"></div>
 
     <main id="app-content" class="vogue-page-main">
-        <!-- Editorial Section Header -->
-        <section class="vogue-subpage-header">
-            <span class="subpage-meta-tag"></span>
+        <!-- Editorial Section Header (Desktop: Hidden to place Order By directly at header; Mobile: Ultra-compact) -->
+        <section class="vogue-subpage-header" id="photoshoots-header">
             <h2 class="subpage-editorial-title">PHOTOSHOOTS</h2>
-            <p class="subpage-editorial-subtitle"></p>
         </section>
 
-        <!-- Sort Bar -->
+        <!-- Editorial Sort & Catalog Bar -->
         <div class="sort-bar">
+            <span class="sort-catalog-tag">EDITORIAL ARCHIVE</span>
             <div class="sort-group">
                 <label for="sort-select" class="sort-label">ORDER BY</label>
                 <select id="sort-select" class="sort-select">
@@ -37,8 +36,8 @@
                     <option value="model">Model</option>
                     <option value="theme">Theme</option>
                 </select>
+                <button id="sort-order-btn" class="sort-btn" data-order="asc">A–Z &darr;</button>
             </div>
-            <button id="sort-order-btn" class="sort-btn" data-order="asc">A–Z &darr;</button>
         </div>
 
         <!-- Gallery Categories -->
@@ -69,7 +68,7 @@
     </div>
 
     <!-- We use a custom script for this page -->
-    <script type="module" src="script.js"></script>
+    <script type="module" src="script.js?v=37"></script>
 </body>
 
 </html>

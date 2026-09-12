@@ -301,21 +301,40 @@ document.addEventListener('DOMContentLoaded', () => {
                         uploadedBy: auth.currentUser.uid
                     });
                 }
+
+                // Prepend newly uploaded URLs to single_shots_order setting so they are placed at the top of the gallery
+                try {
+                    const orderRef = doc(db, 'settings', 'single_shots_order');
+                    const orderSnap = await getDoc(orderRef).catch(() => null);
+                    if (orderSnap && orderSnap.exists()) {
+                        const currentOrder = Array.isArray(orderSnap.data().order) ? orderSnap.data().order : [];
+                        const newOrder = [...uploadedUrls, ...currentOrder.filter(u => !uploadedUrls.includes(u))];
+                        await setDoc(orderRef, { order: newOrder }, { merge: true });
+                    } else {
+                        await setDoc(orderRef, { order: uploadedUrls }, { merge: true });
+                    }
+                } catch (orderErr) {
+                    console.warn("Could not update single_shots_order on upload:", orderErr);
+                }
             } else {
                 // Sanitize category to create a valid Firestore document ID (no slashes allowed)
                 const docId = category.replace(/[\/\\]/g, '-');
                 const photoSetRef = doc(db, 'photo_sets', docId);
+                // In photo sets, galleries display images using rawUrls.reverse() (newest to oldest).
+                // Reversing the uploaded batch before arrayUnion ensures that the first uploaded
+                // image is placed at index 0 (the top of the gallery), followed by subsequent images.
+                const reversedBatch = [...uploadedUrls].reverse();
                 const updateData = {
                     categoryName: category,
                     modelName,
                     theme,
                     date,
-                    urls: arrayUnion(...uploadedUrls),
+                    urls: arrayUnion(...reversedBatch),
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid
                 };
                 if (isAdult) {
-                    updateData.adultUrls = arrayUnion(...uploadedUrls);
+                    updateData.adultUrls = arrayUnion(...reversedBatch);
                     updateData.isAdult = true;
                 }
                 if (description) {
@@ -330,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Invalidate cached photoshoots so fresh uploads appear immediately
             invalidateCache('photoshoots');
             invalidateCache('gallery');
+            invalidateCache('archived');
 
             // Success!
             statusMsg.innerHTML = '<span class="success">All photos successfully uploaded and saved!</span>';
