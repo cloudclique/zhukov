@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     initColorPalettePicker();
+    initMethodologyStepper();
 });
 
 function initColorPalettePicker() {
@@ -33,9 +34,9 @@ function initColorPalettePicker() {
     let luminance = 78; // percentage
     let isDragging = false;
 
-    // Canvas setup for crisp rendering on high-DPI displays (compact 220px)
+    // Canvas setup for crisp rendering on high-DPI displays (compact 150px)
     const ctx = wheelCanvas.getContext('2d');
-    const size = 220;
+    const size = 150;
     const dpr = window.devicePixelRatio || 1;
     wheelCanvas.width = size * dpr;
     wheelCanvas.height = size * dpr;
@@ -44,8 +45,8 @@ function initColorPalettePicker() {
     ctx.scale(dpr, dpr);
 
     const center = size / 2;
-    const outerRadius = (size / 2) - 8;
-    const innerRadius = outerRadius - 24;
+    const outerRadius = (size / 2) - 6;
+    const innerRadius = outerRadius - 18;
 
     // Draw the Hue Ring on Canvas
     function drawHueRing() {
@@ -171,19 +172,19 @@ function initColorPalettePicker() {
             spokesSvg += `
                 <line x1="${center}" y1="${center}" x2="${hx}" y2="${hy}" 
                       stroke="rgba(255, 255, 255, ${isBase ? '0.9' : '0.45'})" 
-                      stroke-width="${isBase ? '2.5' : '1.5'}" 
-                      stroke-dasharray="${isBase ? 'none' : '3,3'}" />
+                      stroke-width="${isBase ? '2' : '1.2'}" 
+                      stroke-dasharray="${isBase ? 'none' : '2,2'}" />
             `;
 
             // Handle circle
             handlesSvg += `
                 <g class="wheel-handle-group" data-hue="${hue}">
-                    <circle cx="${hx}" cy="${hy}" r="${isBase ? '12' : '9.5'}" 
+                    <circle cx="${hx}" cy="${hy}" r="${isBase ? '8.5' : '6.5'}" 
                             fill="${hex}" 
                             stroke="#ffffff" 
-                            stroke-width="${isBase ? '3' : '2'}" 
-                            filter="drop-shadow(0 2px 8px rgba(0,0,0,0.6))" />
-                    ${isBase ? `<circle cx="${hx}" cy="${hy}" r="3" fill="#ffffff" />` : ''}
+                            stroke-width="${isBase ? '2.5' : '1.8'}" 
+                            filter="drop-shadow(0 2px 5px rgba(0,0,0,0.5))" />
+                    ${isBase ? `<circle cx="${hx}" cy="${hy}" r="2" fill="#ffffff" />` : ''}
                 </g>
             `;
         });
@@ -201,16 +202,15 @@ function initColorPalettePicker() {
             const isBase = (idx === 1 && modes[currentModeIndex] === 'analogous') || (idx === 0 && modes[currentModeIndex] !== 'analogous');
 
             const swatch = document.createElement('div');
-            swatch.className = `palette-swatch-box ${isBase ? 'base-swatch' : ''}`;
+            swatch.className = `palette-swatch-box palette-swatch-item ${isBase ? 'base-swatch' : ''}`;
             swatch.title = `Click to copy ${hex}`;
 
             swatch.innerHTML = `
-                <div class="swatch-color-preview" style="background-color: ${hex}; box-shadow: 0 4px 14px ${hex}44;">
+                <div class="swatch-color-preview swatch-color-box" style="background-color: ${hex}; box-shadow: 0 2px 6px ${hex}44;">
                     ${isBase ? '<span class="swatch-base-tag">Key</span>' : ''}
                 </div>
                 <div class="swatch-meta">
                     <span class="swatch-hex">${hex}</span>
-                    <span class="swatch-hsl">${Math.round(hue)}°</span>
                 </div>
                 <div class="swatch-copy-hint">Copied!</div>
             `;
@@ -218,7 +218,12 @@ function initColorPalettePicker() {
             swatch.addEventListener('click', () => {
                 navigator.clipboard.writeText(hex).then(() => {
                     swatch.classList.add('copied');
-                    setTimeout(() => swatch.classList.remove('copied'), 1200);
+                    const hint = swatch.querySelector('.swatch-copy-hint');
+                    if (hint) hint.style.opacity = '1';
+                    setTimeout(() => {
+                        swatch.classList.remove('copied');
+                        if (hint) hint.style.opacity = '0';
+                    }, 1200);
                 }).catch(() => { });
             });
 
@@ -262,48 +267,80 @@ function initColorPalettePicker() {
         updateSliderTracks();
     }
 
-    // Handle Wheel Interaction (Calculate Hue from Pointer Position)
-    function handlePointerOnWheel(e) {
-        const rect = wheelCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    function getPointerOrTouchPos(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
 
-        const x = clientX - rect.left - (rect.width / 2);
-        const y = clientY - rect.top - (rect.height / 2);
+    // Handle Wheel Interaction (Calculate Hue from Pointer or Touch Position)
+    function handlePointerOnWheel(e) {
+        const coords = getPointerOrTouchPos(e);
+        if (coords.x === undefined || coords.y === undefined) return;
+
+        const rect = wheelCanvas.getBoundingClientRect();
+        const dx = coords.x - rect.left - (rect.width / 2);
+        const dy = coords.y - rect.top - (rect.height / 2);
 
         // Calculate angle from center (0 degrees is Top = -Math.PI/2)
-        let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
         if (angle < 0) angle += 360;
 
         baseHue = Math.round(angle);
         updateAll();
     }
 
-    // Pointer event listeners on wheel
+    // Pointer and Native Touch event listeners on wheel for silky-smooth mobile & desktop tracking
     const wheelContainer = document.querySelector('.palette-wheel-container');
     if (wheelContainer) {
+        // Desktop Pointer (Mouse)
         wheelContainer.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch') return; // Touch is handled by dedicated touch events below
             isDragging = true;
-            wheelContainer.setPointerCapture(e.pointerId);
+            try { wheelContainer.setPointerCapture(e.pointerId); } catch (_) {}
             handlePointerOnWheel(e);
         });
 
         wheelContainer.addEventListener('pointermove', (e) => {
-            if (!isDragging) return;
+            if (e.pointerType === 'touch' || !isDragging) return;
             handlePointerOnWheel(e);
         });
 
         const stopDrag = (e) => {
             if (isDragging) {
                 isDragging = false;
-                try {
-                    wheelContainer.releasePointerCapture(e.pointerId);
-                } catch (_) { }
+                try { wheelContainer.releasePointerCapture(e.pointerId); } catch (_) { }
             }
         };
 
         wheelContainer.addEventListener('pointerup', stopDrag);
         wheelContainer.addEventListener('pointercancel', stopDrag);
+
+        // Native Touch for Mobile — prevents carousel swiping and page scrolling while rotating wheel
+        wheelContainer.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            e.preventDefault();
+            e.stopPropagation();
+            handlePointerOnWheel(e);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            handlePointerOnWheel(e);
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            if (isDragging) isDragging = false;
+        }, { passive: true });
+
+        window.addEventListener('touchcancel', () => {
+            if (isDragging) isDragging = false;
+        }, { passive: true });
     }
 
     // Harmony Mode Buttons (Direct click on icons)
@@ -352,3 +389,266 @@ document.addEventListener('dragstart', (e) => {
         return false;
     }
 }, { capture: true });
+
+function initMethodologyStepper() {
+    const stepperLinks = document.querySelectorAll('.stepper-step');
+    const stepCards = document.querySelectorAll('.process-step-card');
+    const roadmapGrid = document.getElementById('process-roadmap-grid');
+    const prevBtn = document.getElementById('mobile-swipe-prev');
+    const nextBtn = document.getElementById('mobile-swipe-next');
+    const swipeDots = document.querySelectorAll('.swipe-dot');
+    const mobileActiveNum = document.getElementById('mobile-active-num');
+    const stepperBar = document.querySelector('.methodology-stepper-bar.vertical');
+
+    if (!stepperLinks.length || !stepCards.length) return;
+
+    let currentActiveIndex = 0;
+    let isManualClick = false;
+    let manualClickTimer = null;
+
+    function isMobile() {
+        return window.innerWidth <= 860;
+    }
+
+    // Prevent browser from restoring scroll position down the page on reload
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    // Ensure page loads at the very top (never jump down to the bar on page load)
+    if (!window.location.hash || window.location.hash === '#methodology') {
+        window.scrollTo(0, 0);
+    }
+
+    // Central state manager for active step
+    function setActiveStep(index, highlightCard = true) {
+        if (index < 0 || index >= stepCards.length) return;
+        currentActiveIndex = index;
+        const targetCard = stepCards[index];
+        const targetId = targetCard ? targetCard.id : null;
+
+        // 1. Immediately update Stepper Links (Desktop vertical rail + Mobile top bar)
+        stepperLinks.forEach((link, idx) => {
+            const isMatch = (idx === index) || (targetId && link.getAttribute('href') === `#${targetId}`);
+            link.classList.toggle('active', isMatch);
+        });
+
+        // 2. Update Card Active / Spotlight State in Grid
+        stepCards.forEach((card, idx) => {
+            card.classList.toggle('active-step', idx === index);
+        });
+
+        if (highlightCard && targetCard && !isMobile()) {
+            targetCard.classList.remove('card-targeted');
+            void targetCard.offsetWidth; // Force reflow to re-trigger CSS spotlight animation
+            targetCard.classList.add('card-targeted');
+        }
+
+        // 3. Update Mobile carousel UI if on mobile
+        if (isMobile()) {
+            swipeDots.forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === index);
+            });
+            if (mobileActiveNum) {
+                mobileActiveNum.textContent = String(index + 1).padStart(2, '0');
+            }
+            if (prevBtn) prevBtn.disabled = (index === 0);
+            if (nextBtn) nextBtn.disabled = (index === stepCards.length - 1);
+
+            if (stepperBar) {
+                const activeLink = stepperLinks[index];
+                if (activeLink) {
+                    const barRect = stepperBar.getBoundingClientRect();
+                    const linkRect = activeLink.getBoundingClientRect();
+                    const delta = (linkRect.left - barRect.left) - (stepperBar.clientWidth / 2) + (linkRect.width / 2);
+                    stepperBar.scrollBy({ left: delta, behavior: 'smooth' });
+                }
+            }
+        }
+    }
+
+    // Scroll directly to a step by index (works smoothly on both mobile carousel and desktop)
+    function goToStep(index) {
+        if (index < 0 || index >= stepCards.length) return;
+        const targetEl = stepCards[index];
+        if (!targetEl) return;
+
+        if (isMobile() && roadmapGrid) {
+            // Scroll strictly inside the horizontal roadmapGrid container (never scrolling window vertically!)
+            const gridRect = roadmapGrid.getBoundingClientRect();
+            const cardRect = targetEl.getBoundingClientRect();
+            const delta = (cardRect.left - gridRect.left) - (roadmapGrid.clientWidth / 2) + (cardRect.width / 2);
+            roadmapGrid.scrollBy({ left: delta, behavior: 'smooth' });
+        } else {
+            const headerOffset = 90;
+            const elementPosition = targetEl.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            
+            // If already within view (e.g. Card 1 and Card 2 in the same row), avoid unnecessary jump
+            if (Math.abs(elementPosition - headerOffset) > 40) {
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }
+
+    // Click handler for Stepper links (Desktop vertical rail + Mobile top bar)
+    stepperLinks.forEach((link, idx) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            // 1. Immediately represent clicked item in the roadmap and highlight card!
+            setActiveStep(idx, true);
+
+            // 2. Lock scroll spy momentarily so smooth scroll doesn't immediately overwrite choice
+            isManualClick = true;
+            clearTimeout(manualClickTimer);
+            manualClickTimer = setTimeout(() => {
+                isManualClick = false;
+            }, 1200);
+
+            // 3. Scroll to row if needed
+            goToStep(idx);
+        });
+    });
+
+    // Also allow clicking directly on cards to activate them in the roadmap
+    stepCards.forEach((card, idx) => {
+        card.addEventListener('click', (e) => {
+            if (isMobile()) return;
+            // Don't interfere if interacting with wheel, sliders, mode buttons, chips, links
+            if (e.target.closest('.palette-mode-btn, #palette-sat-slider, #palette-lum-slider, .palette-wheel-container, .swatch-chip, a, button, input')) {
+                setActiveStep(idx, false);
+                return;
+            }
+            setActiveStep(idx, true);
+        });
+    });
+
+    // Mobile Prev / Next Buttons
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            const curIdx = getActiveMobileIndex();
+            const nextIdx = Math.max(0, curIdx - 1);
+            setActiveStep(nextIdx, false);
+            goToStep(nextIdx);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            const curIdx = getActiveMobileIndex();
+            const nextIdx = Math.min(stepCards.length - 1, curIdx + 1);
+            setActiveStep(nextIdx, false);
+            goToStep(nextIdx);
+        });
+    }
+
+    // Mobile Dots Click
+    swipeDots.forEach((dot, idx) => {
+        dot.addEventListener('click', () => {
+            setActiveStep(idx, false);
+            goToStep(idx);
+        });
+    });
+
+    // Determine which card is currently active on Mobile carousel
+    function getActiveMobileIndex() {
+        if (!roadmapGrid) return 0;
+        const scrollCenter = roadmapGrid.scrollLeft + (roadmapGrid.offsetWidth / 2);
+        let closestIndex = 0;
+        let minDistance = Infinity;
+
+        stepCards.forEach((card, idx) => {
+            const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+            const dist = Math.abs(scrollCenter - cardCenter);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = idx;
+            }
+        });
+
+        return closestIndex;
+    }
+
+    // Update state for Mobile Carousel
+    function updateMobileCarousel() {
+        if (!isMobile()) return;
+        const activeIdx = getActiveMobileIndex();
+        setActiveStep(activeIdx, false);
+    }
+
+    // Desktop Vertical Scroll Spy (Row-aware for pairs in the same row: 1/2, 3/4, 5/6, 7)
+    function updateDesktopScrollSpy() {
+        if (isMobile() || isManualClick) return;
+
+        // Group cards into rows by vertical position (cards within 50px of each other belong to the same row)
+        const rows = [];
+        let currentRow = [];
+        let lastTop = -9999;
+
+        stepCards.forEach((card, idx) => {
+            const top = card.offsetTop;
+            if (Math.abs(top - lastTop) > 50) {
+                if (currentRow.length > 0) rows.push(currentRow);
+                currentRow = [{ card, idx }];
+                lastTop = top;
+            } else {
+                currentRow.push({ card, idx });
+            }
+        });
+        if (currentRow.length > 0) rows.push(currentRow);
+
+        const focalLine = 140;
+        let activeRow = null;
+        let minRowDistance = Infinity;
+
+        rows.forEach(row => {
+            const firstCard = row[0].card;
+            const rect = firstCard.getBoundingClientRect();
+            // Row is eligible if visible in upper reading focal zone
+            if (rect.bottom > 100 && rect.top < window.innerHeight * 0.75) {
+                const distance = Math.abs(rect.top - focalLine);
+                if (distance < minRowDistance) {
+                    minRowDistance = distance;
+                    activeRow = row;
+                }
+            }
+        });
+
+        if (activeRow) {
+            // If current active card is already in this active row (e.g. user clicked 2 and is looking at row 1/2), keep it!
+            const isAlreadyInRow = activeRow.some(item => item.idx === currentActiveIndex);
+            if (!isAlreadyInRow) {
+                // Scrolled into a new row: set active to the first card in that row
+                setActiveStep(activeRow[0].idx, false);
+            }
+        }
+    }
+
+    // Event Listeners
+    if (roadmapGrid) {
+        roadmapGrid.addEventListener('scroll', () => {
+            updateMobileCarousel();
+        }, { passive: true });
+    }
+    window.addEventListener('scroll', updateDesktopScrollSpy, { passive: true });
+
+    window.addEventListener('resize', () => {
+        if (isMobile()) {
+            updateMobileCarousel();
+        } else {
+            updateDesktopScrollSpy();
+        }
+    }, { passive: true });
+
+    // Initial sync
+    if (isMobile()) {
+        updateMobileCarousel();
+    } else {
+        setActiveStep(0, false);
+    }
+}
+
+
+

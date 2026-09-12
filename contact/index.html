@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — Bookings & Impressum</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="contact.css">
+    <link rel="stylesheet" href="/styles.css?v=39">
+    <link rel="stylesheet" href="contact.css?v=59">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -20,53 +20,65 @@
     <div id="site-header-slot"></div>
 
     <main id="app-content" class="vogue-contact-main">
-        <!-- Contact & Bookings Spread -->
-        <section class="vogue-contact-hero">
-            <div class="contact-header-block">
-                <span class="contact-meta-tag">INQUIRIES &amp; COMMISSIONS</span>
-                <h2 class="contact-editorial-title">BOOK A SESSION</h2>
-                <p class="contact-editorial-subtitle">
-                    Available worldwide for high-fashion editorials and private photoshoots.
-                </p>
-            </div>
+        <div class="editorial-contact-container">
+            <!-- Two-Column Editorial Spread: Left Info & Details, Right Live Calendar -->
+            <div class="editorial-contact-grid">
+                <!-- Left Column: Direct Details & Primary Action -->
+                <div class="contact-details-col">
+                    <div class="contact-col-header">
+                        <span class="card-kicker">COMMISSIONS &amp; INQUIRIES</span>
+                        <h2 class="contact-col-title">GET IN TOUCH</h2>
+                        <p class="contact-col-desc">
+                            Stanislav Zhukov is available worldwide for high-fashion editorials, commercial campaigns,
+                            and private portraits. Direct all inquiries below.
+                        </p>
+                    </div>
 
-            <div class="contact-cards-grid">
-                <!-- Direct Booking Card -->
-                <div class="contact-card direct-booking-card">
-                    <h3 class="card-title">get in touch</h3>
-                    <p class="card-desc">
-                        For availability, production rates, or custom creative concepts, contact me directly:
-                    </p>
-
-                    <p class="card-desc">
-                        Fell free to edit the e-mail text to your needs. Please do not change the e-mail subject!!!
-                    </p>
-
-                    <div class="booking-direct-details">
+                    <div class="contact-meta-group">
                         <div class="direct-detail-item">
-                            <span class="detail-label">LOCATED IN</span>
-                            <span class="detail-val">Germany · Available Worldwide</span>
+                            <span class="detail-label">STUDIO LOCATION</span>
+                            <span class="detail-val">Germany &bull; Available Worldwide</span>
+                        </div>
+                        <div class="direct-detail-item">
+                            <span class="detail-label">DIRECT EMAIL</span>
+                            <a href="mailto:contact@zhukov.studio"
+                                class="detail-val detail-email-link">contact@zhukov.studio</a>
                         </div>
                         <div class="direct-detail-item">
                             <span class="detail-label">RESPONSE TIME</span>
                             <span class="detail-val">Within 24 Hours</span>
                         </div>
                     </div>
-                    <button type="button" class="vogue-solid-btn booking-cta-btn" id="contact-cta-btn">contact
-                        &rarr;</button>
+
+                    <div class="direct-card-actions">
+                        <button type="button" class="vogue-solid-btn booking-cta-btn" id="contact-cta-btn">
+                            <span>START INQUIRY</span>
+                            <span class="btn-arrow">&rarr;</span>
+                        </button>
+                        <a href="mailto:contact@zhukov.studio" class="vogue-outline-btn direct-mailto-btn">
+                            <span>EMAIL DIRECTLY</span>
+                        </a>
+                    </div>
                 </div>
 
-                <!-- Studio Availability Calendar Card -->
-                <div class="contact-card calendar-card" id="calendar-card">
-                    <div class="calendar-card-header">
-                        <div>
-                            <h3 class="card-title">AVAILABILITY</h3>
+                <!-- Right Column: Studio Availability Calendar -->
+                <div class="contact-calendar-col">
+                    <div class="contact-col-header">
+                        <div class="calendar-header-row">
+                            <div>
+                                <span class="card-kicker">STUDIO SCHEDULE</span>
+                                <h2 class="contact-col-title">AVAILABILITY</h2>
+                            </div>
+                            <div class="calendar-admin-badge hidden" id="calendar-admin-badge"
+                                title="Studio Administrator Mode Active">
+                                <span class="admin-pulse-dot"></span>
+                                <span>ADMIN MODE</span>
+                            </div>
                         </div>
-                        <div class="calendar-admin-badge hidden" id="calendar-admin-badge"
-                            title="Studio Administrator Mode Active">
-                            <span class="admin-pulse-dot"></span>
-                            <span>ADMIN MODE</span>
-                        </div>
+                        <p class="contact-col-desc">
+                            Real-time studio calendar. Select an open date to request a session or check production
+                            windows.
+                        </p>
                     </div>
 
                     <!-- Calendar Widget -->
@@ -139,16 +151,12 @@
                         <div class="cal-footer">
                             <div class="cal-legend">
                                 <div class="cal-legend-item">
-                                    <span class="cal-legend-dot is-open"></span>
-                                    <span>Open</span>
+                                    <span class="cal-legend-swatch is-open"></span>
+                                    <span>Available</span>
                                 </div>
                                 <div class="cal-legend-item">
-                                    <span class="cal-legend-dot is-booked"></span>
+                                    <span class="cal-legend-swatch is-booked"></span>
                                     <span>Booked</span>
-                                </div>
-                                <div class="cal-legend-item">
-                                    <span class="cal-legend-dot is-past"></span>
-                                    <span>Past</span>
                                 </div>
                             </div>
                             <div class="cal-admin-hint hidden" id="cal-admin-hint">
@@ -163,96 +171,81 @@
                         </div>
                     </div>
 
+                    <!-- Interactive Date Selection Action Bar -->
+                    <div class="main-cal-action-bar hidden" id="main-cal-action-bar">
+                        <div class="main-cal-selected-info">
+                            <span class="selected-label">SELECTED DATE:</span>
+                            <span class="selected-val" id="main-cal-selected-date-text">None selected</span>
+                        </div>
+                        <button type="button" class="vogue-solid-btn main-cal-book-btn" id="main-cal-confirm-btn">
+                            <span>REQUEST THIS DATE</span>
+                            <span class="btn-arrow">&rarr;</span>
+                        </button>
+                    </div>
+
                     <!-- Toast Notification for Admin Actions -->
                     <div class="cal-toast hidden" id="cal-toast" role="status" aria-live="polite"></div>
                 </div>
             </div>
-        </section>
 
-        <!-- Impressum Section -->
-        <section class="vogue-impressum-section" id="impressum">
-            <div class="impressum-container">
-                <span class="contact-meta-tag">LEGAL NOTICE</span>
-                <h3 class="impressum-title">IMPRESSUM</h3>
-                <div class="impressum-content-grid">
-                    <!-- 1. Angaben gemäß § 5 DDG -->
-                    <div class="impressum-block">
-                        <h4>Angaben gemäß § 5 DDG</h4>
-                        <p><strong>Name / Anbieter:</strong> Stanislav Zhukov</p>
-                        <p><strong>Studio / Bezeichnung:</strong> ZHUKOV Photography Studio</p>
-                        <p><strong>Anschrift:</strong> [Straße und Hausnummer]</p>
-                        <p>[PLZ Ort], Deutschland</p>
-                    </div>
+            <!-- Discreet Impressum Accordion at Bottom (§ 5 DDG Compliance) -->
+            <details class="editorial-impressum-drawer" id="impressum">
+                <summary class="impressum-summary">
+                    <span class="impressum-summary-text">LEGAL NOTICE &amp; IMPRESSUM (§ 5 DDG)</span>
+                    <span class="impressum-summary-icon">+</span>
+                </summary>
+                <div class="impressum-expanded-content">
+                    <div class="impressum-content-grid">
+                        <!-- 1. Angaben gemäß § 5 DDG -->
+                        <div class="impressum-block">
+                            <h4>Angaben gemäß § 5 DDG</h4>
+                            <p><strong>Stanislav Zhukov</strong></p>
+                            <p>ZHUKOV Photography Studio</p>
+                            <p>Deutschland &bull; Available Worldwide</p>
+                        </div>
 
-                    <!-- 2. Kontakt -->
-                    <div class="impressum-block">
-                        <h4>Kontakt</h4>
-                        <p><strong>Telefon:</strong> [+49 (0) 123 4567890]</p>
-                        <p><strong>E-Mail:</strong> <a href="mailto:contact@zhukov.studio">contact@zhukov.studio</a></p>
-                        <p><strong>Website:</strong> <a href="https://zhukov.studio">www.zhukov.studio</a></p>
-                    </div>
+                        <!-- 2. Kontakt & Steuern -->
+                        <div class="impressum-block">
+                            <h4>Kontakt &amp; Steuern</h4>
+                            <p><strong>E-Mail:</strong> <a href="mailto:contact@zhukov.studio">contact@zhukov.studio</a>
+                            </p>
+                            <p><strong>Website:</strong> <a href="https://zhukov.studio">www.zhukov.studio</a></p>
+                            <div class="impressum-tax-box">
+                                <p><strong>Umsatzsteuer-Identifikationsnummer (§ 27a UStG):</strong></p>
+                                <p>[DE XXX XXX XXX] <small>(Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.)</small>
+                                </p>
+                            </div>
+                        </div>
 
-                    <!-- 3. Umsatzsteuer-ID -->
-                    <div class="impressum-block">
-                        <h4>Umsatzsteuer-Identifikationsnummer</h4>
-                        <p>Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz (UStG):</p>
-                        <p><strong>USt-IdNr.:</strong> [DE XXX XXX XXX]</p>
-                        <p><small>(Hinweis falls Kleinunternehmer: Gemäß § 19 UStG wird keine Umsatzsteuer
-                                berechnet.)</small></p>
-                    </div>
+                        <!-- 3. Haftung für Inhalte & Links -->
+                        <div class="impressum-block">
+                            <h4>Haftung für Inhalte &amp; Links</h4>
+                            <p><strong>Haftung für Inhalte:</strong> Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG
+                                für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach
+                                §§ 8 bis 10 DDG sind wir jedoch nicht verpflichtet, übermittelte oder gespeicherte
+                                fremde Informationen zu überwachen.</p>
+                            <p><strong>Haftung für Links:</strong> Unser Angebot enthält Links zu externen Websites
+                                Dritter, auf deren Inhalte wir keinen Einfluss haben. Für die Inhalte der verlinkten
+                                Seiten ist stets der jeweilige Anbieter verantwortlich.</p>
+                        </div>
 
-                    <!-- 4. Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV -->
-                    <div class="impressum-block">
-                        <h4>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h4>
-                        <p><strong>Stanislav Zhukov</strong></p>
-                        <p>[Straße und Hausnummer]</p>
-                        <p>[PLZ Ort], Deutschland</p>
-                    </div>
-
-                    <!-- 5. Berufsbezeichnung & Berufsrecht -->
-                    <div class="impressum-block">
-                        <h4>Berufsbezeichnung & Kammer</h4>
-                        <p><strong>Berufsbezeichnung:</strong> Fotograf / Visual Artist (verliehen in Deutschland)</p>
-                        <p><strong>Zuständige Kammer:</strong> [Handwerkskammer / IHK Ort, falls eingetragen]</p>
-                    </div>
-
-                    <!-- 6. EU-Streitschlichtung & Verbraucherstreitbeilegung -->
-                    <div class="impressum-block">
-                        <h4>Streitbeilegung & Verbraucherschlichtung</h4>
-                        <p><strong>EU-Streitschlichtung:</strong> Die Europäische Kommission stellt eine Plattform zur
-                            Online-Streitbeilegung (OS) bereit:
-                            <a href="https://ec.europa.eu/consumers/odr/" target="_blank"
-                                rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>
-                        </p>
-                        <p><strong>Verbraucherstreitbeilegung (§ 36 VSBG):</strong> Wir sind weder bereit noch
-                            verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
-                            teilzunehmen.</p>
-                    </div>
-
-                    <!-- 7. Haftung für Inhalte & Links -->
-                    <div class="impressum-block">
-                        <h4>Haftung für Inhalte & Links</h4>
-                        <p><strong>Haftung für Inhalte:</strong> Als Diensteanbieter sind wir gemäß § 7 Abs. 1 DDG für
-                            eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis
-                            10 DDG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder
-                            gespeicherte fremde Informationen zu überwachen.</p>
-                        <p><strong>Haftung für Links:</strong> Unser Angebot enthält Links zu externen Websites Dritter,
-                            auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte
-                            auch keine Gewähr übernehmen.</p>
-                    </div>
-
-                    <!-- 8. Urheberrecht & Bildrechte -->
-                    <div class="impressum-block">
-                        <h4>Urheberrecht & Bildrechte</h4>
-                        <p>Die durch die Seitenbetreiber erstellten Inhalte, Fotografien und Werke auf diesen Seiten
-                            unterliegen dem deutschen Urheberrecht.</p>
-                        <p>Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der
-                            Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw.
-                            Erstellers.</p>
+                        <!-- 4. Urheberrecht & Streitbeilegung -->
+                        <div class="impressum-block">
+                            <h4>Urheberrecht &amp; Streitbeilegung</h4>
+                            <p><strong>Urheber- &amp; Bildrechte:</strong> Die auf diesen Seiten erstellten Inhalte,
+                                Fotografien und Bildwerke unterliegen dem deutschen Urheberrecht. Jede Art der
+                                Verwertung außerhalb der Grenzen des Urheberrechtes bedarf der vorherigen schriftlichen
+                                Zustimmung des Fotografen.</p>
+                            <p><strong>Verbraucherstreitbeilegung:</strong> Online-Streitbeilegung (OS): <a
+                                    href="https://ec.europa.eu/consumers/odr/" target="_blank"
+                                    rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>. Wir sind nicht
+                                verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle
+                                teilzunehmen (§ 36 VSBG).</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </details>
+        </div>
     </main>
 
     <!-- Dynamic Site Footer Slot -->
@@ -409,7 +402,7 @@
         </div>
     </div>
 
-    <script type="module" src="contact.js"></script>
+    <script type="module" src="contact.js?v=44"></script>
 </body>
 
 </html>

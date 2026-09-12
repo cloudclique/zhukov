@@ -254,7 +254,9 @@ main {
 .gallery-item:hover .slot-edit-btn,
 .gallery-item.empty-slot .slot-edit-btn,
 .editorial-hero:hover .hero-edit-btn,
+.editorial-hero:hover .profile-edit-btn,
 .hero-diagonal-cut-wrapper:hover .hero-edit-btn,
+.hero-diagonal-cut-wrapper:hover .profile-edit-btn,
 .profile-image-frame:hover .profile-edit-btn {
     opacity: 1;
 }
@@ -2295,17 +2297,46 @@ body.moodboard-body .vogue-header .brand-subtitle {
     position: relative;
     z-index: 10;
     width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
     padding: 5rem 2rem 5rem 4vw;
     pointer-events: auto;
+    box-sizing: border-box;
 }
 
 .hero-editorial-card {
-    max-width: 520px;
+    max-width: 100%;
     text-align: left;
     position: relative;
     z-index: 11;
+}
+
+@media (min-width: 1025px) {
+    .editorial-hero .hero-text-container {
+        width: 37.5vw;
+        max-width: 37.5vw;
+        margin: 0;
+        padding: 5rem 0 5rem clamp(1.5rem, 3vw, 4vw);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-end;
+        box-sizing: border-box;
+        pointer-events: auto;
+    }
+
+    .hero-editorial-card {
+        max-width: 520px;
+        width: 100%;
+        margin-left: auto;
+        margin-right: 0;
+        text-align: left;
+    }
+
+    .hero-subdeck {
+        max-width: 440px;
+        text-align: left;
+    }
 }
 
 .hero-issue-tag {
@@ -2360,7 +2391,7 @@ body.moodboard-body .vogue-header .brand-subtitle {
     border-left: 2px solid #111111;
     padding-left: 1.25rem;
     margin: 0 0 2.5rem 0;
-    max-width: 440px;
+    max-width: 100%;
     font-family: 'Inter', sans-serif;
     font-size: 0.75rem;
     font-weight: 500;
@@ -2368,6 +2399,7 @@ body.moodboard-body .vogue-header .brand-subtitle {
     line-height: 1.65;
     color: #666666;
     text-transform: uppercase;
+    text-align: left;
 }
 
 .hero-action-btn {
@@ -2803,8 +2835,17 @@ body.editorial-body .gallery-item:hover img {
 
     .hero-text-container {
         padding: 3.5rem 2rem 2.5rem 2rem;
-        max-width: 100%;
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
         box-sizing: border-box;
+    }
+
+    .hero-editorial-card {
+        max-width: 100% !important;
+        width: 100%;
+        margin: 0 !important;
+        text-align: left;
     }
 
     .hero-diagonal-cut-wrapper {
@@ -3696,10 +3737,12 @@ body.editorial-body .gallery-item:hover img {
     margin-bottom: 0.5rem !important;
 }
 
-/* Desktop Photoshoots Page: Page title banner hidden, Order By directly at header */
+/* Desktop Subpages: Page title banner hidden on PC (Photoshoots & Contact) */
 @media (min-width: 769px) {
     body.photoshoots-body .vogue-subpage-header,
-    .photoshoots-page .vogue-subpage-header {
+    .photoshoots-page .vogue-subpage-header,
+    .contact-header-block,
+    #contact-header {
         display: none !important;
     }
 

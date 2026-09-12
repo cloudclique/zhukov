@@ -57,6 +57,10 @@ let recurringBar = null;
 let recurringTogglesContainer = null;
 let weekdaysHeader = null;
 let toastEl = null;
+let mainCalSelectedDate = null;
+let mainCalActionBar = null;
+let mainCalSelectedText = null;
+let mainCalConfirmBtn = null;
 
 // UI DOM References - Contact Modal
 let contactModal = null;
@@ -320,10 +324,12 @@ function createDayCell(dayNum, dateKey, isOtherMonth, todayKey) {
     const isUnavailable = isDateUnavailable(dateKey);
     const isToday = dateKey === todayKey;
     const isPast = dateKey < todayKey;
+    const isSelected = (mainCalSelectedDate === dateKey);
 
     if (isOtherMonth) cell.classList.add('is-other-month');
     if (isToday) cell.classList.add('is-today');
     if (isPast) cell.classList.add('is-past');
+    if (isSelected) cell.classList.add('is-selected');
 
     if (isUnavailable) {
         cell.classList.add('is-booked');
@@ -341,18 +347,17 @@ function createDayCell(dayNum, dateKey, isOtherMonth, todayKey) {
         badgeText = '';
     }
 
+    if (isSelected) {
+        badgeText = 'SELECTED';
+    }
+
     cell.setAttribute('aria-label', `${dateKey}: ${badgeText || 'Date'}`);
 
     const numSpan = document.createElement('span');
     numSpan.className = 'cal-day-num';
     numSpan.textContent = dayNum;
 
-    const badgeSpan = document.createElement('span');
-    badgeSpan.className = 'cal-day-badge';
-    badgeSpan.textContent = badgeText;
-
     cell.appendChild(numSpan);
-    cell.appendChild(badgeSpan);
 
     return cell;
 }
@@ -757,7 +762,7 @@ function initInteractionEngine() {
     }
 }
 
-// ── Visitor Main Calendar Date Click Handler (NEVER opens email) ────────
+// ── Visitor Main Calendar Date Click Handler ──────────────────────────
 function handleVisitorClick(cell, dateKey) {
     const todayKey = getTodayKey();
     const isPast = dateKey < todayKey;
@@ -769,12 +774,46 @@ function handleVisitorClick(cell, dateKey) {
     }
 
     if (isBooked) {
-        showToast("This date is booked / unavailable.", false);
+        showToast("This date is booked / unavailable. Please choose an open date.", false);
         return;
     }
 
-    // Date is Open: Informational feedback only
-    showToast("This date is open for booking. Click 'CONTACT →' to book.", false);
+    // Set selected date
+    mainCalSelectedDate = dateKey;
+
+    // Highlight cell in daysGrid
+    if (daysGrid) {
+        daysGrid.querySelectorAll('.cal-day-cell').forEach(c => {
+            const isTarget = (c.dataset.date === dateKey);
+            c.classList.toggle('is-selected', isTarget);
+            const badge = c.querySelector('.cal-day-badge');
+            if (badge) {
+                if (isTarget) {
+                    badge.textContent = 'SELECTED';
+                } else if (!c.classList.contains('is-booked') && !c.classList.contains('is-past') && !c.classList.contains('is-other-month')) {
+                    badge.textContent = 'OPEN';
+                }
+            }
+        });
+    }
+
+    // Format friendly date
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const formattedDate = dt.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    if (mainCalSelectedText) {
+        mainCalSelectedText.textContent = formattedDate;
+    }
+    if (mainCalActionBar) {
+        mainCalActionBar.classList.remove('hidden');
+        mainCalActionBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 // ── Direct Email Dispatcher Helper ──────────────────────────────────────
@@ -1038,8 +1077,29 @@ function initAuth() {
     });
 }
 
+// ── Impressum Drawer & Deep Link Controller ─────────────────────────────
+function initImpressumDrawer() {
+    const checkHash = () => {
+        const rawHash = (window.location.hash || '').toLowerCase();
+        if (rawHash.includes('impressum') || rawHash.includes('legal')) {
+            const drawer = document.getElementById('impressum');
+            if (drawer) {
+                drawer.open = true;
+                setTimeout(() => {
+                    drawer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+    };
+
+    // Run on initial load
+    checkHash();
+    // Run whenever hash changes (e.g. from footer link)
+    window.addEventListener('hashchange', checkHash);
+}
+
 // ── Application Initialization ──────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+function initContactApp() {
     // Cache DOM Elements - Main Page Calendar
     daysGrid = document.getElementById('cal-days-grid');
     monthHeading = document.getElementById('cal-month-heading');
@@ -1053,6 +1113,18 @@ document.addEventListener('DOMContentLoaded', () => {
     weekdaysHeader = document.getElementById('cal-weekdays');
     toastEl = document.getElementById('cal-toast');
 
+    // Main Calendar Action Bar Elements
+    mainCalActionBar = document.getElementById('main-cal-action-bar');
+    mainCalSelectedText = document.getElementById('main-cal-selected-date-text');
+    mainCalConfirmBtn = document.getElementById('main-cal-confirm-btn');
+
+    if (mainCalConfirmBtn) {
+        mainCalConfirmBtn.addEventListener('click', () => {
+            if (!mainCalSelectedDate) return;
+            openEmailClientForTopic('booking', mainCalSelectedDate);
+        });
+    }
+
     // Initialize modules
     renderCalendar();
     initNavigation();
@@ -1060,4 +1132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initFirestoreSync();
     initAuth();
     initContactModal();
-});
+    initImpressumDrawer();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initContactApp);
+} else {
+    initContactApp();
+}

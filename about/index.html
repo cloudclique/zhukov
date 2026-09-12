@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — About & Creative Roadmap</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="about.css">
+    <link rel="stylesheet" href="/styles.css?v=52">
+    <link rel="stylesheet" href="about.css?v=52">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -20,40 +20,113 @@
     <div id="site-header-slot"></div>
 
     <main id="app-content" class="vogue-about-main">
-        <!-- About Me Intro Section -->
-        <section class="about-hero-section">
-            <div class="about-container">
-                <span class="about-kicker">EDITORIAL PROFILE</span>
-                <h2 class="about-editorial-title">STANISLAV ZHUKOV</h2>
-                <p class="about-text">
-                    Dedicated to capturing the beauty of form, high-fashion elegance, and raw emotional tension. With a
-                    distinctive eye for contrast and nuanced visual storytelling, each commission is directed and
-                    crafted into timeless editorial art.
-                </p>
+        <!-- 1-to-1 Vogue Hero Section with Full Bleed Diagonal Cut Image (Matching Homepage Hero) -->
+        <section class="editorial-hero about-editorial-hero" id="profile">
+            <div class="hero-text-container">
+                <div class="hero-editorial-card">
+                    <span class="hero-issue-tag">EDITORIAL PROFILE &bull; CREATIVE VISION</span>
+                    <h1 class="hero-main-title">
+                        <span class="hero-line-top">STANISLAV</span>
+                        <span class="hero-line-bottom"><span class="line-plain">ZHUKOV</span></span>
+                    </h1>
+                    <p class="hero-subdeck">
+                        A STUDY IN BOLD CONTRAST, REFINED LIGHTING, AND RAW EMOTIONAL TENSION.
+                    </p>
+                    <div class="about-hero-bio">
+                        <p class="about-hero-statement">
+                            Photography is not merely the capture of light&mdash;it is the deliberate orchestration of
+                            shadows, form, and emotional tension.
+                        </p>
+                        <p>
+                            Combining high-fashion precision with raw cinematic intimacy, Stanislav Zhukov collaborates
+                            with international fashion houses, editorial publications, and visionary models across
+                            Paris,
+                            Milan, and New York to craft timeless visual legacies.
+                        </p>
+                    </div>
+                    <div class="about-hero-pillars">
+                        <span class="about-pillar-tag">01 High Fashion</span>
+                        <span class="about-pillar-tag">02 Fine-Art Portraiture</span>
+                        <span class="about-pillar-tag">03 Creative Direction</span>
+                    </div>
+                    <div class="about-hero-actions">
+                        <a href="/contact/" class="hero-action-btn">BOOK A PHOTOSHOOT</a>
+                        <a href="#methodology" class="vogue-outline-btn about-jump-btn">METHODOLOGY &darr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right (1-to-1 Homepage Angle) -->
+            <div class="hero-diagonal-cut-wrapper" id="about-hero-img-container">
+                <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp" alt="Stanislav Zhukov Atelier Portrait"
+                    loading="eager" id="profile-img">
+                <button class="slot-edit-btn profile-edit-btn hero-edit-btn" id="profile-edit-btn"
+                    title="Change profile photo" aria-label="Change profile photo">✏️</button>
             </div>
         </section>
 
         <!-- Working Process Workflow Roadmap -->
-        <section class="process-section">
+        <section class="process-section" id="methodology">
             <div class="process-header">
-                <h3 class="process-section-title">METHODOLOGY & PRODUCTION</h3>
+                <span class="process-badge">CREATIVE ARCHITECTURE</span>
+                <h2 class="process-section-title">METHODOLOGY &amp; PRODUCTION</h2>
                 <p class="process-section-subtitle">
                     A comprehensive walkthrough of how every photoshoot is conceptualized, directed, lighted, and
                     polished into master deliverables.
                 </p>
             </div>
 
-            <!-- Workflow Roadmap (2-Column Flow) -->
-            <div class="process-roadmap-grid">
+            <!-- Main Layout: Sticky Vertical Stepper Rail on Left + Chronological Cards on Right -->
+            <div class="methodology-main-layout">
+                <aside class="methodology-stepper-rail" id="methodology-stepper-rail"
+                    aria-label="Methodology Navigation Rail">
+                    <nav class="methodology-stepper-bar vertical" aria-label="Methodology Steps Quick Navigation">
+                        <div class="stepper-rail-header">
+                            <span class="stepper-rail-title">ROADMAP</span>
+                            <span class="stepper-rail-dot"></span>
+                        </div>
+                        <div class="stepper-rail-items">
+                            <a href="#step-picking-theme" class="stepper-step active">
+                                <span class="stepper-num">01</span>
+                                <span class="stepper-name">Theme</span>
+                            </a>
+                            <a href="#step-color-palette" class="stepper-step">
+                                <span class="stepper-num">02</span>
+                                <span class="stepper-name">Palette</span>
+                            </a>
+                            <a href="#step-location" class="stepper-step">
+                                <span class="stepper-num">03</span>
+                                <span class="stepper-name">Scouting</span>
+                            </a>
+                            <a href="#step-moodboard" class="stepper-step">
+                                <span class="stepper-num">04</span>
+                                <span class="stepper-name">Moodboard</span>
+                            </a>
+                            <a href="#step-photoshoot" class="stepper-step">
+                                <span class="stepper-num">05</span>
+                                <span class="stepper-name">Shoot</span>
+                            </a>
+                            <a href="#step-editing" class="stepper-step">
+                                <span class="stepper-num">06</span>
+                                <span class="stepper-name">Grading</span>
+                            </a>
+                            <a href="#step-sending-files" class="stepper-step">
+                                <span class="stepper-num">07</span>
+                                <span class="stepper-name">Delivery</span>
+                            </a>
+                        </div>
+                    </nav>
+                </aside>
 
-                <!-- Left Column: Steps 1, 3, 5, 6 -->
-                <div class="process-column process-col-left">
+                <!-- Main Layout: Sticky Vertical Stepper Rail on Left + Chronological Cards on Right -->
+                <div class="methodology-cards-area">
+                    <!-- Chronological Roadmap Grid (Swipeable on Mobile) -->
+                    <div class="process-roadmap-grid" id="process-roadmap-grid">
 
-                    <!-- STEP 1: Picking a Theme -->
-                    <div class="process-step-wrapper step-1" id="step-picking-theme">
-                        <div class="process-step-card">
+                        <!-- STEP 1: Picking a Theme -->
+                        <div class="process-step-card step-1" id="step-picking-theme">
                             <div class="step-badge-row">
-                                <span class="step-number-badge">1</span>
+                                <span class="step-number-badge">01</span>
                                 <span class="step-pill">Ideation</span>
                             </div>
 
@@ -74,7 +147,7 @@
                             </div>
 
                             <div class="step-content">
-                                <h4 class="step-title">Picking a theme</h4>
+                                <h3 class="step-title">Picking a Theme</h3>
                                 <p class="step-desc">
                                     Every shoot starts with a narrative foundation. We explore creative themes,
                                     character archetypes, mood boards, and evocative storytelling directions to set the
@@ -82,107 +155,11 @@
                                 </p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- STEP 3: Location -->
-                    <div class="process-step-wrapper step-3" id="step-location">
-                        <div class="process-step-card">
+                        <!-- STEP 2: Color Palette -->
+                        <div class="process-step-card interactive-tool-card step-2" id="step-color-palette">
                             <div class="step-badge-row">
-                                <span class="step-number-badge">3</span>
-                                <span class="step-pill">Scouting</span>
-                            </div>
-
-                            <!-- Fan Styled Location Images -->
-                            <div class="fan-deck" aria-label="Location Scouting Images">
-                                <div class="fan-card fan-card-left" title="Outdoor & Nature">
-                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_waterfall.jpg"
-                                        alt="Outdoor & Nature Location" class="fan-card-img" draggable="false">
-                                </div>
-                                <div class="fan-card fan-card-center" title="Interior & Architecture">
-                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_interior.jpg"
-                                        alt="Interior Architecture Location" class="fan-card-img" draggable="false">
-                                </div>
-                                <div class="fan-card fan-card-right" title="Studio Setup">
-                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_studio.jpg"
-                                        alt="Studio Setup Location" class="fan-card-img" draggable="false">
-                                </div>
-                            </div>
-
-                            <div class="step-content">
-                                <h4 class="step-title">Location</h4>
-                                <p class="step-desc">
-                                    We scout natural, urban, and studio locations with optimal lighting angles and
-                                    background textures. Sun positions, shadow play, and spatial depth are mapped out
-                                    beforehand.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 5: Photoshoot -->
-                    <div class="process-step-wrapper step-5" id="step-photoshoot">
-                        <div class="process-step-card text-focused-card">
-                            <div class="step-badge-row">
-                                <span class="step-number-badge">5</span>
-                                <span class="step-pill">Production</span>
-                            </div>
-
-                            <div class="step-mini-visual">
-                                <div class="shutter-icon-box">
-                                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <path
-                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                        <circle cx="12" cy="13" r="4" />
-                                    </svg>
-                                    <span>Live Capture Phase</span>
-                                </div>
-                            </div>
-
-                            <div class="step-content">
-                                <h4 class="step-title">Photoshoot</h4>
-                                <p class="step-desc">
-                                    Production day is where vision meets spontaneous magic. I direct comfortable,
-                                    natural posing, shape lighting with precision, and capture authentic expressions.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 6: Editing (Placed directly under Step 5) -->
-                    <div class="process-step-wrapper step-6" id="step-editing">
-                        <div class="process-step-card">
-                            <div class="step-badge-row">
-                                <span class="step-number-badge">6</span>
-                                <span class="step-pill">Post-Production</span>
-                            </div>
-
-                            <!-- Editing Preview Image -->
-                            <div class="process-image-container" aria-label="Editing and Color Grading Preview">
-                                <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/editing_preview.jpg"
-                                    alt="Lightroom Editing and Retouching Preview" class="process-preview-img">
-                            </div>
-
-                            <div class="step-content">
-                                <h4 class="step-title">Editing</h4>
-                                <p class="step-desc">
-                                    Careful image culling is followed by nuanced RAW processing, skin retouching, color
-                                    grading curves, and tonal adjustments that elevate every frame.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Right Column: Steps 2, 4, 7 -->
-                <div class="process-column process-col-right">
-
-                    <!-- STEP 2: Color Palette -->
-                    <div class="process-step-wrapper step-2" id="step-color-palette">
-                        <div class="process-step-card interactive-tool-card">
-                            <div class="step-badge-row">
-                                <span class="step-number-badge">2</span>
+                                <span class="step-number-badge">02</span>
                                 <div class="palette-header-meta">
                                     <span class="step-pill interactive-pill">Interactive Tool</span>
                                     <span class="palette-mode-status" id="palette-current-mode-name">Analogous (3
@@ -192,6 +169,7 @@
 
                             <!-- Interactive Palette Picker Component -->
                             <div class="color-palette-widget">
+                                <!-- Top Row: Harmony Choices & Live Color Swatches -->
                                 <div class="palette-top-controls">
                                     <div class="palette-mode-selector" aria-label="Color Combination Types">
                                         <!-- Mode 1: Analogous -->
@@ -234,51 +212,48 @@
                                             </svg>
                                         </button>
                                     </div>
+
+                                    <!-- Live Harmonies Color Swatches (Moved to top row) -->
+                                    <div class="palette-swatches-container" id="palette-swatches-container">
+                                        <!-- Swatches injected via about.js -->
+                                    </div>
                                 </div>
 
-                                <!-- Color Wheel & Live Swatches Row -->
+                                <!-- Color Wheel & Sliders Row (Saturation & Luminance moved to where colors were) -->
                                 <div class="palette-interactive-stage">
                                     <div class="palette-wheel-container" title="Click or drag to select base hue">
                                         <canvas id="palette-wheel-canvas"></canvas>
                                         <svg id="palette-wheel-overlay" class="palette-wheel-overlay"
-                                            viewBox="0 0 220 220"></svg>
+                                            viewBox="0 0 150 150"></svg>
                                         <div class="wheel-center-label">
                                             <span class="wheel-hint">Drag Hue</span>
                                         </div>
                                     </div>
 
-                                    <!-- Dynamic Color Swatch Preview Boxes -->
-                                    <div class="palette-swatches-column">
-                                        <span class="swatches-column-title">Selected Harmonies</span>
-                                        <div class="palette-swatches-container" id="palette-swatches-container">
-                                            <!-- Swatches injected via about.js -->
+                                    <!-- Saturation & Luminance Sliders (Positioned beside wheel) -->
+                                    <div class="palette-sliders-box">
+                                        <div class="palette-slider-group">
+                                            <div class="slider-label-row">
+                                                <label for="palette-sat-slider">Saturation</label>
+                                                <span class="slider-val" id="palette-sat-val">100%</span>
+                                            </div>
+                                            <input type="range" id="palette-sat-slider" min="10" max="100" value="100"
+                                                class="palette-range-input">
                                         </div>
-                                    </div>
-                                </div>
-
-                                <!-- Saturation & Luminance Sliders -->
-                                <div class="palette-sliders-box">
-                                    <div class="palette-slider-group">
-                                        <div class="slider-label-row">
-                                            <label for="palette-sat-slider">Saturation</label>
-                                            <span class="slider-val" id="palette-sat-val">90%</span>
+                                        <div class="palette-slider-group">
+                                            <div class="slider-label-row">
+                                                <label for="palette-lum-slider">Luminance</label>
+                                                <span class="slider-val" id="palette-lum-val">78%</span>
+                                            </div>
+                                            <input type="range" id="palette-lum-slider" min="15" max="85" value="78"
+                                                class="palette-range-input">
                                         </div>
-                                        <input type="range" id="palette-sat-slider" min="10" max="100" value="90"
-                                            class="palette-range-input">
-                                    </div>
-                                    <div class="palette-slider-group">
-                                        <div class="slider-label-row">
-                                            <label for="palette-lum-slider">Luminance</label>
-                                            <span class="slider-val" id="palette-lum-val">56%</span>
-                                        </div>
-                                        <input type="range" id="palette-lum-slider" min="15" max="85" value="56"
-                                            class="palette-range-input">
                                     </div>
                                 </div>
                             </div>
 
                             <div class="step-content">
-                                <h4 class="step-title">Color Palette</h4>
+                                <h3 class="step-title">Color Palette</h3>
                                 <p class="step-desc">
                                     Color harmony defines the visual mood. Using balanced chromatic palettes, we
                                     coordinate wardrobe tones, environment hues, gels, and ambient lights to produce a
@@ -286,24 +261,55 @@
                                 </p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- STEP 4: Moodboard -->
-                    <div class="process-step-wrapper step-4" id="step-moodboard">
-                        <div class="process-step-card">
+                        <!-- STEP 3: Location Scouting -->
+                        <div class="process-step-card step-3" id="step-location">
                             <div class="step-badge-row">
-                                <span class="step-number-badge">4</span>
+                                <span class="step-number-badge">03</span>
+                                <span class="step-pill">Scouting</span>
+                            </div>
+
+                            <!-- Fan Styled Location Images -->
+                            <div class="fan-deck" aria-label="Location Scouting Images">
+                                <div class="fan-card fan-card-left" title="Outdoor & Nature">
+                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_waterfall.jpg"
+                                        alt="Outdoor & Nature Location" class="fan-card-img" draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-center" title="Interior & Architecture">
+                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_interior.jpg"
+                                        alt="Interior Architecture Location" class="fan-card-img" draggable="false">
+                                </div>
+                                <div class="fan-card fan-card-right" title="Studio Setup">
+                                    <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_studio.jpg"
+                                        alt="Studio Setup Location" class="fan-card-img" draggable="false">
+                                </div>
+                            </div>
+
+                            <div class="step-content">
+                                <h3 class="step-title">Location Scouting</h3>
+                                <p class="step-desc">
+                                    We scout natural, urban, and studio locations with optimal lighting angles and
+                                    background textures. Sun positions, shadow play, and spatial depth are mapped out
+                                    beforehand.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- STEP 4: The Moodboard -->
+                        <div class="process-step-card step-4" id="step-moodboard">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">04</span>
                                 <span class="step-pill">Visual Blueprint</span>
                             </div>
 
                             <!-- Moodboard Preview Image -->
                             <div class="process-image-container" aria-label="Moodboard Reference Preview">
                                 <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/moodboard_preview.jpg"
-                                    alt="Moodboard Canvas Preview" class="process-preview-img">
+                                    alt="Moodboard Canvas Preview" class="process-preview-img" draggable="false">
                             </div>
 
                             <div class="step-content">
-                                <h4 class="step-title">Moodboard</h4>
+                                <h3 class="step-title">The Moodboard</h3>
                                 <p class="step-desc">
                                     All concepts, poses, wardrobe suggestions, and lighting diagrams are assembled into
                                     a coherent moodboard. This gives everyone on set a clear vision and shared
@@ -311,40 +317,158 @@
                                 </p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- STEP 7: Sending Files (Placed next to Step 6) -->
-                    <div class="process-step-wrapper step-7" id="step-sending-files">
-                        <div class="process-step-card">
+                        <!-- STEP 5: The Photoshoot -->
+                        <div class="process-step-card step-5" id="step-photoshoot">
                             <div class="step-badge-row">
-                                <span class="step-number-badge">7</span>
-                                <span class="step-pill finish-pill">Completion</span>
+                                <span class="step-number-badge">05</span>
+                                <span class="step-pill">Live Production</span>
                             </div>
 
-                            <!-- Delivery Visual Banner -->
-                            <div class="step-mini-visual">
-                                <div class="delivery-icon-box">
-                                    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                        <polyline points="22 4 12 14.01 9 11.01" />
-                                    </svg>
-                                    <span>Private Gallery & Master Files</span>
+                            <div class="process-image-container" aria-label="Live Photoshoot Production">
+                                <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp"
+                                    alt="On-Set Live Photoshoot and Lighting Production" class="process-preview-img"
+                                    draggable="false">
+                                <div class="image-overlay-badge">
+                                    <span>ON-SET LIGHTING &amp; DIRECTING</span>
                                 </div>
                             </div>
 
                             <div class="step-content">
-                                <h4 class="step-title">Sending Files</h4>
+                                <h3 class="step-title">The Photoshoot</h3>
                                 <p class="step-desc">
-                                    Finished, full-resolution files are delivered through a private, password-protected
-                                    online client gallery. Includes web-optimized versions and master print-ready files.
+                                    Production day is where vision meets spontaneous magic. I direct comfortable,
+                                    natural posing, shape lighting with precision, and capture authentic expressions in
+                                    high definition.
                                 </p>
                             </div>
                         </div>
+
+                        <!-- STEP 6: Master Editing -->
+                        <div class="process-step-card step-6" id="step-editing">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">06</span>
+                                <span class="step-pill">Post-Production</span>
+                            </div>
+
+                            <!-- Editing Preview Image -->
+                            <div class="process-image-container" aria-label="Editing and Color Grading Preview">
+                                <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/editing_preview.jpg"
+                                    alt="Lightroom Editing and Retouching Preview" class="process-preview-img"
+                                    draggable="false">
+                            </div>
+
+                            <div class="step-content">
+                                <h3 class="step-title">Master Retouching &amp; Color Grading</h3>
+                                <p class="step-desc">
+                                    Careful image culling is followed by nuanced RAW processing, skin retouching, color
+                                    grading curves, and tonal adjustments that elevate every frame into fine-art
+                                    editorial quality.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- STEP 7: Client Delivery (Full-Width Milestone) -->
+                        <div class="process-step-card step-7 step-milestone-card" id="step-sending-files">
+                            <div class="step-badge-row">
+                                <span class="step-number-badge">07</span>
+                                <span class="step-pill finish-pill">Completion &amp; Archival</span>
+                            </div>
+
+                            <div class="milestone-content-layout">
+                                <div class="milestone-info-col">
+                                    <h3 class="step-title">Client Gallery &amp; Master Delivery</h3>
+                                    <p class="step-desc">
+                                        Finished, full-resolution files are delivered through a private,
+                                        password-protected
+                                        online client portal. Every deliverable is cataloged for seamless client
+                                        downloads and archival longevity.
+                                    </p>
+                                    <div class="milestone-action-row">
+                                        <a href="/contact/" class="milestone-cta-link">COMMISSION A SESSION &rarr;</a>
+                                    </div>
+                                </div>
+                                <div class="milestone-deliverables-panel">
+                                    <div class="deliverable-item">
+                                        <span class="deliverable-check">✓</span>
+                                        <div class="deliverable-text">
+                                            <strong>Private Web Gallery</strong>
+                                            <span>Cloud-hosted, password-protected, high-speed sharing</span>
+                                        </div>
+                                    </div>
+                                    <div class="deliverable-item">
+                                        <span class="deliverable-check">✓</span>
+                                        <div class="deliverable-text">
+                                            <strong>Print-Ready Masters</strong>
+                                            <span>Uncompressed 16-bit TIFF / full-resolution JPGs (300 DPI)</span>
+                                        </div>
+                                    </div>
+                                    <div class="deliverable-item">
+                                        <span class="deliverable-check">✓</span>
+                                        <div class="deliverable-text">
+                                            <strong>Web &amp; Social Previews</strong>
+                                            <span>Optimized sRGB color profiles for Instagram &amp; editorial
+                                                press</span>
+                                        </div>
+                                    </div>
+                                    <div class="deliverable-item">
+                                        <span class="deliverable-check">✓</span>
+                                        <div class="deliverable-text">
+                                            <strong>Full Commercial Usage Rights</strong>
+                                            <span>Clear license agreements tailored to your campaign</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End #process-roadmap-grid (Strictly 7 items) -->
+
+                    <!-- Mobile Swipeable Carousel Controls (Prev/Next & Step Indicator Dots - Outside of scroll track) -->
+                    <div class="mobile-swipe-controls" id="mobile-swipe-controls" aria-label="Mobile Step Navigation">
+                        <button type="button" class="mobile-swipe-btn" id="mobile-swipe-prev"
+                            aria-label="Previous step">
+                            <span class="swipe-arrow">&larr;</span> Prev
+                        </button>
+                        <div class="mobile-swipe-pagination">
+                            <span class="mobile-swipe-badge"><strong id="mobile-active-num">01</strong> / 07</span>
+                            <div class="mobile-swipe-dots" id="mobile-swipe-dots">
+                                <button type="button" class="swipe-dot active" data-step-index="0"
+                                    aria-label="Go to Step 1"></button>
+                                <button type="button" class="swipe-dot" data-step-index="1"
+                                    aria-label="Go to Step 2"></button>
+                                <button type="button" class="swipe-dot" data-step-index="2"
+                                    aria-label="Go to Step 3"></button>
+                                <button type="button" class="swipe-dot" data-step-index="3"
+                                    aria-label="Go to Step 4"></button>
+                                <button type="button" class="swipe-dot" data-step-index="4"
+                                    aria-label="Go to Step 5"></button>
+                                <button type="button" class="swipe-dot" data-step-index="5"
+                                    aria-label="Go to Step 6"></button>
+                                <button type="button" class="swipe-dot" data-step-index="6"
+                                    aria-label="Go to Step 7"></button>
+                            </div>
+                        </div>
+                        <button type="button" class="mobile-swipe-btn" id="mobile-swipe-next" aria-label="Next step">
+                            Next <span class="swipe-arrow">&rarr;</span>
+                        </button>
                     </div>
+                </div> <!-- End .methodology-cards-area -->
+            </div> <!-- End .methodology-main-layout -->
+        </section>
 
+        <!-- Concluding Editorial Call to Action -->
+        <section class="about-cta-section">
+            <div class="about-cta-container">
+                <span class="cta-kicker">COLLABORATIONS &bull; COMMISSIONS</span>
+                <h2 class="cta-title">READY TO BRING YOUR VISION TO LIFE?</h2>
+                <p class="cta-desc">
+                    Now accepting private bookings, couture editorials, and commercial campaigns worldwide. Let us
+                    sculpt your story into timeless imagery.
+                </p>
+                <div class="cta-actions">
+                    <a href="/contact/" class="vogue-solid-btn cta-btn">BOOK A PHOTOSHOOT &rarr;</a>
+                    <a href="/photoshoots/" class="vogue-outline-btn cta-btn-secondary">EXPLORE ARCHIVE</a>
                 </div>
-
             </div>
         </section>
     </main>
@@ -353,7 +477,7 @@
     <div id="site-footer-slot"></div>
 
     <script type="module" src="/script.js"></script>
-    <script src="about.js"></script>
+    <script src="about.js?v=52"></script>
 </body>
 
 </html>

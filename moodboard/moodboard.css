@@ -154,10 +154,30 @@ body.moodboard-body.inside-board #site-footer-slot {
 .dashboard-hero {
     text-align: center;
     max-width: 800px;
-    margin-bottom: 3.5rem;
+    margin-bottom: 2.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: 100%;
+}
+
+.dashboard-hero.vogue-dashboard-hero {
+    padding: 0 0 2rem 0 !important;
+    border-bottom: 1px solid #ebebeb;
+    width: 100%;
+}
+
+.dashboard-hero .dashboard-controls {
+    margin: 0;
+}
+
+.dashboard-hero .vogue-pill-btn {
+    margin-top: 0;
+}
+
+.dashboard-hero:has(#btn-create-board.hidden),
+.dashboard-hero:empty {
+    display: none !important;
 }
 
 .editorial-section-tag {
@@ -1922,7 +1942,7 @@ select.form-input option:hover {
 
     /* --- Dashboard View --- */
     .dashboard-main-content {
-        padding: 2rem 1.25rem 3.5rem;
+        padding: 4.5rem 1.25rem 3.5rem;
     }
 
     .dashboard-hero {
@@ -2206,7 +2226,7 @@ select.form-input option:hover {
 
     /* Slim Smartphones */
     .dashboard-main-content {
-        padding: 1.5rem 0.85rem 3rem;
+        padding: 4.5rem 0.85rem 3rem;
     }
 
     .editorial-page-title {
