@@ -252,6 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Instant Cache Render (0ms delay)
         const cachedSlots = getCachedData('home_gallery_slots');
         if (cachedSlots && Array.isArray(cachedSlots) && cachedSlots.length > 0) {
+            if (cachedSlots[0]) cachedSlots[0].aspectRatio = 'landscape';
+            if (cachedSlots[1]) cachedSlots[1].aspectRatio = 'portrait';
+            if (cachedSlots[2]) cachedSlots[2].aspectRatio = 'landscape';
+            if (cachedSlots[3]) cachedSlots[3].aspectRatio = 'portrait';
             if (cachedSlots[4]) cachedSlots[4].aspectRatio = 'portrait';
             if (cachedSlots[5]) cachedSlots[5].aspectRatio = 'landscape';
             if (cachedSlots[6]) cachedSlots[6].aspectRatio = 'portrait';
@@ -302,7 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Normalize slot 5, 6, 7, 8 orientations
+            // Normalize slot orientations: 1, 3, 6, 8 landscape; 2, 4, 5, 7 portrait
+            if (freshSlots[0]) freshSlots[0].aspectRatio = 'landscape';
+            if (freshSlots[1]) freshSlots[1].aspectRatio = 'portrait';
+            if (freshSlots[2]) freshSlots[2].aspectRatio = 'landscape';
+            if (freshSlots[3]) freshSlots[3].aspectRatio = 'portrait';
             if (freshSlots[4]) freshSlots[4].aspectRatio = 'portrait';
             if (freshSlots[5]) freshSlots[5].aspectRatio = 'landscape';
             if (freshSlots[6]) freshSlots[6].aspectRatio = 'portrait';
@@ -345,19 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.add('is-last-slot');
             }
 
-            // Determine orientation: 5 & 7 vertical, 6 & 8 horizontal
-            let slotAspect = slot.aspectRatio;
-            if (index === 4 || index === 6) {
-                slotAspect = 'portrait';
-            } else if (index === 5 || index === 7 || isLastSlot) {
-                slotAspect = 'landscape';
-            } else if (!slotAspect) {
-                slotAspect = defaultSlotAspects[index] || 'landscape';
-            }
-
-            const isInitiallyVertical = slotAspect === 'portrait';
-            item.classList.add(isInitiallyVertical ? 'is-vertical' : 'is-horizontal');
-            item.classList.add(isInitiallyVertical ? 'is-portrait' : 'is-landscape');
+            // Determine orientation: 1, 3, 6, 8 horizontal; 2, 4, 5, 7 vertical
+            const isVerticalSlot = (index === 1 || index === 3 || index === 4 || index === 6);
+            item.classList.add(isVerticalSlot ? 'is-vertical' : 'is-horizontal');
+            item.classList.add(isVerticalSlot ? 'is-portrait' : 'is-landscape');
 
             if (slot.url) {
                 const img = document.createElement('img');
@@ -367,16 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Real dimension check to dynamically assign vertical vs horizontal orientation
                 const updateOrientation = () => {
-                    // Slots 5 & 7 are strictly vertical
-                    if (index === 4 || index === 6) {
-                        item.classList.add('is-vertical', 'is-portrait');
-                        item.classList.remove('is-horizontal', 'is-landscape');
-                        return;
-                    }
-                    // Slots 6 & 8 are strictly horizontal
-                    if (index === 5 || index === 7 || isLastSlot) {
+                    // Slots 1, 3, 6, 8 are strictly horizontal in the editorial composition
+                    if (index === 0 || index === 2 || index === 5 || index === 7 || isLastSlot) {
                         item.classList.remove('is-vertical', 'is-portrait');
                         item.classList.add('is-horizontal', 'is-landscape');
+                        return;
+                    }
+                    // Slots 2, 4, 5, 7 are strictly vertical in the editorial composition
+                    if (index === 1 || index === 3 || index === 4 || index === 6) {
+                        item.classList.add('is-vertical', 'is-portrait');
+                        item.classList.remove('is-horizontal', 'is-landscape');
                         return;
                     }
                     if (img.naturalWidth && img.naturalHeight) {

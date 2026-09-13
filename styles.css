@@ -572,7 +572,7 @@ body:has(.picker-overlay.show) header {
     }
 }
 
-/* Mobile Breakpoint: 2-Column Responsive Flow (Vertical = 1 Col, Horizontal = 2 Cols) */
+/* Mobile Breakpoint: 2-Column Responsive Flow (Zero Gaps, Curated Editorial Rhythm) */
 @media (max-width: 768px) {
     .gallery,
     body.editorial-body .gallery {
@@ -609,7 +609,39 @@ body:has(.picker-overlay.show) header {
         aspect-ratio: 16 / 10 !important;
     }
 
-    /* ── Precision Slot Rules for Mobile: 5 & 7 Vertical (side-by-side), 6 & 8 Horizontal (span 2) ── */
+    /* ── Precision Slot Rules for Mobile: Exact 2-Column Editorial Flow ── */
+    /* Row 1: Slot 1 Full-Width Landscape */
+    .gallery-item:nth-child(1),
+    body.editorial-body .gallery-item:nth-child(1) {
+        grid-column: span 2 !important;
+        aspect-ratio: 16 / 10 !important;
+        order: 1 !important;
+    }
+
+    /* Row 2: Slot 2 & Slot 4 Side-by-Side Portrait Pair */
+    .gallery-item:nth-child(2),
+    body.editorial-body .gallery-item:nth-child(2) {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+        order: 2 !important;
+    }
+
+    .gallery-item:nth-child(4),
+    body.editorial-body .gallery-item:nth-child(4) {
+        grid-column: span 1 !important;
+        aspect-ratio: 4 / 5 !important;
+        order: 3 !important;
+    }
+
+    /* Row 3: Slot 3 Full-Width Landscape */
+    .gallery-item:nth-child(3),
+    body.editorial-body .gallery-item:nth-child(3) {
+        grid-column: span 2 !important;
+        aspect-ratio: 16 / 10 !important;
+        order: 4 !important;
+    }
+
+    /* Row 4: Slot 5 & Slot 7 Side-by-Side Portrait Pair */
     .gallery-item:nth-child(5),
     body.editorial-body .gallery-item:nth-child(5) {
         grid-column: span 1 !important;
@@ -624,6 +656,7 @@ body:has(.picker-overlay.show) header {
         order: 6 !important;
     }
 
+    /* Row 5: Slot 6 Full-Width Landscape */
     .gallery-item:nth-child(6),
     body.editorial-body .gallery-item:nth-child(6) {
         grid-column: span 2 !important;
@@ -631,6 +664,7 @@ body:has(.picker-overlay.show) header {
         order: 7 !important;
     }
 
+    /* Row 6: Slot 8 Full-Width Landscape Anchor */
     .gallery-item:nth-child(8),
     body.editorial-body .gallery-item:nth-child(8),
     .gallery-item.is-last-slot,
