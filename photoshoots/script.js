@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.src;
+        lightboxImg.src = imgElement.dataset.src || imgElement.src;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
         }
@@ -444,12 +444,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- Render Gallery ---
+    let photoshootsViewportObserver = null;
+
     const renderGallery = () => {
         const sortBy = sortSelect.value;
         const sortOrder = sortOrderBtn.getAttribute('data-order'); // 'asc' or 'desc'
 
         categoriesContainer.innerHTML = '';
         noResults.style.display = 'none';
+
+        if (photoshootsViewportObserver) {
+            photoshootsViewportObserver.disconnect();
+        }
+
+        photoshootsViewportObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const wrapper = entry.target;
+                    const img = wrapper.querySelector('img.row-img');
+                    if (img && img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        if (img.complete && img.naturalWidth && typeof img._reveal === 'function') {
+                            img._reveal();
+                        }
+                    }
+                    observer.unobserve(wrapper);
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '150px 200px', // 150px vertical buffer, 200px horizontal buffer
+            threshold: 0
+        });
 
         if (categoriesData.length === 0) {
             noResults.style.display = 'block';
@@ -737,7 +764,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
-                img.src = url;
+                img.dataset.src = url;
+                // Transparent placeholder
+                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
                 img.draggable = false;
                 img.setAttribute('draggable', 'false');
                 img.addEventListener('dragstart', (e) => {
@@ -747,7 +776,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const reveal = () => {
                     wrapper.classList.add('is-sized');
-                    const delay = waveIndex * 0.08;
+                    const delay = (waveIndex % 6) * 0.08;
                     img.style.transitionDelay = `${delay}s`;
                     requestAnimationFrame(() => {
                         img.classList.add('is-revealed');
@@ -758,11 +787,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }, (delay + 0.65) * 1000);
                 };
 
-                if (img.complete && img.naturalWidth) {
-                    reveal();
-                } else {
-                    img.addEventListener('load', reveal, { once: true });
-                }
+                img._reveal = reveal;
+
+                img.addEventListener('load', () => {
+                    if (img.src && !img.src.startsWith('data:')) {
+                        reveal();
+                    }
+                });
 
                 img.addEventListener('click', (e) => {
                     if (hasDragged) return; // Ignore click if user was dragging
@@ -786,6 +817,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wrapper.appendChild(delPhotoBtn);
                 }
                 
+                if (photoshootsViewportObserver) {
+                    photoshootsViewportObserver.observe(wrapper);
+                }
+
                 return wrapper;
             };
 

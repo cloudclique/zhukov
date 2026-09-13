@@ -13,9 +13,38 @@
         href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
         rel="stylesheet">
     <script src="/site-components.js"></script>
+    <script>
+        // Immediately activate loader if opening board directly via ?id=
+        if (window.location.search && (window.location.search.includes('id=') || window.location.search.includes('board='))) {
+            document.documentElement.classList.add('moodboard-loading-direct');
+        }
+    </script>
 </head>
 
 <body class="moodboard-body">
+
+    <!-- ==============================================
+         Moodboard Atelier Loading Screen
+         ============================================== -->
+    <div id="moodboard-loader" class="moodboard-loader" aria-live="polite" aria-busy="true">
+        <div class="moodboard-loader-content">
+            <div class="loader-brand-badge">
+                <span class="loader-badge-dot"></span>
+                <span>ZHUKOV STUDIO &bull; MOODBOARD</span>
+            </div>
+            <h2 id="loader-board-title" class="loader-title">Curating Atelier Canvas</h2>
+            
+            <div class="loader-progress-container">
+                <div class="loader-progress-track">
+                    <div id="loader-progress-bar" class="loader-progress-bar" style="width: 0%;"></div>
+                </div>
+                <div class="loader-progress-meta">
+                    <span id="loader-status-text" class="loader-status-text">Connecting to workspace...</span>
+                    <span id="loader-progress-percent" class="loader-progress-percent">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Dynamic Site Header Slot -->
     <div id="site-header-slot"></div>

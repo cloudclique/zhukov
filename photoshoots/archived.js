@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.src;
+        lightboxImg.src = imgElement.dataset.src || imgElement.src;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
         }
@@ -380,12 +380,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Render Gallery Rows ---
+    let archivedViewportObserver = null;
+
     const renderArchivedGallery = () => {
         if (!categoriesContainer) return;
         const sortBy = sortSelect ? sortSelect.value : 'date';
         const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'desc';
 
         categoriesContainer.innerHTML = '';
+
+        if (archivedViewportObserver) {
+            archivedViewportObserver.disconnect();
+        }
+
+        archivedViewportObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const wrapper = entry.target;
+                    const img = wrapper.querySelector('img.row-img');
+                    if (img && img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        if (img.complete && img.naturalWidth && typeof img._reveal === 'function') {
+                            img._reveal();
+                        }
+                    }
+                    observer.unobserve(wrapper);
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '150px 200px', // 150px vertical buffer, 200px horizontal buffer
+            threshold: 0
+        });
 
         if (categoriesData.length === 0) {
             showViewState('empty');
@@ -668,7 +695,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
-                img.src = url;
+                img.dataset.src = url;
+                // Transparent placeholder
+                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
                 img.draggable = false;
                 img.setAttribute('draggable', 'false');
                 img.addEventListener('dragstart', (e) => {
@@ -678,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const reveal = () => {
                     wrapper.classList.add('is-sized');
-                    const delay = waveIndex * 0.08;
+                    const delay = (waveIndex % 6) * 0.08;
                     img.style.transitionDelay = `${delay}s`;
                     requestAnimationFrame(() => {
                         img.classList.add('is-revealed');
@@ -689,11 +718,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, (delay + 0.65) * 1000);
                 };
 
-                if (img.complete && img.naturalWidth) {
-                    reveal();
-                } else {
-                    img.addEventListener('load', reveal, { once: true });
-                }
+                img._reveal = reveal;
+
+                img.addEventListener('load', () => {
+                    if (img.src && !img.src.startsWith('data:')) {
+                        reveal();
+                    }
+                });
 
                 img.addEventListener('click', () => {
                     if (hasDragged) return;
@@ -702,6 +733,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 attachTiltEffect(wrapper);
                 wrapper.appendChild(img);
+
+                if (archivedViewportObserver) {
+                    archivedViewportObserver.observe(wrapper);
+                }
+
                 return wrapper;
             };
 

@@ -158,6 +158,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputFileLocal = document.getElementById('input-file-local');
     const uploadStatusText = document.getElementById('upload-status-text');
 
+    // --- Moodboard Loading Screen & Progress Bar Controller ---
+    const moodboardLoaderEl = document.getElementById('moodboard-loader');
+    const loaderBoardTitleEl = document.getElementById('loader-board-title');
+    const loaderProgressBarEl = document.getElementById('loader-progress-bar');
+    const loaderStatusTextEl = document.getElementById('loader-status-text');
+    const loaderProgressPercentEl = document.getElementById('loader-progress-percent');
+
+    let currentLoaderProgress = 0;
+    let loaderDismissTimeout = null;
+    let isLoaderActive = false;
+
+    const moodboardLoader = {
+        show(options = {}) {
+            clearTimeout(loaderDismissTimeout);
+            isLoaderActive = true;
+            if (loaderBoardTitleEl) {
+                if (options.title) {
+                    loaderBoardTitleEl.textContent = options.title;
+                } else if (!options.preserveTitle) {
+                    loaderBoardTitleEl.textContent = 'Curating Atelier Canvas';
+                }
+            }
+            this.setProgress(options.initialProgress || 10, options.status || 'Connecting to workspace...');
+            if (moodboardLoaderEl) {
+                moodboardLoaderEl.classList.add('active');
+                moodboardLoaderEl.setAttribute('aria-busy', 'true');
+            }
+        },
+
+        setProgress(percent, statusText = null) {
+            currentLoaderProgress = Math.max(0, Math.min(100, Math.round(percent)));
+            if (loaderProgressBarEl) {
+                loaderProgressBarEl.style.width = `${currentLoaderProgress}%`;
+            }
+            if (loaderProgressPercentEl) {
+                loaderProgressPercentEl.textContent = `${currentLoaderProgress}%`;
+            }
+            if (loaderStatusTextEl && statusText) {
+                loaderStatusTextEl.textContent = statusText;
+            }
+        },
+
+        complete(callback) {
+            if (!isLoaderActive) return;
+            this.setProgress(100, 'Canvas ready');
+            clearTimeout(loaderDismissTimeout);
+            loaderDismissTimeout = setTimeout(() => {
+                this.hide();
+                if (typeof callback === 'function') callback();
+            }, 260);
+        },
+
+        hide() {
+            clearTimeout(loaderDismissTimeout);
+            isLoaderActive = false;
+            document.documentElement.classList.remove('moodboard-loading-direct');
+            if (moodboardLoaderEl) {
+                moodboardLoaderEl.classList.remove('active');
+                moodboardLoaderEl.setAttribute('aria-busy', 'false');
+            }
+        }
+    };
+
     // --- Toast Notification Helper ---
     const showToast = (message) => {
         const toast = document.getElementById('mb-toast');
@@ -1283,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadDashboardBoards = async () => {
+        moodboardLoader.hide();
         if (!currentUser) return;
         const cacheKey = `moodboard_dashboard_${currentUser.uid}_admin_${currentIsAdmin}`;
 
@@ -1497,9 +1561,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Instant Cache Loading for this board
         const cachedBoard = getCachedData(`moodboard_board_${boardId}`);
+
+        // Display Loading Screen with progress bar
+        moodboardLoader.show({
+            title: cachedBoard?.title || 'Curating Atelier Canvas',
+            status: 'Authenticating workspace...',
+            initialProgress: 20
+        });
+
         if (cachedBoard) {
             activeBoardData = cachedBoard;
             if (activeBoardTitle) activeBoardTitle.innerText = activeBoardData.title || 'Untitled Moodboard';
+            moodboardLoader.setProgress(40, 'Rendering cached workspace...');
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
             renderGroupTags();
@@ -1510,6 +1583,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             centerViewport();
+            moodboardLoader.setProgress(35, 'Fetching board from atelier cloud...');
         }
 
         // Update URL with query param ?id= to support all hosting environments
@@ -1522,8 +1596,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unsubscribeBoardSnapshot) unsubscribeBoardSnapshot();
         const boardRef = doc(db, 'moodboards', boardId);
 
-        unsubscribeBoardSnapshot = onSnapshot(boardRef, (docSnap) => {
+        unsubscribeBoardSnapshot = onSnapshot(boardRef, async (docSnap) => {
             if (!docSnap.exists()) {
+                moodboardLoader.hide();
                 showToast('Moodboard not found or was deleted.');
                 exitBoardToDashboard();
                 return;
@@ -1553,9 +1628,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             activeBoardTitle.textContent = activeBoardData.title || 'Untitled Board';
+            if (loaderBoardTitleEl && activeBoardData.title) {
+                loaderBoardTitleEl.textContent = activeBoardData.title;
+            }
 
             // Sync role badge, toolbar, settings visibility, and view mode
             syncBoardPermissions();
+
+            // Preload media assets on first load to provide accurate progress feedback
+            if (isFirstLoadForBoard) {
+                moodboardLoader.setProgress(55, 'Composing layout & checking assets...');
+
+                const imageElements = (activeBoardData.elements || []).filter(it => it.type === 'image' && it.content);
+                if (imageElements.length > 0) {
+                    let loadedCount = 0;
+                    const totalImages = imageElements.length;
+                    const imagePromises = imageElements.map((item) => {
+                        return new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = img.onerror = () => {
+                                loadedCount++;
+                                const pct = 55 + Math.round((loadedCount / totalImages) * 35); // 55% -> 90%
+                                moodboardLoader.setProgress(pct, `Preloading media (${loadedCount}/${totalImages})...`);
+                                resolve();
+                            };
+                            img.src = item.content;
+                        });
+                    });
+
+                    // Race with a 2.5s maximum timeout so loading screen never hangs on slow/broken links
+                    await Promise.race([
+                        Promise.allSettled(imagePromises),
+                        new Promise(r => setTimeout(r, 2500))
+                    ]);
+                } else {
+                    moodboardLoader.setProgress(85, 'Composing visual elements...');
+                }
+            }
 
             renderCanvasElements(activeBoardData.elements || []);
             renderDrawingPaths(activeBoardData.drawingPaths || []);
@@ -1564,22 +1673,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isFirstLoadForBoard) {
                 isFirstLoadForBoard = false;
+                moodboardLoader.setProgress(95, 'Fitting canvas view...');
                 // Automatically perform "reset view" to fit all elements cleanly into view
                 setTimeout(() => {
                     fitViewToElements(activeBoardData?.elements, activeBoardData?.drawingPaths, false);
                 }, 80);
                 setTimeout(() => {
                     fitViewToElements(activeBoardData?.elements, activeBoardData?.drawingPaths, false);
-                }, 250);
+                    moodboardLoader.complete();
+                }, 220);
             }
         }, (error) => {
             console.error("Realtime sync error:", error);
+            moodboardLoader.hide();
             showToast("Access denied or permission issue.");
             exitBoardToDashboard();
         });
     };
 
     const exitBoardToDashboard = async () => {
+        moodboardLoader.hide();
         if (activeBoardId && activeBoardData && activeBoardCanEdit) {
             await cleanAndSaveBoard();
         }
@@ -3971,51 +4084,21 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     };
 
-    // --- Helper: Upgrade Pinterest Image to Highest Resolution (Originals) ---
-    const upgradePinterestQuality = async (imgUrl) => {
-        if (!imgUrl || !imgUrl.includes('pinimg.com')) return imgUrl;
-
-        // Convert /236x/, /474x/, /564x/, /736x/ to /originals/
-        const origUrl = imgUrl.replace(/\/(?:\d+x|originals)\//i, '/originals/');
-        if (origUrl === imgUrl) return imgUrl;
-
-        // Verify if /originals/ image is reachable in the browser
-        return new Promise((resolve) => {
-            const img = new Image();
-            let resolved = false;
-            const timer = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    resolve(imgUrl); // Fallback to working URL
-                }
-            }, 2500);
-
-            img.onload = () => {
-                if (!resolved) {
-                    resolved = true;
-                    clearTimeout(timer);
-                    resolve(origUrl);
-                }
-            };
-            img.onerror = () => {
-                if (!resolved) {
-                    resolved = true;
-                    clearTimeout(timer);
-                    resolve(imgUrl); // Fallback to safe URL
-                }
-            };
-            img.src = origUrl;
-        });
+    // --- Helper: Optimize Pinterest Image to ~720px tier (736x) ---
+    const optimizePinterestImage = (imgUrl) => {
+        if (!imgUrl || typeof imgUrl !== 'string' || !imgUrl.includes('pinimg.com')) return imgUrl;
+        // Standard Pinterest ~720px tier is 736x (736px on the longest/width edge)
+        return imgUrl.replace(/\/(?:236x|474x|564x|1200x|originals)\//i, '/736x/');
     };
 
-    // --- Helper: Resolve Pinterest Page / Pin URL to Direct High-Res Image ---
+    // --- Helper: Resolve Pinterest Page / Pin URL to Direct ~720px Image ---
     const resolvePinterestImage = async (rawUrl) => {
         let url = (rawUrl || '').trim();
         if (!url) throw new Error('Please enter or paste a valid URL.');
 
         // 1. Direct Pinterest image CDN URL
         if (/i\.pinimg\.com\//i.test(url)) {
-            return await upgradePinterestQuality(url);
+            return optimizePinterestImage(url);
         }
 
         // 2. Resolve Pinterest pin or short link (pin.it or pinterest.com/pin/...)
@@ -4026,7 +4109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const json = await res.json();
                 const extractedImg = json?.data?.image?.url;
                 if (extractedImg) {
-                    return await upgradePinterestQuality(extractedImg);
+                    return optimizePinterestImage(extractedImg);
                 }
             }
         } catch (err) {
@@ -4043,7 +4126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (proxyRes.ok) {
                     const oembedData = await proxyRes.json();
                     if (oembedData?.thumbnail_url) {
-                        return await upgradePinterestQuality(oembedData.thumbnail_url);
+                        return optimizePinterestImage(oembedData.thumbnail_url);
                     }
                 }
             } catch (e) {
@@ -4303,17 +4386,76 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Helper: Client-Side Image Downscaling to ~720px on the Long Side ---
+    const optimizeImageTo720 = (file, maxDimension = 720) => {
+        return new Promise((resolve) => {
+            if (!file || !file.type.startsWith('image/')) {
+                return resolve(file);
+            }
+            // Preserve GIFs and SVGs without raster resizing
+            if (file.type === 'image/gif' || file.type === 'image/svg+xml') {
+                return resolve(file);
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    let width = img.naturalWidth || img.width;
+                    let height = img.naturalHeight || img.height;
+
+                    // If image is already within 720px on the long side, keep original
+                    if (width <= maxDimension && height <= maxDimension) {
+                        return resolve(file);
+                    }
+
+                    // Scale down preserving aspect ratio so the longest side is maxDimension (720px)
+                    if (width > height) {
+                        height = Math.round(height * (maxDimension / width));
+                        width = maxDimension;
+                    } else {
+                        width = Math.round(width * (maxDimension / height));
+                        height = maxDimension;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/webp', 0.85);
+                };
+                img.onerror = () => resolve(file);
+                img.src = e.target.result;
+            };
+            reader.onerror = () => resolve(file);
+            reader.readAsDataURL(file);
+        });
+    };
+
     // Local File Upload directly onto Moodboard via Cloudflare Worker -> ImgBB
     inputFileLocal.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         uploadStatusText.style.display = 'block';
-        uploadStatusText.textContent = 'Compressing & uploading image to ImgBB...';
+        uploadStatusText.textContent = 'Optimizing & resizing image to 720px...';
 
         try {
+            const optimizedBlob = await optimizeImageTo720(file, 720);
+
+            uploadStatusText.textContent = 'Uploading optimized image to atelier cloud...';
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('image', optimizedBlob, `moodboard_${Date.now()}.webp`);
 
             const workerUrl = 'https://long-sky-4aa4.dener4826.workers.dev';
             const response = await fetch(workerUrl, {
@@ -4602,8 +4744,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- URL-based Board Routing on Page Load ---
     const initialBoardId = getBoardIdFromUrl();
     if (initialBoardId) {
+        moodboardLoader.show({ status: 'Connecting to atelier workspace...', initialProgress: 15 });
         setTimeout(() => {
             if (!activeBoardId) openMoodboard(initialBoardId);
-        }, 150);
+        }, 80);
+    } else {
+        moodboardLoader.hide();
     }
 });

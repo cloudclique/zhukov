@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Data & Auth State
     let isAdmin = false;
+    let currentRatioMode = 'original';
+    try {
+        currentRatioMode = localStorage.getItem('zhukov_gallery_ratio_mode') || 'original';
+    } catch (e) {}
     const urlParams = new URLSearchParams(window.location.search);
     const categoryId = urlParams.get('id');
 
@@ -115,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.src;
+        lightboxImg.src = imgElement.dataset.src || imgElement.src;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'GALLERY').toUpperCase();
         }
@@ -743,14 +747,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="gallery-title editable" data-field="categoryName" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
-                    <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
                 `;
             } else {
                 headerContainer.innerHTML = `
                     <h2 class="gallery-title">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
-                    <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
                 `;
             }
             
@@ -894,65 +896,188 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headerContainer.appendChild(adminGroup);
             }
 
-            const calculateSpans = (wrapper, img) => {
-                if (!img.naturalWidth) return;
-                
-                const ratio = img.naturalWidth / img.naturalHeight;
-                const isMobile = window.innerWidth <= 800;
-                let colSpan = 1;
-                
-                if (isMobile) {
-                    // On mobile 2-column Pinterest layout:
-                    // If panoramic/ultra-wide (> 1.45), span across both columns
-                    if (ratio > 1.45) {
-                        colSpan = 2;
-                    } else {
-                        colSpan = 1;
-                    }
-                } else {
-                    // Stretch horizontal/wide images across 2 columns if viewport is wide enough
-                    if (ratio > 1.2 && window.innerWidth > 800) {
-                        colSpan = 2;
-                    }
+            // Bottom Toolbar: Photo Count + Ratio Switcher (Original vs 1:1 Square)
+            const headerBottom = document.createElement('div');
+            headerBottom.className = 'gallery-header-bottom';
+            headerBottom.innerHTML = `
+                <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
+                <div class="gallery-ratio-switcher" id="gallery-ratio-switcher" role="group" aria-label="Aspect Ratio View">
+                    <button type="button" class="ratio-switch-btn ${currentRatioMode === 'original' ? 'active' : ''}" data-ratio="original" title="View in original aspect ratio">
+                        <svg class="ratio-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="8" height="11" rx="0.5"/>
+                            <rect x="13" y="3" width="8" height="7" rx="0.5"/>
+                            <rect x="13" y="12" width="8" height="9" rx="0.5"/>
+                            <rect x="3" y="16" width="8" height="5" rx="0.5"/>
+                        </svg>
+                        <span>Original</span>
+                    </button>
+                    <button type="button" class="ratio-switch-btn ${currentRatioMode === '1:1' ? 'active' : ''}" data-ratio="1:1" title="View in 1:1 square ratio">
+                        <svg class="ratio-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="8" height="8" rx="0.5"/>
+                            <rect x="13" y="3" width="8" height="8" rx="0.5"/>
+                            <rect x="3" y="13" width="8" height="8" rx="0.5"/>
+                            <rect x="13" y="13" width="8" height="8" rx="0.5"/>
+                        </svg>
+                        <span>1:1</span>
+                    </button>
+                </div>
+            `;
+            headerContainer.appendChild(headerBottom);
+
+            const setRatioMode = (mode) => {
+                currentRatioMode = mode;
+                try {
+                    localStorage.setItem('zhukov_gallery_ratio_mode', mode);
+                } catch (e) {}
+
+                const switcher = document.getElementById('gallery-ratio-switcher');
+                if (switcher) {
+                    switcher.querySelectorAll('.ratio-switch-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.getAttribute('data-ratio') === mode);
+                    });
                 }
-                
-                wrapper.style.gridColumn = `span ${colSpan}`;
-                
-                requestAnimationFrame(() => {
-                    const renderedWidth = wrapper.getBoundingClientRect().width;
-                    if (!renderedWidth) return;
-                    
-                    let targetHeight;
-                    if (isMobile) {
-                        // Dynamic Pinterest height according to aspect ratio
-                        if (colSpan === 2) {
-                            targetHeight = renderedWidth / (ratio > 1 ? ratio : 1.6);
+
+                if (mode === '1:1') {
+                    gridContainer.classList.add('ratio-1-1');
+                    gridContainer.style.position = '';
+                    gridContainer.style.height = '';
+                    gridContainer.querySelectorAll('.masonry-item').forEach(wrapper => {
+                        wrapper.style.position = '';
+                        wrapper.style.left = '';
+                        wrapper.style.top = '';
+                        wrapper.style.width = '';
+                        wrapper.style.height = '';
+                        wrapper.style.gridColumn = '';
+                        wrapper.style.gridRow = '';
+                    });
+                } else {
+                    gridContainer.classList.remove('ratio-1-1');
+                    layoutMasonry();
+                }
+            };
+
+            headerBottom.querySelectorAll('.ratio-switch-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetRatio = btn.getAttribute('data-ratio');
+                    if (targetRatio && targetRatio !== currentRatioMode) {
+                        setRatioMode(targetRatio);
+                    }
+                });
+            });
+
+            const layoutMasonry = () => {
+                if (currentRatioMode === '1:1') return;
+
+                const items = Array.from(gridContainer.querySelectorAll('.masonry-item'));
+                if (items.length === 0) return;
+
+                const containerWidth = gridContainer.getBoundingClientRect().width;
+                if (!containerWidth) return;
+
+                const isMobile = window.innerWidth <= 500;
+                const isTablet = window.innerWidth <= 800;
+                const isLaptop = window.innerWidth <= 1200;
+
+                let numCols = 4;
+                if (isTablet || isMobile) {
+                    numCols = 2;
+                } else if (isLaptop) {
+                    numCols = 3;
+                }
+
+                const gap = isMobile ? 8 : (isTablet ? 12 : 16);
+                const colWidth = (containerWidth - (numCols - 1) * gap) / numCols;
+                const colHeights = new Array(numCols).fill(0);
+
+                gridContainer.style.position = 'relative';
+
+                items.forEach(wrapper => {
+                    const img = wrapper.querySelector('img.masonry-img');
+                    // Accurate natural aspect ratio (fallback 0.75 for portrait placeholders)
+                    const ratio = (img && img.naturalWidth && img.naturalHeight)
+                        ? (img.naturalWidth / img.naturalHeight)
+                        : 0.75;
+
+                    // Intelligent 2-column feature span:
+                    // Only span 2 columns if adjacent columns are level (<= 20px difference) so NO GAP is ever created!
+                    const isWide = ratio > 1.35;
+                    let bestCol = 0;
+                    let spanCols = 1;
+
+                    if (isWide && numCols >= 2) {
+                        let bestPairCol = -1;
+                        let bestPairTop = Infinity;
+
+                        for (let c = 0; c < numCols - 1; c++) {
+                            const heightDiff = Math.abs(colHeights[c] - colHeights[c + 1]);
+                            if (heightDiff <= 20) {
+                                const pairTop = Math.max(colHeights[c], colHeights[c + 1]);
+                                if (pairTop < bestPairTop) {
+                                    bestPairTop = pairTop;
+                                    bestPairCol = c;
+                                }
+                            }
+                        }
+
+                        let minSingleCol = 0;
+                        let minSingleHeight = colHeights[0];
+                        for (let c = 1; c < numCols; c++) {
+                            if (colHeights[c] < minSingleHeight) {
+                                minSingleHeight = colHeights[c];
+                                minSingleCol = c;
+                            }
+                        }
+
+                        if (bestPairCol !== -1 && bestPairTop <= minSingleHeight + 30) {
+                            spanCols = 2;
+                            bestCol = bestPairCol;
                         } else {
-                            // Clamp ratio between 0.65 (slender portrait) and 1.4 (landscape)
-                            const clampedRatio = Math.max(0.65, Math.min(1.4, ratio));
-                            targetHeight = renderedWidth / clampedRatio;
+                            spanCols = 1;
+                            bestCol = minSingleCol;
                         }
                     } else {
-                        let targetRatio;
-                        if (colSpan === 2) {
-                            targetRatio = 3 / 2; // Standard Landscape
-                        } else if (ratio < 0.85) {
-                            targetRatio = 4 / 5; // Standard Portrait
-                        } else {
-                            targetRatio = 1 / 1; // Standard Square
+                        let minCol = 0;
+                        let minHeight = colHeights[0];
+                        for (let c = 1; c < numCols; c++) {
+                            if (colHeights[c] < minHeight) {
+                                minHeight = colHeights[c];
+                                minCol = c;
+                            }
                         }
-                        targetHeight = renderedWidth / targetRatio;
+                        bestCol = minCol;
+                        spanCols = 1;
                     }
-                    
-                    const rowHeight = 10;
-                    const gap = isMobile ? 8 : 16;
-                    const rowSpan = Math.ceil((targetHeight + gap) / (rowHeight + gap));
-                    
-                    wrapper.style.gridRow = `span ${rowSpan}`;
+
+                    const itemWidth = spanCols === 2 ? Math.round(colWidth * 2 + gap) : Math.round(colWidth);
+                    const top = spanCols === 2
+                        ? Math.max(colHeights[bestCol], colHeights[bestCol + 1])
+                        : colHeights[bestCol];
+                    const left = Math.round(bestCol * (colWidth + gap));
+                    const itemHeight = Math.round(itemWidth / ratio);
+
+                    wrapper.style.position = 'absolute';
+                    wrapper.style.left = `${left}px`;
+                    wrapper.style.top = `${top}px`;
+                    wrapper.style.width = `${itemWidth}px`;
+                    wrapper.style.height = `${itemHeight}px`;
+                    wrapper.style.gridColumn = '';
+                    wrapper.style.gridRow = '';
+
+                    const newHeight = top + itemHeight + gap;
+                    colHeights[bestCol] = newHeight;
+                    if (spanCols === 2) {
+                        colHeights[bestCol + 1] = newHeight;
+                    }
                 });
+
+                const maxHeight = Math.max(...colHeights);
+                gridContainer.style.height = `${maxHeight}px`;
             };
 
             let draggedIndex = null;
+
+            let galleryViewportObserver = null;
 
             const renderGrid = () => {
                 gridContainer.innerHTML = ''; // clear
@@ -962,22 +1087,55 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                if (currentRatioMode === '1:1') {
+                    gridContainer.classList.add('ratio-1-1');
+                } else {
+                    gridContainer.classList.remove('ratio-1-1');
+                }
+
+                if (galleryViewportObserver) {
+                    galleryViewportObserver.disconnect();
+                }
+
+                galleryViewportObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const wrapper = entry.target;
+                            const img = wrapper.querySelector('img.masonry-img');
+                            if (img && img.dataset.src) {
+                                img.src = img.dataset.src;
+                                img.removeAttribute('data-src');
+                                if (img.complete && img.naturalWidth && typeof img._reveal === 'function') {
+                                    img._reveal();
+                                }
+                            }
+                            observer.unobserve(wrapper);
+                        }
+                    });
+                }, {
+                    root: null,
+                    rootMargin: '250px 0px',
+                    threshold: 0
+                });
+
                 currentUrls.forEach((url, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'masonry-item img-container';
-                    // Initially set a default span so it doesn't break layout while loading
-                    wrapper.style.gridRow = `span 20`; // default fallback
                     
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
-                    img.src = url;
+                    img.dataset.src = url;
+                    // Light SVG transparent placeholder to prevent broken image iconography
+                    img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
 
                     const reveal = () => {
-                        calculateSpans(wrapper, img);
-                        const delay = (index * 0.05); // 50ms wave interval
+                        const delay = Math.min((index % 6) * 0.05, 0.3); // Smooth staggered reveal
                         img.style.transitionDelay = `${delay}s`;
                         requestAnimationFrame(() => {
                             img.classList.add('is-revealed');
+                            if (currentRatioMode !== '1:1') {
+                                layoutMasonry();
+                            }
                         });
                         setTimeout(() => {
                             wrapper.classList.add('img-loaded');
@@ -985,11 +1143,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }, (delay + 0.65) * 1000);
                     };
 
-                    if (img.complete && img.naturalWidth) {
-                        reveal();
-                    } else {
-                        img.addEventListener('load', reveal, { once: true });
-                    }
+                    img._reveal = reveal;
+
+                    img.addEventListener('load', () => {
+                        if (img.src && !img.src.startsWith('data:')) {
+                            reveal();
+                        }
+                    });
                     
                     img.addEventListener('click', () => {
                         openLightbox(img, categoryName || 'GALLERY');
@@ -1116,22 +1276,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     
                     gridContainer.appendChild(wrapper);
+                    if (galleryViewportObserver) {
+                        galleryViewportObserver.observe(wrapper);
+                    }
                 });
+
+                if (currentRatioMode !== '1:1') {
+                    layoutMasonry();
+                }
             };
 
             renderGrid();
 
-            // Handle Resize - recalculate all spans since column widths change
+            // Handle Resize - recalculate masonry layout since column widths change
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(() => {
-                    const items = gridContainer.querySelectorAll('.masonry-item');
-                    items.forEach(wrapper => {
-                        const img = wrapper.querySelector('img');
-                        calculateSpans(wrapper, img);
-                    });
-                }, 200);
+                    if (currentRatioMode === '1:1') return;
+                    layoutMasonry();
+                }, 100);
             });
 
         } catch (error) {
