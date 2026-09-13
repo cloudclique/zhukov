@@ -148,6 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoshootCountBadge = document.getElementById('photoshoot-count-badge');
     const inputImgUrl = document.getElementById('input-img-url');
     const btnInsertUrlImg = document.getElementById('btn-insert-url-img');
+    const btnPastePinterest = document.getElementById('btn-paste-pinterest');
+    const btnPasteClipboardUrl = document.getElementById('btn-paste-clipboard-url');
+    const btnClearUrlInput = document.getElementById('btn-clear-url-input');
+    const urlStatusText = document.getElementById('url-status-text');
+    const urlPreviewBox = document.getElementById('url-preview-box');
+    const urlPreviewImg = document.getElementById('url-preview-img');
+    const urlPreviewBadge = document.getElementById('url-preview-badge');
     const inputFileLocal = document.getElementById('input-file-local');
     const uploadStatusText = document.getElementById('upload-status-text');
 
@@ -3953,16 +3960,348 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Insert Image via URL
-    btnInsertUrlImg.addEventListener('click', () => {
-        const url = inputImgUrl.value.trim();
-        if (!url) {
-            alert('Please enter a valid image URL.');
+    // --- Helper: Detect Pinterest URLs ---
+    const isPinterestUrl = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        const clean = url.trim().toLowerCase();
+        return (
+            clean.includes('pinterest.') ||
+            clean.includes('pin.it') ||
+            clean.includes('pinimg.com')
+        );
+    };
+
+    // --- Helper: Upgrade Pinterest Image to Highest Resolution (Originals) ---
+    const upgradePinterestQuality = async (imgUrl) => {
+        if (!imgUrl || !imgUrl.includes('pinimg.com')) return imgUrl;
+
+        // Convert /236x/, /474x/, /564x/, /736x/ to /originals/
+        const origUrl = imgUrl.replace(/\/(?:\d+x|originals)\//i, '/originals/');
+        if (origUrl === imgUrl) return imgUrl;
+
+        // Verify if /originals/ image is reachable in the browser
+        return new Promise((resolve) => {
+            const img = new Image();
+            let resolved = false;
+            const timer = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve(imgUrl); // Fallback to working URL
+                }
+            }, 2500);
+
+            img.onload = () => {
+                if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timer);
+                    resolve(origUrl);
+                }
+            };
+            img.onerror = () => {
+                if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timer);
+                    resolve(imgUrl); // Fallback to safe URL
+                }
+            };
+            img.src = origUrl;
+        });
+    };
+
+    // --- Helper: Resolve Pinterest Page / Pin URL to Direct High-Res Image ---
+    const resolvePinterestImage = async (rawUrl) => {
+        let url = (rawUrl || '').trim();
+        if (!url) throw new Error('Please enter or paste a valid URL.');
+
+        // 1. Direct Pinterest image CDN URL
+        if (/i\.pinimg\.com\//i.test(url)) {
+            return await upgradePinterestQuality(url);
+        }
+
+        // 2. Resolve Pinterest pin or short link (pin.it or pinterest.com/pin/...)
+        try {
+            const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}`;
+            const res = await fetch(microlinkUrl, { signal: AbortSignal.timeout(9000) });
+            if (res.ok) {
+                const json = await res.json();
+                const extractedImg = json?.data?.image?.url;
+                if (extractedImg) {
+                    return await upgradePinterestQuality(extractedImg);
+                }
+            }
+        } catch (err) {
+            console.warn('Microlink resolution error:', err);
+        }
+
+        // 3. Fallback: Check if numeric pin ID can be resolved via oEmbed proxy
+        const pinIdMatch = url.match(/\/pin\/(\d+)/i);
+        if (pinIdMatch) {
+            const pinId = pinIdMatch[1];
+            try {
+                const oembedTarget = `https://www.pinterest.com/oembed.json?url=https://www.pinterest.com/pin/${pinId}/`;
+                const proxyRes = await fetch(`https://corsproxy.org/?${encodeURIComponent(oembedTarget)}`, { signal: AbortSignal.timeout(6000) });
+                if (proxyRes.ok) {
+                    const oembedData = await proxyRes.json();
+                    if (oembedData?.thumbnail_url) {
+                        return await upgradePinterestQuality(oembedData.thumbnail_url);
+                    }
+                }
+            } catch (e) {
+                console.warn('oEmbed proxy fallback failed:', e);
+            }
+        }
+
+        // 4. If URL ends with common image extensions, treat as direct image
+        if (/\.(?:jpe?g|png|webp|gif|svg)(?:\?.*)?$/i.test(url)) {
+            return url;
+        }
+
+        throw new Error('Unable to extract image from Pinterest link. Please ensure the pin is public, or copy the direct image address.');
+    };
+
+    // --- Helper: URL Status & Preview UI Handlers ---
+    const showUrlStatus = (msg, type = 'info') => {
+        if (!urlStatusText) return;
+        urlStatusText.className = `url-status-banner ${type}`;
+        urlStatusText.innerHTML = msg;
+        urlStatusText.style.display = 'flex';
+    };
+
+    const hideUrlStatus = () => {
+        if (!urlStatusText) return;
+        urlStatusText.style.display = 'none';
+        urlStatusText.textContent = '';
+    };
+
+    const updateUrlPreview = (imgUrl, badgeText = 'Image URL') => {
+        if (!urlPreviewBox || !urlPreviewImg) return;
+        if (!imgUrl) {
+            urlPreviewBox.style.display = 'none';
+            urlPreviewImg.src = '';
+            if (urlPreviewBadge) urlPreviewBadge.textContent = '';
             return;
         }
-        insertImageElement(url);
-        inputImgUrl.value = '';
-    });
+        urlPreviewImg.src = imgUrl;
+        if (urlPreviewBadge) {
+            urlPreviewBadge.textContent = badgeText;
+            urlPreviewBadge.style.display = badgeText ? 'block' : 'none';
+        }
+        urlPreviewBox.style.display = 'flex';
+    };
+
+    // --- Core Action: Process URL (Pinterest or Direct) and Insert onto Canvas ---
+    const processAndInsertUrl = async (rawUrl) => {
+        const url = (rawUrl || '').trim();
+        if (!url) {
+            showToast('Please enter or paste a valid URL.');
+            showUrlStatus('Please enter or paste a valid URL.', 'error');
+            return;
+        }
+
+        const isPinterest = isPinterestUrl(url);
+        const loadingMsg = isPinterest
+            ? 'Fetching & resolving Pinterest image...'
+            : 'Verifying image URL...';
+        showUrlStatus(loadingMsg, 'loading');
+
+        if (btnInsertUrlImg) btnInsertUrlImg.disabled = true;
+        if (btnPastePinterest) {
+            btnPastePinterest.disabled = true;
+            btnPastePinterest.classList.add('is-loading');
+        }
+
+        try {
+            let finalImageUrl = url;
+            if (isPinterest) {
+                finalImageUrl = await resolvePinterestImage(url);
+            }
+
+            // Test pre-loading the final image to ensure it is valid
+            await new Promise((resolve, reject) => {
+                const testImg = new Image();
+                const timeout = setTimeout(() => {
+                    resolve(); // avoid indefinite freeze
+                }, 5000);
+
+                testImg.onload = () => {
+                    clearTimeout(timeout);
+                    resolve();
+                };
+                testImg.onerror = () => {
+                    clearTimeout(timeout);
+                    if (!isPinterest) {
+                        reject(new Error('Image failed to load. Please verify the URL points directly to an image.'));
+                    } else {
+                        resolve();
+                    }
+                };
+                testImg.src = finalImageUrl;
+            });
+
+            // Insert element onto canvas
+            insertImageElement(finalImageUrl);
+
+            // Reset modal state
+            if (inputImgUrl) inputImgUrl.value = '';
+            hideUrlStatus();
+            updateUrlPreview(null);
+            if (btnClearUrlInput) btnClearUrlInput.style.display = 'none';
+
+            if (isPinterest) {
+                showToast('Pinterest image placed onto moodboard in original resolution!');
+            }
+        } catch (err) {
+            console.error('Error inserting URL image:', err);
+            showUrlStatus(err.message || 'Failed to load image. Please check the URL.', 'error');
+            showToast(err.message || 'Failed to resolve image.');
+        } finally {
+            if (btnInsertUrlImg) btnInsertUrlImg.disabled = false;
+            if (btnPastePinterest) {
+                btnPastePinterest.disabled = false;
+                btnPastePinterest.classList.remove('is-loading');
+            }
+        }
+    };
+
+    // 1. "Paste from Pinterest" Button Click Handler (Direct Clipboard Pull)
+    if (btnPastePinterest) {
+        btnPastePinterest.addEventListener('click', async () => {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    showToast('Clipboard API not supported. Paste the URL manually.');
+                    if (inputImgUrl) inputImgUrl.focus();
+                    return;
+                }
+
+                let clipText = '';
+                try {
+                    clipText = await navigator.clipboard.readText();
+                } catch (clipErr) {
+                    console.warn('Clipboard read error:', clipErr);
+                    showToast('Clipboard access was denied. Paste your link manually below.');
+                    showUrlStatus('Clipboard access denied. Please paste your link manually with Ctrl+V below.', 'info');
+                    if (inputImgUrl) {
+                        inputImgUrl.focus();
+                        inputImgUrl.select();
+                    }
+                    return;
+                }
+
+                clipText = (clipText || '').trim();
+                if (!clipText) {
+                    showToast('Clipboard is empty. Copy a Pinterest pin or image first!');
+                    showUrlStatus('Clipboard is empty. Copy a link from Pinterest and try again.', 'info');
+                    if (inputImgUrl) inputImgUrl.focus();
+                    return;
+                }
+
+                if (!/^https?:\/\//i.test(clipText)) {
+                    showToast('No valid URL found in clipboard.');
+                    showUrlStatus('The text in your clipboard does not appear to be a web URL. Please copy a link from Pinterest.', 'error');
+                    if (inputImgUrl) {
+                        inputImgUrl.value = clipText;
+                        inputImgUrl.focus();
+                    }
+                    return;
+                }
+
+                // Populate input field for user transparency
+                if (inputImgUrl) {
+                    inputImgUrl.value = clipText;
+                    if (btnClearUrlInput) btnClearUrlInput.style.display = 'inline-block';
+                }
+
+                // Automatically resolve & insert onto canvas
+                await processAndInsertUrl(clipText);
+
+            } catch (err) {
+                console.error('Paste from Pinterest error:', err);
+                showToast('Failed to read Pinterest link from clipboard.');
+            }
+        });
+    }
+
+    // 2. Clipboard Paste Button inside Input Row
+    if (btnPasteClipboardUrl) {
+        btnPasteClipboardUrl.addEventListener('click', async () => {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    showToast('Clipboard API not supported. Use Ctrl+V.');
+                    if (inputImgUrl) inputImgUrl.focus();
+                    return;
+                }
+                const text = (await navigator.clipboard.readText() || '').trim();
+                if (text && inputImgUrl) {
+                    inputImgUrl.value = text;
+                    if (btnClearUrlInput) btnClearUrlInput.style.display = 'inline-block';
+                    inputImgUrl.dispatchEvent(new Event('input'));
+                    showToast('Link pasted from clipboard!');
+                } else {
+                    showToast('Clipboard is empty.');
+                }
+            } catch (err) {
+                showToast('Clipboard access denied. Please paste with Ctrl+V.');
+                if (inputImgUrl) inputImgUrl.focus();
+            }
+        });
+    }
+
+    // 3. Clear Button for Input
+    if (btnClearUrlInput) {
+        btnClearUrlInput.addEventListener('click', () => {
+            if (inputImgUrl) inputImgUrl.value = '';
+            hideUrlStatus();
+            updateUrlPreview(null);
+            btnClearUrlInput.style.display = 'none';
+            if (inputImgUrl) inputImgUrl.focus();
+        });
+    }
+
+    // 4. "Insert Onto Canvas" Button Click Handler
+    if (btnInsertUrlImg) {
+        btnInsertUrlImg.addEventListener('click', () => {
+            processAndInsertUrl(inputImgUrl.value.trim());
+        });
+    }
+
+    // 5. Input Field Keydown (Enter to insert) & Live Preview on Input
+    if (inputImgUrl) {
+        inputImgUrl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                processAndInsertUrl(inputImgUrl.value.trim());
+            }
+        });
+
+        let previewDebounceTimer = null;
+        inputImgUrl.addEventListener('input', () => {
+            clearTimeout(previewDebounceTimer);
+            const val = inputImgUrl.value.trim();
+            if (btnClearUrlInput) {
+                btnClearUrlInput.style.display = val ? 'inline-block' : 'none';
+            }
+
+            if (!val) {
+                hideUrlStatus();
+                updateUrlPreview(null);
+                return;
+            }
+
+            if (isPinterestUrl(val)) {
+                showUrlStatus('📌 Pinterest link detected — will automatically fetch highest resolution original image on insert.', 'info');
+                if (/i\.pinimg\.com\//i.test(val)) {
+                    updateUrlPreview(val, 'Pinterest CDN');
+                }
+            } else if (/\.(?:jpe?g|png|webp|gif|svg)(?:\?.*)?$/i.test(val)) {
+                hideUrlStatus();
+                previewDebounceTimer = setTimeout(() => {
+                    updateUrlPreview(val, 'Direct Image');
+                }, 300);
+            } else {
+                hideUrlStatus();
+            }
+        });
+    }
 
     // Local File Upload directly onto Moodboard via Cloudflare Worker -> ImgBB
     inputFileLocal.addEventListener('change', async (e) => {

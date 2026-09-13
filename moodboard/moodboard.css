@@ -1819,6 +1819,249 @@ select.form-input option:hover {
     font-weight: 600;
 }
 
+/* Pinterest Quick Action & URL Tab Styling */
+.pinterest-quick-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(230, 0, 35, 0.12) 0%, rgba(25, 20, 24, 0.6) 100%);
+    border: 1px solid rgba(230, 0, 35, 0.28);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    margin-bottom: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.pinterest-quick-action:hover {
+    border-color: rgba(230, 0, 35, 0.45);
+    background: linear-gradient(135deg, rgba(230, 0, 35, 0.16) 0%, rgba(25, 20, 24, 0.7) 100%);
+    box-shadow: 0 6px 24px rgba(230, 0, 35, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.pinterest-badge-title {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.pinterest-icon {
+    color: #e60023;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 6px rgba(230, 0, 35, 0.4));
+}
+
+.pinterest-badge-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.pinterest-badge-text strong {
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.pinterest-badge-text span {
+    color: var(--mb-text-muted, #94a3b8);
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+
+.mb-btn-pinterest {
+    background: #e60023;
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 14px rgba(230, 0, 35, 0.38);
+}
+
+.mb-btn-pinterest:hover {
+    background: #cc001f;
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 20px rgba(230, 0, 35, 0.55);
+}
+
+.mb-btn-pinterest:active {
+    transform: translateY(0);
+}
+
+.mb-btn-pinterest:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.mb-btn-pinterest.is-loading svg {
+    animation: mb-spin 1s linear infinite;
+}
+
+@keyframes mb-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.picker-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.25rem 0 1.1rem;
+    color: var(--mb-text-muted, #64748b);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+}
+
+.picker-divider::before,
+.picker-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.picker-divider span {
+    padding: 0 1rem;
+}
+
+.url-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    position: relative;
+}
+
+.url-input-row .form-input {
+    flex: 1;
+}
+
+.icon-btn-paste {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+    border-radius: 6px;
+    height: 42px;
+    width: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.icon-btn-paste:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.url-status-banner {
+    margin-top: 0.9rem;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    line-height: 1.4;
+    transition: all 0.25s ease;
+}
+
+.url-status-banner.info {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #7dd3fc;
+}
+
+.url-status-banner.loading {
+    background: rgba(230, 0, 35, 0.12);
+    border: 1px solid rgba(230, 0, 35, 0.3);
+    color: #fca5a5;
+}
+
+.url-status-banner.error {
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fecdd3;
+}
+
+.url-status-banner.success {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+}
+
+.url-preview-box {
+    margin-top: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    max-height: 260px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.75rem;
+}
+
+.url-preview-wrapper {
+    position: relative;
+    max-height: 240px;
+    display: inline-block;
+}
+
+.url-preview-box img {
+    max-height: 240px;
+    max-width: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.url-preview-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+    .pinterest-quick-action {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .mb-btn-pinterest {
+        justify-content: center;
+    }
+}
+
 /* Collaborator list tags */
 .collab-chip-list {
     display: flex;
