@@ -209,9 +209,6 @@ function initColorPalettePicker() {
                 <div class="swatch-color-preview swatch-color-box" style="background-color: ${hex}; box-shadow: 0 2px 6px ${hex}44;">
                     ${isBase ? '<span class="swatch-base-tag">Key</span>' : ''}
                 </div>
-                <div class="swatch-meta">
-                    <span class="swatch-hex">${hex}</span>
-                </div>
                 <div class="swatch-copy-hint">Copied!</div>
             `;
 
@@ -457,10 +454,9 @@ function initMethodologyStepper() {
             if (stepperBar) {
                 const activeLink = stepperLinks[index];
                 if (activeLink) {
-                    const barRect = stepperBar.getBoundingClientRect();
-                    const linkRect = activeLink.getBoundingClientRect();
-                    const delta = (linkRect.left - barRect.left) - (stepperBar.clientWidth / 2) + (linkRect.width / 2);
-                    stepperBar.scrollBy({ left: delta, behavior: 'smooth' });
+                    const itemOffset = activeLink.getBoundingClientRect().left - stepperBar.getBoundingClientRect().left + stepperBar.scrollLeft;
+                    const linkLeft = itemOffset - (stepperBar.clientWidth - activeLink.offsetWidth) / 2;
+                    stepperBar.scrollTo({ left: Math.max(0, linkLeft), behavior: 'smooth' });
                 }
             }
         }
@@ -473,11 +469,9 @@ function initMethodologyStepper() {
         if (!targetEl) return;
 
         if (isMobile() && roadmapGrid) {
-            // Scroll strictly inside the horizontal roadmapGrid container (never scrolling window vertically!)
-            const gridRect = roadmapGrid.getBoundingClientRect();
-            const cardRect = targetEl.getBoundingClientRect();
-            const delta = (cardRect.left - gridRect.left) - (roadmapGrid.clientWidth / 2) + (cardRect.width / 2);
-            roadmapGrid.scrollBy({ left: delta, behavior: 'smooth' });
+            // Scroll strictly inside the horizontal roadmapGrid container to center the target card
+            const targetLeft = targetEl.offsetLeft - (roadmapGrid.clientWidth - targetEl.offsetWidth) / 2;
+            roadmapGrid.scrollTo({ left: targetLeft, behavior: 'smooth' });
         } else {
             const headerOffset = 90;
             const elementPosition = targetEl.getBoundingClientRect().top;
@@ -528,8 +522,11 @@ function initMethodologyStepper() {
     // Mobile Prev / Next Buttons
     if (prevBtn) {
         prevBtn.addEventListener('click', () => {
-            const curIdx = getActiveMobileIndex();
+            const curIdx = currentActiveIndex;
             const nextIdx = Math.max(0, curIdx - 1);
+            isManualClick = true;
+            clearTimeout(manualClickTimer);
+            manualClickTimer = setTimeout(() => { isManualClick = false; }, 800);
             setActiveStep(nextIdx, false);
             goToStep(nextIdx);
         });
@@ -537,8 +534,11 @@ function initMethodologyStepper() {
 
     if (nextBtn) {
         nextBtn.addEventListener('click', () => {
-            const curIdx = getActiveMobileIndex();
+            const curIdx = currentActiveIndex;
             const nextIdx = Math.min(stepCards.length - 1, curIdx + 1);
+            isManualClick = true;
+            clearTimeout(manualClickTimer);
+            manualClickTimer = setTimeout(() => { isManualClick = false; }, 800);
             setActiveStep(nextIdx, false);
             goToStep(nextIdx);
         });
@@ -547,6 +547,9 @@ function initMethodologyStepper() {
     // Mobile Dots Click
     swipeDots.forEach((dot, idx) => {
         dot.addEventListener('click', () => {
+            isManualClick = true;
+            clearTimeout(manualClickTimer);
+            manualClickTimer = setTimeout(() => { isManualClick = false; }, 800);
             setActiveStep(idx, false);
             goToStep(idx);
         });
@@ -573,9 +576,11 @@ function initMethodologyStepper() {
 
     // Update state for Mobile Carousel
     function updateMobileCarousel() {
-        if (!isMobile()) return;
+        if (!isMobile() || isManualClick) return;
         const activeIdx = getActiveMobileIndex();
-        setActiveStep(activeIdx, false);
+        if (activeIdx !== currentActiveIndex) {
+            setActiveStep(activeIdx, false);
+        }
     }
 
     // Desktop Vertical Scroll Spy (Row-aware for pairs in the same row: 1/2, 3/4, 5/6, 7)

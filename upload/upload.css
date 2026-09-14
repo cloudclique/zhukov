@@ -207,3 +207,59 @@
         padding: 2rem 1.25rem;
     }
 }
+
+/* ==========================================================================
+   UPLOAD PORTAL — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] .vogue-upload-main {
+    background: #0f0d0b !important;
+}
+
+html[data-theme="dark"] .vogue-auth-warning,
+html[data-theme="dark"] .upload-container {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .vogue-auth-warning p,
+html[data-theme="dark"] .upload-desc {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .upload-label {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .upload-input,
+html[data-theme="dark"] .upload-select {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .upload-input:focus,
+html[data-theme="dark"] .upload-select:focus {
+    border-color: #cca353 !important;
+}
+
+html[data-theme="dark"] .drop-zone {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.25) !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .drop-zone.dragover {
+    border-color: #cca353 !important;
+    background: #1c1713 !important;
+}
+
+html[data-theme="dark"] .checkbox-label {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .checkbox-hint {
+    color: #8f8272 !important;
+}
+

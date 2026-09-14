@@ -314,9 +314,10 @@
     padding: 0.42rem 0.6rem;
     border-radius: 6px;
     text-decoration: none;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     color: #444444;
     background: transparent;
+    border: 1px solid transparent;
     width: 100%;
     box-sizing: border-box;
 }
@@ -844,10 +845,11 @@
 .palette-swatch-item {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    justify-content: center;
+    gap: 0;
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    padding: 0.28rem 0.55rem;
+    padding: 0.32rem 0.42rem;
     border-radius: 4px;
     position: relative;
     cursor: pointer;
@@ -891,28 +893,15 @@
     line-height: 1;
 }
 
-.swatch-meta {
-    display: flex;
-    align-items: baseline;
-    gap: 0.35rem;
-}
-
-.swatch-hex {
-    font-family: 'Inter', monospace, sans-serif;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #0f172a;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
+.swatch-meta,
+.swatch-hex,
 .swatch-hsl {
-    display: none;
+    display: none !important;
 }
 
 .swatch-copy-hint {
     font-family: 'Inter', sans-serif;
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     font-weight: 700;
     color: #10b981;
     text-transform: uppercase;
@@ -921,9 +910,16 @@
     pointer-events: none;
     transition: opacity 0.2s ease;
     position: absolute;
-    right: 8px;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
     background: #ffffff;
-    padding: 0 2px;
+    border: 1px solid #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .palette-swatch-box.copied .swatch-copy-hint,
@@ -1192,7 +1188,7 @@
     /* ── Compact Mobile Slide Card Architecture ── */
     .process-step-card {
         scroll-snap-align: center !important;
-        scroll-snap-stop: always !important;
+        scroll-snap-stop: normal !important;
         flex: 0 0 86vw !important;
         width: 86vw !important;
         max-width: 420px !important;
@@ -1273,8 +1269,8 @@
 
     .palette-swatch-box,
     .palette-swatch-item {
-        padding: 0.18rem 0.35rem !important;
-        gap: 0.3rem !important;
+        padding: 0.22rem 0.32rem !important;
+        gap: 0 !important;
     }
 
     .swatch-color-preview {
@@ -1284,10 +1280,8 @@
         min-height: 14px !important;
     }
 
-    .swatch-hex {
-        font-size: 0.62rem !important;
-    }
-
+    .swatch-meta,
+    .swatch-hex,
     .swatch-hsl {
         display: none !important;
     }
@@ -1444,6 +1438,8 @@
         z-index: 99;
         display: flex;
         justify-content: center;
+        height: 38px !important;
+        min-height: 38px !important;
     }
 
     .methodology-stepper-rail,
@@ -1464,28 +1460,62 @@
     }
 
     .methodology-stepper-bar.vertical {
-        flex-direction: row;
-        width: auto;
-        max-width: 100%;
-        overflow-x: auto;
-        border-radius: 30px;
-        padding: 0.35rem 0.55rem;
+        flex-direction: row !important;
+        align-items: center !important;
+        width: auto !important;
+        max-width: 100% !important;
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        box-sizing: border-box !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scroll-behavior: smooth !important;
+        border-radius: 30px !important;
+        padding: 0 0.45rem !important;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
     }
 
     .stepper-rail-header {
-        display: none;
+        display: none !important;
     }
 
     .stepper-rail-items {
-        display: flex;
-        flex-direction: row;
-        gap: 0.25rem;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        min-width: max-content !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .methodology-stepper-bar.vertical .stepper-step {
-        padding: 0.3rem 0.55rem;
-        border-radius: 20px;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.4rem !important;
+        width: auto !important;
+        min-width: max-content !important;
+        max-width: max-content !important;
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        max-height: 28px !important;
+        padding: 0 0.65rem !important;
+        margin: 0 !important;
+        border-radius: 20px !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+        border: 1px solid transparent !important;
+        transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        transform: none !important;
+    }
+
+    .methodology-stepper-bar.vertical .stepper-step:hover {
+        transform: none !important;
     }
 
     /* ── Mobile Swipe Carousel Navigation Bar (Directly Below Slides) ── */
@@ -1644,4 +1674,279 @@
     .process-image-container {
         height: 165px !important;
     }
+}
+
+/* ==========================================================================
+   ABOUT ME — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] .vogue-about-main,
+html[data-theme="dark"] .about-editorial-hero {
+    background: #0f0d0b !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .about-pillar-tag {
+    color: #fae8a4 !important;
+    background: rgba(204, 163, 83, 0.1) !important;
+    border-color: rgba(204, 163, 83, 0.25) !important;
+}
+
+html[data-theme="dark"] .about-jump-btn {
+    border: 1px solid rgba(216, 196, 170, 0.35) !important;
+    color: #dcd3c5 !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .about-jump-btn:hover {
+    border-color: #cca353 !important;
+    background: rgba(204, 163, 83, 0.12) !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .stepper-rail-header {
+    border-bottom-color: rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .stepper-rail-title {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .stepper-rail-dot {
+    background: #cca353 !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step {
+    color: #ad9f8d !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    box-sizing: border-box !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step:hover {
+    background: #241c16 !important;
+    color: #fae8a4 !important;
+    border-color: rgba(204, 163, 83, 0.2) !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step.active {
+    background: #271e17 !important;
+    color: #fae8a4 !important;
+    border-color: rgba(204, 163, 83, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-num {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step.active .stepper-num {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .process-step-card {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] .process-step-card:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .step-badge-row {
+    border-bottom-color: rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .step-number-badge {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .step-pill {
+    background: rgba(204, 163, 83, 0.12) !important;
+    color: #fae8a4 !important;
+    border-color: rgba(204, 163, 83, 0.3) !important;
+}
+
+html[data-theme="dark"] .step-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .step-desc,
+html[data-theme="dark"] .step-detail-text {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .gear-spec-card,
+html[data-theme="dark"] .lighting-diagram-box,
+html[data-theme="dark"] .palette-stage-box {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.1) !important;
+}
+
+/* Step 2: Interactive Color Palette Widget (Zero White) */
+html[data-theme="dark"] .color-palette-widget {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .palette-mode-selector {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.18) !important;
+}
+
+html[data-theme="dark"] .palette-mode-btn {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .palette-mode-btn:hover {
+    background: #241c16 !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .palette-mode-btn.active {
+    background: #271e17 !important;
+    color: #fae8a4 !important;
+    border: 1px solid rgba(204, 163, 83, 0.4) !important;
+}
+
+html[data-theme="dark"] .palette-swatch-box,
+html[data-theme="dark"] .palette-swatch-item {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.15) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .swatch-copy-hint {
+    background: #1e1813 !important;
+    border-color: rgba(204, 163, 83, 0.3) !important;
+    color: #fae8a4 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="dark"] .palette-sliders-box {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.15) !important;
+}
+
+html[data-theme="dark"] .palette-sliders-box label,
+html[data-theme="dark"] .slider-label-row {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .palette-mode-status,
+html[data-theme="dark"] .slider-val {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .palette-range-input {
+    background: #241c16 !important;
+}
+
+/* Step 7: Deliverables Box & Luxury Gold Button (Zero White & Zero Crimson) */
+html[data-theme="dark"] .milestone-deliverables-panel {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .deliverable-text strong {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .deliverable-text span {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .deliverable-check {
+    background: rgba(204, 163, 83, 0.15) !important;
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .milestone-cta-link {
+    background: #171310 !important;
+    border: 1px solid #cca353 !important;
+    color: #fae8a4 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .milestone-cta-link:hover {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 100%) !important;
+    border-color: #fae8a4 !important;
+    color: #120e0b !important;
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.35) !important;
+    transform: translateY(-2px);
+}
+
+/* Image Frames & Zero 1px Light Border in About Me */
+html[data-theme="dark"] .process-image-container,
+html[data-theme="dark"] .fan-card,
+html[data-theme="dark"] .fan-card-left,
+html[data-theme="dark"] .fan-card-center,
+html[data-theme="dark"] .fan-card-right,
+html[data-theme="dark"] .profile-image-frame {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .image-overlay-badge {
+    background: rgba(20, 16, 13, 0.85) !important;
+    border-color: rgba(216, 196, 170, 0.2) !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] #about-hero-img-container,
+html[data-theme="dark"] .hero-diagonal-cut-wrapper {
+    background-color: #14100d !important;
+    border: none !important;
+}
+
+/* Mobile Swipe Controls & Numbered Bar in Dark Mode */
+html[data-theme="dark"] .methodology-stepper-bar.vertical {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.18) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .mobile-swipe-controls {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.18) !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .mobile-swipe-btn {
+    background: #1f1914 !important;
+    border: 1px solid rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .mobile-swipe-btn:hover,
+html[data-theme="dark"] .mobile-swipe-btn:active {
+    background: #2a221b !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .mobile-swipe-badge {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .mobile-swipe-badge strong {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .swipe-dot {
+    background: rgba(216, 196, 170, 0.25) !important;
+}
+
+html[data-theme="dark"] .swipe-dot.active {
+    background: #cca353 !important;
 }

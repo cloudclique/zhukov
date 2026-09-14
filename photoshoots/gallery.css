@@ -837,3 +837,93 @@
         padding: 2.5rem 1rem;
     }
 }
+
+/* ==========================================================================
+   GALLERY — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] .vogue-gallery-main,
+html[data-theme="dark"] .gallery-nav-breadcrumb,
+html[data-theme="dark"] .gallery-header {
+    background: #0f0d0b !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+/* Hairline Divider underneath title (fixing bright line) */
+html[data-theme="dark"] .gallery-header-bottom {
+    border-top: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .vogue-back-link {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .vogue-back-link:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .gallery-meta,
+html[data-theme="dark"] .gallery-photo-count,
+html[data-theme="dark"] .gallery-description {
+    color: #ad9f8d !important;
+}
+
+/* Gallery description links / social pills */
+html[data-theme="dark"] .desc-link {
+    background: #191512 !important;
+    border: 1px solid rgba(216, 196, 170, 0.22) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .desc-link:hover {
+    background: #271f18 !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .desc-placeholder {
+    color: #8c7d6d !important;
+}
+
+/* Ratio View Mode Switcher (fixing too bright switcher) */
+html[data-theme="dark"] .gallery-ratio-switcher {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.18) !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn.active {
+    background: #271e17 !important;
+    color: #fae8a4 !important;
+    border: 1px solid rgba(204, 163, 83, 0.35) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn .ratio-icon {
+    stroke: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn.active .ratio-icon {
+    stroke: #fae8a4 !important;
+}
+
+/* Zero 1px Light Border around Images in Galleries */
+html[data-theme="dark"] .masonry-item,
+html[data-theme="dark"] .photo-item {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .masonry-img {
+    background: #14100d !important;
+}

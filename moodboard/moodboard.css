@@ -54,6 +54,13 @@ body.moodboard-body.inside-board #site-footer-slot {
     display: none !important;
 }
 
+body.moodboard-body.inside-board #theme-toggle-btn,
+body.moodboard-body.inside-board .zhukov-theme-toggle,
+body.inside-board #theme-toggle-btn,
+body.inside-board .zhukov-theme-toggle {
+    display: none !important;
+}
+
 /* ==============================================
    Moodboard Atelier Loading Screen & Progress Bar
    ============================================== */
@@ -2721,4 +2728,127 @@ select.form-input option:hover {
         max-width: min(220px, calc(100vw - 6rem)) !important;
         max-height: 38vh !important;
     }
+}
+
+/* ==========================================================================
+   MOODBOARD DASHBOARD — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] body.moodboard-body:not(.inside-board),
+html[data-theme="dark"] .dashboard-view,
+html[data-theme="dark"] .dashboard-main-content {
+    background-color: #0f0d0b !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] body.moodboard-body:not(.inside-board) #site-header-slot {
+    background: #0f0d0b !important;
+}
+
+html[data-theme="dark"] .dashboard-hero.vogue-dashboard-hero,
+html[data-theme="dark"] .dashboard-hero,
+html[data-theme="dark"] .vogue-dashboard-hero {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .editorial-section-tag {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .editorial-page-title {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 22%, #aa771c 46%, #fef4cc 68%, #9c6f17 86%, #deb75e 100%) !important;
+    background-size: 200% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    color: #deb75e !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+}
+
+html[data-theme="dark"] .editorial-page-subtitle {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .auth-notice-card,
+html[data-theme="dark"] #auth-notice,
+html[data-theme="dark"] #empty-boards-notice {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.15) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .auth-notice-card h3 {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .auth-notice-card p {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .board-card {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .board-card:hover {
+    border-color: #cca353 !important;
+    background: #1c1713 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .board-card-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .board-card:hover .board-card-title {
+    color: #fef4cc !important;
+}
+
+html[data-theme="dark"] .board-card-desc {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .board-badge {
+    background: #241c16 !important;
+    color: #fae8a4 !important;
+    border-color: rgba(204, 163, 83, 0.3) !important;
+}
+
+html[data-theme="dark"] .board-card-footer {
+    border-top: 1px solid rgba(216, 196, 170, 0.1) !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .collab-tag {
+    background: #1f1915 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .icon-btn-small {
+    background: #241c16 !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .icon-btn-small:hover {
+    color: #fae8a4 !important;
+    background: #2f231a !important;
+}
+
+html[data-theme="dark"] .vogue-pill-btn {
+    background: #171310 !important;
+    color: #fae8a4 !important;
+    border: 1px solid #cca353 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .vogue-pill-btn:hover {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 100%) !important;
+    color: #120e0b !important;
+    border-color: #fae8a4 !important;
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.35) !important;
 }

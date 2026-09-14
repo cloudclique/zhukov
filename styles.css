@@ -3731,6 +3731,15 @@ body.editorial-body .gallery-item:hover img {
     width: 100%;
 }
 
+html[data-theme="dark"] .vogue-subpage-header,
+html[data-theme="dark"] .about-hero-section,
+html[data-theme="dark"] .vogue-contact-hero,
+html[data-theme="dark"] .vogue-dashboard-hero,
+html[data-theme="dark"] .archived-banner {
+    background: transparent !important;
+    border-bottom-color: rgba(216, 196, 170, 0.12) !important;
+}
+
 .subpage-editorial-title,
 .about-editorial-title,
 .contact-editorial-title,
@@ -3854,3 +3863,865 @@ body.editorial-body .gallery-item:hover img {
         padding: 0.55rem 0.85rem !important;
     }
 }
+
+/* ==========================================================================
+   ZHUKOV STUDIO — UNIVERSAL FLOATING DARK / LIGHT THEME TOGGLE & DESIGN SYSTEM
+   ========================================================================== */
+
+/* ── 1. Floating Theme Switch Button (Bottom-Right Corner) ─────────────── */
+.zhukov-theme-toggle {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 99999;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #14110e;
+    border: 1.5px solid rgba(212, 175, 55, 0.5);
+    color: #e5c567;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.16);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.25s ease,
+                border-color 0.25s ease,
+                background-color 0.25s ease;
+    outline: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.zhukov-theme-toggle:hover {
+    transform: scale(1.08);
+    border-color: #d4af37;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 16px rgba(212, 175, 55, 0.3);
+}
+
+.zhukov-theme-toggle:active {
+    transform: scale(0.92);
+}
+
+.zhukov-theme-toggle .toggle-icon-wrap {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zhukov-theme-toggle .toggle-icon {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.25s ease;
+}
+
+/* Light Mode State: Moon visible, Sun hidden */
+.zhukov-theme-toggle .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    color: #cca353;
+}
+
+.zhukov-theme-toggle .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.3);
+    color: #fae8a4;
+}
+
+/* Dark Mode State: Sun visible, Moon hidden */
+html[data-theme="dark"] .zhukov-theme-toggle,
+.zhukov-theme-toggle.is-dark {
+    background: #1c1713;
+    border-color: #cca353;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 18px rgba(212, 175, 55, 0.28);
+}
+
+html[data-theme="dark"] .zhukov-theme-toggle:hover,
+.zhukov-theme-toggle.is-dark:hover {
+    border-color: #fae8a4;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), 0 0 24px rgba(212, 175, 55, 0.45);
+}
+
+html[data-theme="dark"] .zhukov-theme-toggle .icon-moon,
+.zhukov-theme-toggle.is-dark .icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.3);
+}
+
+html[data-theme="dark"] .zhukov-theme-toggle .icon-sun,
+.zhukov-theme-toggle.is-dark .icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+/* Luxury Editorial Tooltip */
+.zhukov-theme-toggle .theme-toggle-tooltip {
+    position: absolute;
+    right: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%) translateX(6px);
+    background: rgba(20, 17, 14, 0.95);
+    color: #dcd3c5;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.zhukov-theme-toggle:hover .theme-toggle-tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+@media (max-width: 768px) {
+    .zhukov-theme-toggle {
+        bottom: 20px;
+        right: 20px;
+        width: 46px;
+        height: 46px;
+    }
+    .zhukov-theme-toggle .theme-toggle-tooltip {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   ── 2. DARK MODE THEME SYSTEM (Reference-Faithful Palette & Aesthetics) ──
+   ========================================================================== */
+
+/* Realistic Metallic Gold Gradient Token */
+:root {
+    --gold-metallic-foil: linear-gradient(135deg,
+        #cca353 0%,
+        #fae8a4 22%,
+        #aa771c 46%,
+        #fef4cc 68%,
+        #9c6f17 86%,
+        #deb75e 100%
+    );
+    --gold-subtle-accent: #cca353;
+    --sand-beige-primary: #dcd3c5;
+    --sand-beige-muted: #ad9f8d;
+    --sand-beige-kicker: #cbbdaf;
+    --dark-espresso-bg: #0f0d0b;
+    --dark-espresso-surface: #171310;
+    --dark-espresso-card: #1c1713;
+    --dark-espresso-border: rgba(216, 196, 170, 0.12);
+}
+
+/* ── Base Dark Page Background & Sand Typography ───────────────────────── */
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] body.editorial-body,
+html[data-theme="dark"] body.moodboard-body:not(.inside-board),
+html[data-theme="dark"] body.photoshoots-body {
+    background-color: var(--dark-espresso-bg) !important;
+    background-image: none !important;
+    color: var(--sand-beige-primary) !important;
+}
+
+html[data-theme="dark"] main.vogue-main,
+html[data-theme="dark"] .vogue-section,
+html[data-theme="dark"] .vogue-about-main,
+html[data-theme="dark"] .vogue-contact-main,
+html[data-theme="dark"] .vogue-page-main,
+html[data-theme="dark"] .vogue-gallery-main,
+html[data-theme="dark"] .vogue-upload-main {
+    background-color: var(--dark-espresso-bg) !important;
+    color: var(--sand-beige-primary) !important;
+}
+
+/* ── Top Editorial Bar (Warm Sand Beige Bar as in Reference Image) ──────── */
+html[data-theme="dark"] .vogue-top-bar {
+    background: #d6c7b2 !important;
+    border-bottom: 1px solid #c2b19b !important;
+    color: #14110e !important;
+}
+
+html[data-theme="dark"] .vogue-top-bar .top-bar-left,
+html[data-theme="dark"] .vogue-top-bar .top-bar-center,
+html[data-theme="dark"] .vogue-top-bar .top-bar-right {
+    color: #14110e !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.22em !important;
+}
+
+/* ── Header & Navigation (Very Dark Brown Espresso) ─────────────────────── */
+html[data-theme="dark"] #site-header-slot {
+    background: var(--dark-espresso-bg) !important;
+}
+
+html[data-theme="dark"] .vogue-header,
+html[data-theme="dark"] .vogue-header.is-scrolled {
+    background: #0f0d0b !important;
+    border-bottom: 1px solid var(--dark-espresso-border) !important;
+}
+
+html[data-theme="dark"] .vogue-masthead-container,
+html[data-theme="dark"] .vogue-header.is-scrolled .vogue-masthead-container {
+    background: #0f0d0b !important;
+}
+
+html[data-theme="dark"] .vogue-nav-bar,
+html[data-theme="dark"] .vogue-nav-bar.open,
+html[data-theme="dark"] .vogue-header.is-scrolled .vogue-nav-bar,
+html[data-theme="dark"] .vogue-header.is-scrolled .vogue-nav-bar.open {
+    background-color: #0f0d0b !important;
+    background: #0f0d0b !important;
+    border-top: 1px solid var(--dark-espresso-border) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+}
+
+html[data-theme="dark"] .vogue-mobile-menu-btn .hamburger-line {
+    background: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .vogue-mobile-menu-btn:hover .hamburger-line,
+html[data-theme="dark"] .vogue-mobile-menu-btn.active .hamburger-line {
+    background: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .vogue-nav-bar .vogue-auth-btn {
+    border-color: rgba(216, 196, 170, 0.35) !important;
+    color: #fae8a4 !important;
+    background: transparent !important;
+}
+
+/* ── Realistic Metallic Gold Logo ("ZHUKOV" & "studio") ────────────────── */
+html[data-theme="dark"] .vogue-header .brand-name,
+html[data-theme="dark"] body.editorial-body .brand-name,
+html[data-theme="dark"] .brand-logo .brand-name,
+html[data-theme="dark"] .vogue-masthead-logo .brand-name,
+html[data-theme="dark"] .vogue-scrolled-logo .brand-name.scrolled-name {
+    background: var(--gold-metallic-foil) !important;
+    background-size: 180% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    color: #deb75e !important; /* fallback */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 10px rgba(212, 175, 55, 0.15)) !important;
+}
+
+html[data-theme="dark"] .vogue-header .brand-subtitle,
+html[data-theme="dark"] body.editorial-body .brand-subtitle,
+html[data-theme="dark"] .brand-logo .brand-subtitle,
+html[data-theme="dark"] .vogue-scrolled-logo .brand-subtitle.scrolled-sub {
+    color: #c9b596 !important;
+    letter-spacing: 1.5px !important;
+}
+
+/* ── Navigation Links (Sand Beige with Gold Hover) ──────────────────────── */
+html[data-theme="dark"] .vogue-nav-link {
+    color: var(--sand-beige-primary) !important;
+}
+
+html[data-theme="dark"] .vogue-nav-link:hover,
+html[data-theme="dark"] .vogue-nav-link.active {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .vogue-nav-link::after {
+    background: #cca353 !important;
+}
+
+html[data-theme="dark"] .vogue-auth-btn {
+    border: 1px solid rgba(216, 196, 170, 0.35) !important;
+    color: var(--sand-beige-primary) !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .vogue-auth-btn:hover {
+    border-color: #cca353 !important;
+    color: #ffffff !important;
+    background: rgba(212, 175, 55, 0.15) !important;
+}
+
+html[data-theme="dark"] .vogue-mobile-menu-btn .hamburger-line {
+    background: var(--sand-beige-primary) !important;
+}
+
+/* ── Realistic Metallic Gold Editorial Titles & Headings ────────────────── */
+html[data-theme="dark"] .hero-main-title,
+html[data-theme="dark"] .hero-main-title .hero-line-top,
+html[data-theme="dark"] .hero-main-title .hero-line-bottom,
+html[data-theme="dark"] .hero-main-title .line-italic,
+html[data-theme="dark"] .hero-main-title .line-plain,
+html[data-theme="dark"] .section-editorial-title,
+html[data-theme="dark"] .profile-main-heading,
+html[data-theme="dark"] .subpage-editorial-title,
+html[data-theme="dark"] .process-section-title,
+html[data-theme="dark"] .contact-col-title,
+html[data-theme="dark"] .gallery-title,
+html[data-theme="dark"] .discipline-title,
+html[data-theme="dark"] .vogue-auth-warning h2,
+html[data-theme="dark"] .methodology-card-title,
+html[data-theme="dark"] .archived-banner-title {
+    background: var(--gold-metallic-foil) !important;
+    background-size: 200% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    color: #deb75e !important; /* fallback */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+}
+
+/* ── Editorial Hero Section in Dark Mode ────────────────────────────────── */
+html[data-theme="dark"] .editorial-hero {
+    background: var(--dark-espresso-bg) !important;
+    border-bottom: 1px solid var(--dark-espresso-border) !important;
+}
+
+html[data-theme="dark"] .hero-issue-tag,
+html[data-theme="dark"] .section-meta-tag,
+html[data-theme="dark"] .profile-kicker,
+html[data-theme="dark"] .card-kicker,
+html[data-theme="dark"] .subpage-meta-tag,
+html[data-theme="dark"] .process-badge,
+html[data-theme="dark"] .auth-kicker,
+html[data-theme="dark"] .upload-kicker {
+    color: var(--sand-beige-kicker) !important;
+}
+
+html[data-theme="dark"] .hero-subdeck {
+    border-left: 2px solid #cca353 !important;
+    color: #c7b9a5 !important;
+}
+
+html[data-theme="dark"] .hero-diagonal-cut-wrapper {
+    background-color: #14110e !important;
+}
+
+html[data-theme="dark"] .hero-diagonal-cut-wrapper::before {
+    background: linear-gradient(90deg, rgba(15, 13, 11, 0.75) 0%, transparent 16%) !important;
+}
+
+/* ── Circular Gold Edit Pencil Button (Matching Reference Image) ───────── */
+html[data-theme="dark"] .slot-edit-btn,
+html[data-theme="dark"] .hero-edit-btn,
+html[data-theme="dark"] .profile-edit-btn {
+    background: #cca353 !important;
+    color: #14110e !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .slot-edit-btn:hover,
+html[data-theme="dark"] .hero-edit-btn:hover,
+html[data-theme="dark"] .profile-edit-btn:hover {
+    background: #fae8a4 !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.45) !important;
+}
+
+/* ── Action Buttons ─────────────────────────────────────────────────────── */
+html[data-theme="dark"] .hero-action-btn,
+html[data-theme="dark"] .vogue-solid-btn {
+    background: #171310 !important;
+    color: #fae8a4 !important;
+    border: 1px solid #cca353 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .hero-action-btn:hover,
+html[data-theme="dark"] .vogue-solid-btn:hover {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 100%) !important;
+    color: #120e0b !important;
+    border-color: #fae8a4 !important;
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.35) !important;
+}
+
+html[data-theme="dark"] .vogue-outline-btn {
+    border: 1px solid rgba(216, 196, 170, 0.35) !important;
+    color: var(--sand-beige-primary) !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .vogue-outline-btn:hover {
+    border-color: #cca353 !important;
+    background: rgba(204, 163, 83, 0.12) !important;
+    color: #fae8a4 !important;
+}
+
+/* ── Profile Spread & Statements ────────────────────────────────────────── */
+html[data-theme="dark"] .vogue-profile-spread {
+    background: #14100d !important;
+    border-color: var(--dark-espresso-border) !important;
+}
+
+html[data-theme="dark"] .profile-image-frame {
+    background: var(--dark-espresso-surface) !important;
+    border-color: var(--dark-espresso-border) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .profile-statement,
+html[data-theme="dark"] .about-hero-statement {
+    color: #ebdcca !important;
+}
+
+html[data-theme="dark"] .profile-bio,
+html[data-theme="dark"] .about-hero-bio p,
+html[data-theme="dark"] .section-editorial-subtitle,
+html[data-theme="dark"] .subpage-editorial-subtitle,
+html[data-theme="dark"] .contact-col-desc,
+html[data-theme="dark"] .process-section-subtitle {
+    color: var(--sand-beige-muted) !important;
+}
+
+/* ── Areas of Expertise / Services Cards ────────────────────────────────── */
+html[data-theme="dark"] .discipline-card {
+    background: var(--dark-espresso-surface) !important;
+    border-color: var(--dark-espresso-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] .discipline-card:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .discipline-num {
+    color: rgba(216, 196, 170, 0.25) !important;
+}
+
+html[data-theme="dark"] .discipline-desc {
+    color: var(--sand-beige-muted) !important;
+}
+
+/* ── Curated Archive Gallery ────────────────────────────────────────────── */
+html[data-theme="dark"] .vogue-archive-section {
+    border-top: 1px solid var(--dark-espresso-border) !important;
+    background: var(--dark-espresso-bg) !important;
+}
+
+html[data-theme="dark"] body.editorial-body .gallery-item {
+    background: var(--dark-espresso-surface) !important;
+    border-color: var(--dark-espresso-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] body.editorial-body .gallery-item:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ── Editorial Footer in Dark Mode ──────────────────────────────────────── */
+html[data-theme="dark"] .vogue-footer {
+    background: #090806 !important;
+    border-top: 1px solid var(--dark-espresso-border) !important;
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .footer-columns-row {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .footer-col-heading {
+    color: var(--sand-beige-kicker) !important;
+}
+
+html[data-theme="dark"] .footer-info-list li {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .footer-info-list li strong {
+    color: var(--sand-beige-primary) !important;
+}
+
+html[data-theme="dark"] .footer-links-list a {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .footer-links-list a:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .footer-copy {
+    color: #807567 !important;
+}
+
+/* ── Cookie Consent Banner in Dark Mode ─────────────────────────────────── */
+html[data-theme="dark"] .cookie-consent-card {
+    background: #171310 !important;
+    border: 1px solid rgba(212, 175, 55, 0.25) !important;
+    color: var(--sand-beige-primary) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55) !important;
+}
+
+html[data-theme="dark"] .cookie-tag {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .cookie-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-desc {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .cookie-btn-accept {
+    background: #cca353 !important;
+    color: #120e0b !important;
+}
+
+html[data-theme="dark"] .cookie-btn-accept:hover {
+    background: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-link-btn {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .cookie-link-btn:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-close-btn {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .cookie-details-content {
+    background: #120f0d !important;
+    border: 1px solid var(--dark-espresso-border) !important;
+    color: var(--sand-beige-muted) !important;
+}
+
+/* ── Lightbox Modal in Dark Mode ────────────────────────────────────────── */
+html[data-theme="dark"] .lightbox-frame {
+    background: #171310 !important;
+    border: 1px solid var(--dark-espresso-border) !important;
+}
+
+html[data-theme="dark"] .lightbox-caption-bar {
+    border-top: 1px solid var(--dark-espresso-border) !important;
+}
+
+html[data-theme="dark"] .lightbox-author {
+    color: var(--sand-beige-kicker) !important;
+}
+
+html[data-theme="dark"] .lightbox-set-name {
+    color: var(--sand-beige-primary) !important;
+}
+
+/* ── Admin Picker Popup in Dark Mode ────────────────────────────────────── */
+html[data-theme="dark"] .picker-overlay {
+    background: rgba(10, 8, 6, 0.85) !important;
+}
+
+html[data-theme="dark"] .picker-header {
+    background: #171310 !important;
+    border-bottom: 1px solid var(--dark-espresso-border) !important;
+    color: var(--sand-beige-primary) !important;
+}
+
+html[data-theme="dark"] .picker-body {
+    background: #14100d !important;
+}
+
+/* ── Universal Dark Mode Fixes Across All Subpages & Widgets ──────────── */
+
+/* 1. Photoshoots Rows & View Buttons */
+html[data-theme="dark"] .vogue-categories-container,
+html[data-theme="dark"] .category-row,
+html[data-theme="dark"] .category-row:nth-child(even) {
+    background-color: #0f0d0b !important;
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .category-header {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .category-title,
+html[data-theme="dark"] .category-title a {
+    background: var(--gold-metallic-foil) !important;
+    background-size: 200% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    color: #deb75e !important;
+}
+
+html[data-theme="dark"] .view-set-header-btn {
+    border: 1px solid rgba(216, 196, 170, 0.35) !important;
+    color: #dcd3c5 !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .view-set-header-btn:hover {
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+    background: rgba(204, 163, 83, 0.15) !important;
+}
+
+/* 2. Gallery Header Hairline & View Mode Switcher */
+html[data-theme="dark"] .gallery-header-bottom,
+html[data-theme="dark"] .gallery-header {
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .gallery-ratio-switcher {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.18) !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .ratio-switch-btn.active {
+    background: #271e17 !important;
+    color: #fae8a4 !important;
+    border: 1px solid rgba(204, 163, 83, 0.35) !important;
+    box-shadow: none !important;
+}
+
+/* Gallery description links / social pills */
+html[data-theme="dark"] .desc-link {
+    background: #191512 !important;
+    border: 1px solid rgba(216, 196, 170, 0.22) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .desc-link:hover {
+    background: #271f18 !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .desc-placeholder {
+    color: #8c7d6d !important;
+}
+
+/* 3. Moodboard Dashboard & Atelier Lobby */
+html[data-theme="dark"] body.moodboard-body:not(.inside-board),
+html[data-theme="dark"] .dashboard-view,
+html[data-theme="dark"] .dashboard-main-content {
+    background-color: #0f0d0b !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .dashboard-hero,
+html[data-theme="dark"] .dashboard-hero.vogue-dashboard-hero,
+html[data-theme="dark"] .vogue-dashboard-hero {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+/* Hide theme toggle button inside a moodboard canvas */
+body.inside-board #theme-toggle-btn,
+body.inside-board .zhukov-theme-toggle,
+body.moodboard-body.inside-board #theme-toggle-btn,
+body.moodboard-body.inside-board .zhukov-theme-toggle {
+    display: none !important;
+}
+
+html[data-theme="dark"] .auth-notice-card,
+html[data-theme="dark"] #auth-notice,
+html[data-theme="dark"] #empty-boards-notice {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.15) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .auth-notice-card h3 {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .auth-notice-card p {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .board-card {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    color: #dcd3c5 !important;
+}
+
+/* 4. About Me Step 2 Palette & Step 7 Deliverables + Non-Crimson Button */
+html[data-theme="dark"] .color-palette-widget {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .palette-mode-selector {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.18) !important;
+}
+
+.swatch-meta,
+.swatch-hex,
+.swatch-hsl {
+    display: none !important;
+}
+
+html[data-theme="dark"] .palette-swatch-box,
+html[data-theme="dark"] .palette-swatch-item {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.15) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .contact-details-col {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.contact-col-header .card-kicker {
+    display: block !important;
+    margin: 0 0 0.45rem 0 !important;
+    line-height: 1.2 !important;
+}
+
+html[data-theme="dark"] .milestone-deliverables-panel {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme="dark"] .deliverable-text strong {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .deliverable-text span {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .milestone-cta-link {
+    background: #171310 !important;
+    border: 1px solid #cca353 !important;
+    color: #fae8a4 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .milestone-cta-link:hover {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 100%) !important;
+    border-color: #fae8a4 !important;
+    color: #120e0b !important;
+    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.35) !important;
+}
+
+/* 5. Calendar Widget in Contact */
+html[data-theme="dark"] .calendar-widget {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-nav-bar {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .cal-month-heading {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-nav-btn,
+html[data-theme="dark"] .cal-today-btn {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-nav-btn:hover,
+html[data-theme="dark"] .cal-today-btn:hover {
+    background: #241c16 !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.08) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.14) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open .cal-day-num {
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open:hover {
+    background: #241c16 !important;
+    border-color: #cca353 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open:hover .cal-day-num {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-selected {
+    background: #271e17 !important;
+    border-color: #cca353 !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-selected .cal-day-num {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-booked {
+    background: #120e0b !important;
+    border-color: rgba(216, 196, 170, 0.04) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-booked .cal-day-num {
+    color: #6e6355 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-past {
+    background: #0f0d0b !important;
+    border-color: rgba(216, 196, 170, 0.04) !important;
+    opacity: 0.35 !important;
+}
+
+/* 6 & 7. Zero 1px Light Border around Images in Galleries and About Me */
+html[data-theme="dark"] .masonry-item,
+html[data-theme="dark"] .photo-item,
+html[data-theme="dark"] .scrollable-row .img-container,
+html[data-theme="dark"] body.editorial-body .gallery-item,
+html[data-theme="dark"] .process-image-container,
+html[data-theme="dark"] .fan-card,
+html[data-theme="dark"] .profile-image-frame {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .masonry-img,
+html[data-theme="dark"] .row-img,
+html[data-theme="dark"] .gallery-item img,
+html[data-theme="dark"] .process-preview-img,
+html[data-theme="dark"] .fan-card-img {
+    background-color: #14100d !important;
+}
+

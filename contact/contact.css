@@ -44,14 +44,15 @@
 }
 
 .card-kicker {
-    display: inline-block;
+    display: block;
     font-family: 'Inter', sans-serif;
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: #b32d2e;
     text-transform: uppercase;
-    margin-bottom: 0.45rem;
+    margin: 0 0 0.45rem 0;
+    line-height: 1.2;
 }
 
 .card-header-block {
@@ -245,6 +246,14 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
+}
+
+.calendar-header-row > div {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
 }
 
 .calendar-admin-badge {
@@ -1446,4 +1455,262 @@ details[open] .impressum-summary-icon {
     color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================================================
+   CONTACT — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] .vogue-contact-main {
+    background: #0f0d0b !important;
+}
+
+html[data-theme="dark"] .contact-details-col {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+html[data-theme="dark"] .contact-form-col,
+html[data-theme="dark"] .editorial-cal-container,
+html[data-theme="dark"] .editorial-calendar-card,
+html[data-theme="dark"] .editorial-booking-card {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .direct-detail-item {
+    border-bottom-color: rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .detail-label {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .detail-val {
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .detail-email-link {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-month-title,
+html[data-theme="dark"] .cal-header-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-weekday-header {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .cal-day-cell {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.1) !important;
+    color: #dcd3c5 !important;
+}
+
+/* Complete Dark Calendar Widget (Zero Brightness) */
+html[data-theme="dark"] .calendar-widget {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-nav-bar {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .cal-month-heading {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-nav-btn {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-nav-btn:hover {
+    background: #241c16 !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-today-btn {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-today-btn:hover {
+    background: #241c16 !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-weekdays {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.08) !important;
+    padding-bottom: 0.4rem !important;
+}
+
+html[data-theme="dark"] .cal-weekday-col {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .cal-day-cell {
+    background: #14100d !important;
+    border: 1px solid rgba(216, 196, 170, 0.08) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.14) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open .cal-day-num {
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open:hover {
+    background: #241c16 !important;
+    border-color: #cca353 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-open:hover .cal-day-num {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-selected {
+    background: #271e17 !important;
+    border-color: #cca353 !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-selected .cal-day-num {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-booked {
+    background: #120e0b !important;
+    border-color: rgba(216, 196, 170, 0.04) !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-booked .cal-day-num {
+    color: #6e6355 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-past {
+    background: #0f0d0b !important;
+    border-color: rgba(216, 196, 170, 0.04) !important;
+    opacity: 0.35 !important;
+}
+
+html[data-theme="dark"] .cal-day-cell.is-other-month {
+    background: #0e0c0a !important;
+    border-color: rgba(216, 196, 170, 0.03) !important;
+    opacity: 0.2 !important;
+}
+
+html[data-theme="dark"] .cal-footer {
+    border-top: 1px solid rgba(216, 196, 170, 0.08) !important;
+}
+
+html[data-theme="dark"] .cal-legend,
+html[data-theme="dark"] .cal-admin-hint {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .cal-legend-swatch.is-open {
+    background: #171310 !important;
+    border: 1px solid rgba(216, 196, 170, 0.25) !important;
+}
+
+html[data-theme="dark"] .cal-legend-swatch.is-booked {
+    background: #120e0b !important;
+    border: 1px solid rgba(216, 196, 170, 0.08) !important;
+}
+
+html[data-theme="dark"] .cal-recurring-bar {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.15) !important;
+}
+
+html[data-theme="dark"] .recurring-title {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .recurring-sub {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .contact-input,
+html[data-theme="dark"] .contact-textarea,
+html[data-theme="dark"] .contact-select,
+html[data-theme="dark"] .editorial-input,
+html[data-theme="dark"] .input-field {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.2) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .contact-input:focus,
+html[data-theme="dark"] .contact-textarea:focus,
+html[data-theme="dark"] .contact-select:focus,
+html[data-theme="dark"] .editorial-input:focus {
+    border-color: #cca353 !important;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* Impressum Drawer in Dark Mode */
+html[data-theme="dark"] .editorial-impressum-drawer {
+    border-top: 1px solid rgba(216, 196, 170, 0.15) !important;
+}
+
+html[data-theme="dark"] .impressum-summary {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .impressum-summary:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .impressum-summary-text {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .impressum-summary-icon {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .impressum-block h4 {
+    color: #fae8a4 !important;
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .impressum-block p {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .impressum-block p strong {
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .impressum-block a {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .impressum-block a:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .impressum-tax-box {
+    border-top: 1px dashed rgba(216, 196, 170, 0.15) !important;
+}
+
+html[data-theme="dark"] .impressum-block small {
+    color: #8c7d6d !important;
 }

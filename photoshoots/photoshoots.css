@@ -859,3 +859,143 @@
         padding: 2.5rem 1rem;
     }
 }
+
+/* ==========================================================================
+   PHOTOSHOOTS — DARK MODE HARMONIZATION
+   ========================================================================== */
+html[data-theme="dark"] .vogue-page-main,
+html[data-theme="dark"] .vogue-subpage-header {
+    background: #0f0d0b !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .sort-bar {
+    background: #14100d !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .sort-catalog-tag {
+    color: #cbbdaf !important;
+}
+
+html[data-theme="dark"] .sort-catalog-tag::before {
+    background: #cca353 !important;
+}
+
+html[data-theme="dark"] .sort-label {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .sort-select {
+    background: #171310 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23dcd3c5' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E") no-repeat right 0.6rem center !important;
+    border-color: rgba(216, 196, 170, 0.25) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .photoshoot-card,
+html[data-theme="dark"] .photo-card {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.12) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .photoshoot-card:hover,
+html[data-theme="dark"] .photo-card:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .see-all-card {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.15) !important;
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .see-all-card:hover {
+    border-color: #cca353 !important;
+    background: #1c1713 !important;
+}
+
+html[data-theme="dark"] .see-all-plus {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .see-all-label {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .see-all-count {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .photoshoot-title,
+html[data-theme="dark"] .shoot-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .photoshoot-meta,
+html[data-theme="dark"] .shoot-meta {
+    color: #ad9f8d !important;
+}
+
+/* Category Rows & Editorial Headers (Fixing white background in photoshoots) */
+html[data-theme="dark"] .vogue-categories-container,
+html[data-theme="dark"] .category-row,
+html[data-theme="dark"] .category-row:nth-child(even) {
+    background-color: #0f0d0b !important;
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .category-header {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .category-title,
+html[data-theme="dark"] .category-title a {
+    background: linear-gradient(135deg, #cca353 0%, #fae8a4 22%, #aa771c 46%, #fef4cc 68%, #9c6f17 86%, #deb75e 100%) !important;
+    background-size: 200% auto !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    text-fill-color: transparent !important;
+    color: #deb75e !important;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
+}
+
+html[data-theme="dark"] .category-meta {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .view-set-header-btn {
+    border: 1px solid rgba(216, 196, 170, 0.35) !important;
+    color: #dcd3c5 !important;
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .view-set-header-btn:hover {
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
+    background: rgba(204, 163, 83, 0.15) !important;
+}
+
+/* Image Containers & Zero 1px Light Border in Photoshoots */
+html[data-theme="dark"] .scrollable-row .img-container {
+    border: 1px solid rgba(216, 196, 170, 0.12) !important;
+    background: #14100d !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .scrollable-row .img-container:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .row-img {
+    background: #14100d !important;
+}
+
+html[data-theme="dark"] .row-nav-arrow {
+    background: #1c1713 !important;
+    border: 1px solid rgba(216, 196, 170, 0.25) !important;
+    color: #fae8a4 !important;
+}

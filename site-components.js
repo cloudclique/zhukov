@@ -18,6 +18,17 @@ const BANNER_DESTINATION_URL = '';
     const HEADER_CACHE_KEY = 'zhukov_cached_header_v19';
     const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v18';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
+    const THEME_KEY = 'zhukov_theme';
+
+    // 0ms Immediate Theme Initialization to eliminate Flash of Unstyled Content (FOUC)
+    const initialTheme = localStorage.getItem(THEME_KEY);
+    if (initialTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.classList.add('theme-dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.classList.remove('theme-dark');
+    }
 
     // Page-specific top bar text mapping
     const PAGE_TITLES = {
@@ -468,15 +479,106 @@ const BANNER_DESTINATION_URL = '';
     window.addEventListener('resize', syncBannerHeight);
     window.addEventListener('load', syncBannerHeight);
 
+    // =========================================================================
+    // Universal Floating Dark / Light Mode Switch Controller
+    // =========================================================================
+    function updateThemeUI(isDark) {
+        const btn = document.getElementById('theme-toggle-btn');
+        if (!btn) return;
+        btn.classList.toggle('is-dark', isDark);
+        btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        const tooltip = btn.querySelector('.theme-toggle-tooltip');
+        if (tooltip) {
+            tooltip.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        }
+    }
+
+    function applyTheme(theme, save = true) {
+        const isDark = theme === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('theme-dark', isDark);
+        if (document.body) {
+            document.body.classList.toggle('theme-dark', isDark);
+        }
+        if (save) {
+            try {
+                localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+            } catch (e) {}
+        }
+        updateThemeUI(isDark);
+        document.dispatchEvent(new CustomEvent('zhukovThemeChanged', { detail: { theme: isDark ? 'dark' : 'light' } }));
+    }
+
+    function toggleTheme() {
+        const current = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next, true);
+    }
+
+    window.toggleZhukovTheme = toggleTheme;
+    window.setZhukovTheme = applyTheme;
+
+    function initThemeToggle() {
+        if (document.getElementById('theme-toggle-btn')) return;
+
+        const isDark = localStorage.getItem(THEME_KEY) === 'dark';
+        applyTheme(isDark ? 'dark' : 'light', false);
+
+        const btn = document.createElement('button');
+        btn.id = 'theme-toggle-btn';
+        btn.className = `zhukov-theme-toggle ${isDark ? 'is-dark' : ''}`;
+        btn.setAttribute('type', 'button');
+        btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        btn.innerHTML = `
+            <div class="toggle-icon-wrap">
+                <!-- Golden Sun Icon (shown in dark mode to switch to light) -->
+                <svg class="toggle-icon icon-sun" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4.5"></circle>
+                    <line x1="12" y1="1.5" x2="12" y2="4"></line>
+                    <line x1="12" y1="20" x2="12" y2="22.5"></line>
+                    <line x1="4.22" y1="4.22" x2="6" y2="6"></line>
+                    <line x1="18" y1="18" x2="19.78" y2="19.78"></line>
+                    <line x1="1.5" y1="12" x2="4" y2="12"></line>
+                    <line x1="20" y1="12" x2="22.5" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="6" y2="18"></line>
+                    <line x1="18" y1="6" x2="19.78" y2="4.22"></line>
+                </svg>
+                <!-- Golden Crescent Moon Icon (shown in light mode to switch to dark) -->
+                <svg class="toggle-icon icon-moon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </div>
+            <span class="theme-toggle-tooltip">${isDark ? 'Light Mode' : 'Dark Mode'}</span>
+        `;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleTheme();
+        });
+
+        document.body.appendChild(btn);
+
+        // Listen for storage changes across tabs
+        window.addEventListener('storage', (e) => {
+            if (e.key === THEME_KEY) {
+                applyTheme(e.newValue === 'dark' ? 'dark' : 'light', false);
+            }
+        });
+    }
+
     // Auto-mount when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            initThemeToggle();
             loadHeader().then(updateBannerSlots);
             loadFooter();
             initCookieConsent();
             updateBannerSlots();
         });
     } else {
+        initThemeToggle();
         loadHeader().then(updateBannerSlots);
         loadFooter();
         initCookieConsent();
