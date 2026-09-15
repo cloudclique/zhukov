@@ -3869,7 +3869,9 @@ html[data-theme="dark"] .archived-banner {
    ========================================================================== */
 
 /* ── 1. Floating Theme Switch Button (Bottom-Right Corner) ─────────────── */
-.zhukov-theme-toggle {
+.zhukov-theme-toggle,
+#theme-toggle-btn {
+    display: none !important;
     position: fixed;
     bottom: 28px;
     right: 28px;

@@ -114,7 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.dataset.src || imgElement.src;
+        const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
+        lightboxImg.src = targetSrc;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
         }
@@ -573,34 +574,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             scrollRow.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-                e.preventDefault();
                 isMouseDown = true;
                 hasDragged = false;
                 startX = e.pageX - scrollRow.offsetLeft;
                 scrollLeftStart = scrollRow.scrollLeft;
-                scrollRow.classList.add('is-dragging');
                 pauseAutoScroll();
             });
 
             const onRowMouseMove = (e) => {
                 if (!isMouseDown) return;
-                e.preventDefault();
                 const x = e.pageX - scrollRow.offsetLeft;
                 const walk = (x - startX) * 1.5;
-                if (Math.abs(walk) > 5) {
+                if (Math.abs(walk) > 6) {
                     hasDragged = true;
+                    scrollRow.classList.add('is-dragging');
+                    e.preventDefault();
                 }
-                scrollRow.scrollLeft = scrollLeftStart - walk;
-                pauseAutoScroll();
+                if (hasDragged) {
+                    scrollRow.scrollLeft = scrollLeftStart - walk;
+                    pauseAutoScroll();
+                }
             };
 
             const onRowMouseUp = () => {
                 if (isMouseDown) {
                     isMouseDown = false;
                     scrollRow.classList.remove('is-dragging');
-                    setTimeout(() => {
-                        hasDragged = false;
-                    }, 60);
+                    if (hasDragged) {
+                        setTimeout(() => {
+                            hasDragged = false;
+                        }, 80);
+                    }
                     scheduleAutoScroll();
                 }
             };
@@ -765,6 +769,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.dataset.src = url;
+                img.dataset.fullUrl = url;
                 // Transparent placeholder
                 img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
                 img.draggable = false;
@@ -795,9 +800,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
-                img.addEventListener('click', (e) => {
-                    if (hasDragged) return; // Ignore click if user was dragging
+                // Tap & Click handler for lightbox
+                let touchMoved = false;
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let lastOpenTime = 0;
+
+                const triggerLightbox = (e) => {
+                    if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+                    if (hasDragged) return;
+                    const now = Date.now();
+                    if (now - lastOpenTime < 400) return;
+                    lastOpenTime = now;
                     openLightbox(img, cat.categoryName || 'PHOTOSHOOT');
+                };
+
+                wrapper.addEventListener('click', triggerLightbox);
+
+                wrapper.addEventListener('touchstart', (e) => {
+                    touchMoved = false;
+                    if (e.touches && e.touches[0]) {
+                        touchStartX = e.touches[0].clientX;
+                        touchStartY = e.touches[0].clientY;
+                    }
+                }, { passive: true });
+
+                wrapper.addEventListener('touchmove', (e) => {
+                    if (e.touches && e.touches[0]) {
+                        if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
+                            touchMoved = true;
+                        }
+                    }
+                }, { passive: true });
+
+                wrapper.addEventListener('touchend', (e) => {
+                    if (touchMoved) return;
+                    triggerLightbox(e);
                 });
                 
                 // Attach 3D Magnetic Tilt

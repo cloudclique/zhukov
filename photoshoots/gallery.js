@@ -119,7 +119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.dataset.src || imgElement.src;
+        const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
+        lightboxImg.src = targetSrc;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'GALLERY').toUpperCase();
         }
@@ -1125,6 +1126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
                     img.dataset.src = url;
+                    img.dataset.fullUrl = url;
                     // Light SVG transparent placeholder to prevent broken image iconography
                     img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
 
@@ -1151,8 +1153,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     });
                     
-                    img.addEventListener('click', () => {
+                    // Tap & Click handler for Lightbox
+                    let touchMoved = false;
+                    let touchStartX = 0;
+                    let touchStartY = 0;
+                    let lastOpenTime = 0;
+
+                    const triggerLightbox = (e) => {
+                        if (e.target.closest('.photo-admin-bar') || e.target.closest('.photo-admin-btn') || e.target.closest('.modal-overlay')) return;
+                        if (wrapper.classList.contains('dragging')) return;
+                        const now = Date.now();
+                        if (now - lastOpenTime < 400) return;
+                        lastOpenTime = now;
                         openLightbox(img, categoryName || 'GALLERY');
+                    };
+
+                    wrapper.addEventListener('click', triggerLightbox);
+
+                    wrapper.addEventListener('touchstart', (e) => {
+                        touchMoved = false;
+                        if (e.touches && e.touches[0]) {
+                            touchStartX = e.touches[0].clientX;
+                            touchStartY = e.touches[0].clientY;
+                        }
+                    }, { passive: true });
+
+                    wrapper.addEventListener('touchmove', (e) => {
+                        if (e.touches && e.touches[0]) {
+                            if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
+                                touchMoved = true;
+                            }
+                        }
+                    }, { passive: true });
+
+                    wrapper.addEventListener('touchend', (e) => {
+                        if (touchMoved) return;
+                        triggerLightbox(e);
                     });
 
                     // Attach 3D Magnetic Tilt

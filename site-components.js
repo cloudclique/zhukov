@@ -520,45 +520,10 @@ const BANNER_DESTINATION_URL = '';
     window.setZhukovTheme = applyTheme;
 
     function initThemeToggle() {
-        if (document.getElementById('theme-toggle-btn')) return;
-
         const isDark = localStorage.getItem(THEME_KEY) === 'dark';
         applyTheme(isDark ? 'dark' : 'light', false);
 
-        const btn = document.createElement('button');
-        btn.id = 'theme-toggle-btn';
-        btn.className = `zhukov-theme-toggle ${isDark ? 'is-dark' : ''}`;
-        btn.setAttribute('type', 'button');
-        btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
-        btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
-        btn.innerHTML = `
-            <div class="toggle-icon-wrap">
-                <!-- Golden Sun Icon (shown in dark mode to switch to light) -->
-                <svg class="toggle-icon icon-sun" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="4.5"></circle>
-                    <line x1="12" y1="1.5" x2="12" y2="4"></line>
-                    <line x1="12" y1="20" x2="12" y2="22.5"></line>
-                    <line x1="4.22" y1="4.22" x2="6" y2="6"></line>
-                    <line x1="18" y1="18" x2="19.78" y2="19.78"></line>
-                    <line x1="1.5" y1="12" x2="4" y2="12"></line>
-                    <line x1="20" y1="12" x2="22.5" y2="12"></line>
-                    <line x1="4.22" y1="19.78" x2="6" y2="18"></line>
-                    <line x1="18" y1="6" x2="19.78" y2="4.22"></line>
-                </svg>
-                <!-- Golden Crescent Moon Icon (shown in light mode to switch to dark) -->
-                <svg class="toggle-icon icon-moon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-            </div>
-            <span class="theme-toggle-tooltip">${isDark ? 'Light Mode' : 'Dark Mode'}</span>
-        `;
-
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleTheme();
-        });
-
-        document.body.appendChild(btn);
+        // Theme toggle button is hidden across all pages as requested
 
         // Listen for storage changes across tabs
         window.addEventListener('storage', (e) => {
