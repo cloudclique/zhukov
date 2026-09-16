@@ -80,9 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
         profileImg.src = cachedProfile;
     }
 
-    if (localStorage.getItem('zhukov_logged_in') === 'true') {
+    if (localStorage.getItem('zhukov_is_admin') === 'true') {
         if (heroEditBtn) heroEditBtn.style.display = 'flex';
         if (profileEditBtn) profileEditBtn.style.display = 'flex';
+    } else {
+        if (heroEditBtn) heroEditBtn.style.display = 'none';
+        if (profileEditBtn) profileEditBtn.style.display = 'none';
     }
 
     if (heroEditBtn) {
@@ -711,9 +714,18 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const userSnap = await getDoc(doc(db, 'users', user.uid));
                 currentIsAdmin = userSnap.exists() && userSnap.data().role === 'admin';
-            } catch { currentIsAdmin = false; }
+                if (currentIsAdmin) {
+                    localStorage.setItem('zhukov_is_admin', 'true');
+                } else {
+                    localStorage.removeItem('zhukov_is_admin');
+                }
+            } catch {
+                currentIsAdmin = false;
+                localStorage.removeItem('zhukov_is_admin');
+            }
         } else {
             localStorage.removeItem('zhukov_logged_in');
+            localStorage.removeItem('zhukov_is_admin');
             currentIsAdmin = false;
         }
         if (window.updateHeaderAuthState) {
@@ -755,6 +767,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (e.target.closest('#logout-btn')) {
             localStorage.removeItem('zhukov_logged_in');
+            localStorage.removeItem('zhukov_is_admin');
+            currentIsAdmin = false;
+            if (heroEditBtn) heroEditBtn.style.display = 'none';
+            if (profileEditBtn) profileEditBtn.style.display = 'none';
+            renderGallerySlots();
             signOut(auth).catch((error) => {
                 console.error("Error signing out: ", error);
             });
