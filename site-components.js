@@ -32,18 +32,18 @@ const BANNER_DESTINATION_URL = '';
 
     // Page-specific top bar text mapping
     const PAGE_TITLES = {
-        '/': 'FASHION & GLAMOUR & PORTRAITURE',
-        '/index.html': 'FASHION & GLAMOUR & PORTRAITURE',
-        '/photoshoots/': 'CURATED PORTFOLIO & PHOTOSHOOTS',
-        '/photoshoots/index.html': 'CURATED PORTFOLIO & PHOTOSHOOTS',
-        '/photoshoots/gallery.html': 'EDITORIAL MAGAZINE SPREAD',
-        '/photoshoots/archived.html': 'ADMINISTRATIVE ARCHIVE',
-        '/moodboard/': 'MOODBOARD STUDIO',
-        '/moodboard/index.html': 'MOODBOARD STUDIO',
-        '/about/': 'STUDIO PROFILE & ROADMAP',
-        '/about/index.html': 'STUDIO PROFILE & ROADMAP',
-        '/contact/': 'EDITORIAL & PRIVATE BOOKINGS',
-        '/contact/index.html': 'EDITORIAL & PRIVATE BOOKINGS',
+        '/': 'EDITORIAL & GLAMOUR & SENSUAL',
+        '/index.html': 'EDITORIAL & GLAMOUR & SENSUAL',
+        '/photoshoots/': 'PHOTOSHOOTS',
+        '/photoshoots/index.html': 'PHOTOSHOOTS',
+        '/photoshoots/gallery.html': ' ',
+        '/photoshoots/archived.html': 'ARCHIVE',
+        '/moodboard/': 'MOODBOARDS',
+        '/moodboard/index.html': 'MOODBOARDS',
+        '/about/': 'ABOUT ME / WORKFLOW & GEAR',
+        '/about/index.html': 'ABOUT ME / WORKFLOW & GEAR',
+        '/contact/': 'CONTACT / BOOKING / IMPRESS',
+        '/contact/index.html': 'CONTACT / BOOKING / IMPRESS',
         '/upload/': 'CONTENT MANAGEMENT SYSTEM',
         '/upload/index.html': 'CONTENT MANAGEMENT SYSTEM'
     };
@@ -504,7 +504,7 @@ const BANNER_DESTINATION_URL = '';
         if (save) {
             try {
                 localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-            } catch (e) {}
+            } catch (e) { }
         }
         updateThemeUI(isDark);
         document.dispatchEvent(new CustomEvent('zhukovThemeChanged', { detail: { theme: isDark ? 'dark' : 'light' } }));

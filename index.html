@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV.studio</title>
-    <link rel="stylesheet" href="/styles.css?v=55">
+    <link rel="stylesheet" href="/styles.css?v=58">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -23,14 +23,14 @@
         <section class="editorial-hero">
             <div class="hero-text-container">
                 <div class="hero-editorial-card">
-                    <span class="hero-issue-tag">EXCLUSIVE COVER STORY</span>
+                    <span class="hero-issue-tag">YOUR NEXT EXCLUSIVE PHOTOSHOOT -></span>
                     <h2 class="hero-main-title">
                         <span class="hero-line-top">Photography</span>
-                        <span class="hero-line-bottom"><span class="line-italic">that</span> <span
+                        <span class="hero-line-bottom"><span class="line-italic">that</span><span
                                 class="line-plain">inspires</span></span>
                     </h2>
                     <p class="hero-subdeck">
-                        A STUDY IN BOLD CONTRAST, REFINED LIGHTING, AND STRIKING FASHION PORTRAITURE.
+                        CREATING STUNNING PERSONAL MOMENTS WITH REFINED LIGHTING, AND STRIKING VISUALS.
                     </p>
                     <a href="/photoshoots/" class="hero-action-btn">EXPLORE PHOTOSHOOTS</a>
                 </div>
@@ -58,18 +58,17 @@
                 </div>
 
                 <div class="profile-text-column">
-                    <div class="profile-kicker">THE STUDIO &bull; PROFILE</div>
+                    <div class="profile-kicker">CREATIVE DIRECTOR &bull; PROFILE</div>
                     <h3 class="profile-main-heading">ABOUT STANISLAV</h3>
                     <div class="profile-body-text">
                         <p class="profile-statement">
-                            Photography is not merely the capture of light&mdash;it is the deliberate orchestration of
-                            shadows, form, and emotional tension.
+                            Elevating personal allure into striking, modern visual art.
                         </p>
                         <p class="profile-bio">
-                            Combining high-fashion precision with raw cinematic intimacy, Stanislav Zhukov collaborates
-                            with international fashion houses, editorial publications, and visionary models across
-                            Paris,
-                            Milan, and New York to craft timeless visual legacies.
+                            Operating within contemporary glamour, editorial concepts, and sensual portraiture,
+                            I craft polished visual narratives that honor form, beauty, and emotional
+                            presence. My approach merges clean, controlled studio illumination with cinematic mood,
+                            creating imagery that feels both strikingly modern and effortlessly captivating.
                         </p>
                     </div>
 
@@ -86,31 +85,58 @@
         <!-- Areas of Expertise Section -->
         <section class="vogue-section vogue-disciplines-section" id="services">
             <div class="vogue-section-header">
-                <h3 class="section-editorial-title">AREAS OF EXPERTISE</h3>
-                <p class="section-editorial-subtitle">Tailored creative photography crafted with elegant lighting,
-                    beauty, and captivating confidence.</p>
+                <h3 class="section-editorial-title">DIRECTIONS</h3>
+                <p class="section-editorial-subtitle">A focused approach to editorial, glamour, and sensual imagery.</p>
             </div>
 
             <div class="disciplines-grid">
-                <div class="discipline-card">
-                    <span class="discipline-num">01</span>
-                    <h4 class="discipline-title">Portraiture</h4>
-                    <p class="discipline-desc">Professional headshots, personal branding, and creative portraits
-                        tailored to your unique personality.</p>
-                </div>
 
                 <div class="discipline-card featured-discipline">
-                    <span class="discipline-num">02</span>
-                    <h4 class="discipline-title">Fashion & Editorial</h4>
-                    <p class="discipline-desc">High-end fashion shoots with a focus on lighting, mood, and striking
-                        compositions.</p>
+                    <button class="discipline-toggle-btn" aria-label="Show Editorial preview image"
+                        title="Preview image" type="button" aria-expanded="false">
+                        <span class="discipline-toggle-icon icon-question">?</span>
+                        <span class="discipline-toggle-icon icon-close">&times;</span>
+                    </button>
+                    <div class="discipline-image-overlay" aria-hidden="true">
+                        <img src="https://i.ibb.co/SjM7Vz6/editorial.png" alt="Editorial direction preview"
+                            class="discipline-overlay-img" loading="lazy">
+                    </div>
+                    <span class="discipline-num">01</span>
+                    <h4 class="discipline-title">Editorial</h4>
+                    <p class="discipline-desc">Cinematic location portraits and concept-driven shoots featuring
+                        expressive styling and environmental storytelling.</p>
                 </div>
 
                 <div class="discipline-card">
-                    <span class="discipline-num">03</span>
+                    <button class="discipline-toggle-btn" aria-label="Show Glamour preview image" title="Preview image"
+                        type="button" aria-expanded="false">
+                        <span class="discipline-toggle-icon icon-question">?</span>
+                        <span class="discipline-toggle-icon icon-close">&times;</span>
+                    </button>
+                    <div class="discipline-image-overlay" aria-hidden="true">
+                        <img src="https://i.ibb.co/hFqsyBvs/glamour.png" alt="Glamour direction preview"
+                            class="discipline-overlay-img" loading="lazy">
+                    </div>
+                    <span class="discipline-num">02</span>
                     <h4 class="discipline-title">Glamour</h4>
-                    <p class="discipline-desc">Sophisticated, alluring photography crafted with elegant lighting,
-                        beauty, and captivating confidence.</p>
+                    <p class="discipline-desc">Form-focused aesthetics and polished beauty captured in playful outfits,
+                        swimwear, and sculpted studio light.</p>
+                </div>
+
+                <div class="discipline-card">
+                    <button class="discipline-toggle-btn" aria-label="Show Sensual preview image" title="Preview image"
+                        type="button" aria-expanded="false">
+                        <span class="discipline-toggle-icon icon-question">?</span>
+                        <span class="discipline-toggle-icon icon-close">&times;</span>
+                    </button>
+                    <div class="discipline-image-overlay" aria-hidden="true">
+                        <img src="https://i.ibb.co/wZpdNR9R/sensual.png" alt="Sensual direction preview"
+                            class="discipline-overlay-img" loading="lazy">
+                    </div>
+                    <span class="discipline-num">03</span>
+                    <h4 class="discipline-title">Sensual</h4>
+                    <p class="discipline-desc">Intimate, atmospheric portraiture centered on quiet mood, lingerie, and
+                        natural confidence.</p>
                 </div>
             </div>
         </section>
@@ -119,8 +145,8 @@
         <section class="vogue-section vogue-archive-section" id="portraits">
             <div class="vogue-section-header">
                 <h3 class="section-editorial-title">Recent work</h3>
-                <p class="section-editorial-subtitle">A curated presentation of recent fashion commissions, runway
-                    studies, and fine art portraits.</p>
+                <p class="section-editorial-subtitle">Recent visual work spanning editorial concepts, swimwear,
+                    lingerie, and sensual portraiture.</p>
             </div>
 
             <!-- Dynamic 8-slot gallery managed by script.js -->
@@ -162,7 +188,7 @@
         </div>
     </div>
 
-    <script type="module" src="/script.js?v=36"></script>
+    <script type="module" src="/script.js?v=38"></script>
 </body>
 
 </html>

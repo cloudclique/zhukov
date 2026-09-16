@@ -284,6 +284,7 @@ main {
 }
 
 @media (hover: none) {
+
     .hero-edit-btn,
     .profile-edit-btn {
         opacity: 0.85;
@@ -494,6 +495,7 @@ body:has(.picker-overlay.show) header {
 
 /* Tablet Breakpoint: 4 Rows of 2 Alternating Items (Flush, No Gaps) */
 @media (max-width: 1100px) and (min-width: 769px) {
+
     .gallery,
     body.editorial-body .gallery {
         grid-template-columns: repeat(3, 1fr) !important;
@@ -574,6 +576,7 @@ body:has(.picker-overlay.show) header {
 
 /* Mobile Breakpoint: 2-Column Responsive Flow (Zero Gaps, Curated Editorial Rhythm) */
 @media (max-width: 768px) {
+
     .gallery,
     body.editorial-body .gallery {
         display: grid !important;
@@ -1993,6 +1996,7 @@ body.editorial-body.header-is-scrolled {
 }
 
 @media (max-width: 768px) {
+
     body.editorial-body,
     body.editorial-body.header-is-scrolled {
         padding-top: calc(60px + var(--site-banner-height, 0px)) !important;
@@ -2408,7 +2412,8 @@ body.moodboard-body .vogue-header .brand-subtitle {
     display: inline-block;
     font-style: italic;
     font-family: 'Instrument Serif', Georgia, serif;
-    text-transform: none; /* "Elegance &" as in reference */
+    text-transform: none;
+    /* "Elegance &" as in reference */
     letter-spacing: 0.01em;
     font-weight: 400;
     color: #000000;
@@ -2675,10 +2680,11 @@ body.moodboard-body .vogue-header .brand-subtitle {
 .discipline-card {
     background: #ffffff;
     border: 1px solid #ebebeb;
-    padding: 2.8rem 2.2rem;
+    padding: 1.5rem 2.2rem 2.4rem 2.2rem;
     display: flex;
     flex-direction: column;
     position: relative;
+    overflow: hidden;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -2686,6 +2692,140 @@ body.moodboard-body .vogue-header .brand-subtitle {
     border-color: #000000;
     transform: translateY(-4px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+}
+
+.discipline-card.preview-active {
+    border-color: #000000;
+}
+
+/* ── Discipline Toggle Button (Question mark -> Close X) ─────────────── */
+.discipline-toggle-btn {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: #ffffff;
+    color: #111111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
+    margin: 0;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.25s ease,
+        border-color 0.25s ease,
+        color 0.25s ease,
+        box-shadow 0.25s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+.discipline-toggle-btn:hover {
+    transform: scale(1.08);
+    background: #000000;
+    border-color: #000000;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+.discipline-toggle-btn:focus-visible {
+    outline: 2px solid #000000;
+    outline-offset: 2px;
+}
+
+.discipline-toggle-icon {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.discipline-toggle-icon.icon-close {
+    font-size: 1.35rem;
+    font-weight: 300;
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+    pointer-events: none;
+}
+
+.discipline-card.preview-active .discipline-toggle-btn {
+    background: rgba(18, 18, 18, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.discipline-card.preview-active .discipline-toggle-btn:hover {
+    background: #000000;
+    border-color: #ffffff;
+    transform: scale(1.12);
+}
+
+.discipline-card.preview-active .discipline-toggle-icon.icon-question {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+    pointer-events: none;
+}
+
+.discipline-card.preview-active .discipline-toggle-icon.icon-close {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+    pointer-events: auto;
+}
+
+/* ── Discipline Image Overlay (Slides out from left) ──────────────────── */
+.discipline-image-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    overflow: hidden;
+    transform: translateX(-100%);
+    transition: transform 0.48s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(12px);
+    cursor: pointer;
+}
+
+.discipline-card.preview-active .discipline-image-overlay {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.discipline-overlay-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.9;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.discipline-card.preview-active:hover .discipline-overlay-img {
+    transform: scale(1.03);
 }
 
 .discipline-num {
@@ -2921,6 +3061,7 @@ body.editorial-body .gallery-item:hover img {
 }
 
 @media (max-width: 768px) {
+
     /* ── Mobile Header: Always visible, same size, logo on left, reduced height ── */
     #site-header-slot {
         position: fixed !important;
@@ -3073,14 +3214,14 @@ body.editorial-body .gallery-item:hover img {
         border-top: 1px solid #f0f0f0 !important;
         border-bottom: none !important;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
-        
+
         opacity: 0 !important;
         visibility: hidden !important;
         transform: translateY(-8px) !important;
         pointer-events: none !important;
         transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                    visibility 0.25s !important;
+            transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+            visibility 0.25s !important;
     }
 
     .vogue-nav-bar.open,
@@ -3407,11 +3548,20 @@ body.editorial-body .gallery-item:hover img {
     }
 
     .discipline-card {
-        padding: 1.65rem 1.35rem;
+        padding: 1rem 1.35rem 1.65rem 1.35rem;
         border: 1px solid #ebebeb;
         background: #ffffff;
         border-radius: 4px;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .discipline-toggle-btn {
+        top: 1rem;
+        right: 1rem;
+        width: 30px;
+        height: 30px;
     }
 
     .discipline-num {
@@ -3788,6 +3938,7 @@ html[data-theme="dark"] .archived-banner {
 
 /* Desktop Subpages: Page title banner hidden on PC (Photoshoots & Contact) */
 @media (min-width: 769px) {
+
     body.photoshoots-body .vogue-subpage-header,
     .photoshoots-page .vogue-subpage-header,
     .contact-header-block,
@@ -3805,6 +3956,7 @@ html[data-theme="dark"] .archived-banner {
 
 /* Mobile Uniform Page Headers (Compact, elegant, minimal vertical height) */
 @media (max-width: 768px) {
+
     .vogue-subpage-header,
     .about-hero-section,
     .vogue-contact-hero,
@@ -3888,9 +4040,9 @@ html[data-theme="dark"] .archived-banner {
     justify-content: center;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.16);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.25s ease,
-                border-color 0.25s ease,
-                background-color 0.25s ease;
+        box-shadow 0.25s ease,
+        border-color 0.25s ease,
+        background-color 0.25s ease;
     outline: none;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -3920,7 +4072,7 @@ html[data-theme="dark"] .archived-banner {
     width: 22px;
     height: 22px;
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-                opacity 0.25s ease;
+        opacity 0.25s ease;
 }
 
 /* Light Mode State: Moon visible, Sun hidden */
@@ -3997,6 +4149,7 @@ html[data-theme="dark"] .zhukov-theme-toggle .icon-sun,
         width: 46px;
         height: 46px;
     }
+
     .zhukov-theme-toggle .theme-toggle-tooltip {
         display: none;
     }
@@ -4009,13 +4162,12 @@ html[data-theme="dark"] .zhukov-theme-toggle .icon-sun,
 /* Realistic Metallic Gold Gradient Token */
 :root {
     --gold-metallic-foil: linear-gradient(135deg,
-        #cca353 0%,
-        #fae8a4 22%,
-        #aa771c 46%,
-        #fef4cc 68%,
-        #9c6f17 86%,
-        #deb75e 100%
-    );
+            #cca353 0%,
+            #fae8a4 22%,
+            #aa771c 46%,
+            #fef4cc 68%,
+            #9c6f17 86%,
+            #deb75e 100%);
     --gold-subtle-accent: #cca353;
     --sand-beige-primary: #dcd3c5;
     --sand-beige-muted: #ad9f8d;
@@ -4116,7 +4268,8 @@ html[data-theme="dark"] .vogue-scrolled-logo .brand-name.scrolled-name {
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     text-fill-color: transparent !important;
-    color: #deb75e !important; /* fallback */
+    color: #deb75e !important;
+    /* fallback */
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 10px rgba(212, 175, 55, 0.15)) !important;
 }
 
@@ -4180,7 +4333,8 @@ html[data-theme="dark"] .archived-banner-title {
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
     text-fill-color: transparent !important;
-    color: #deb75e !important; /* fallback */
+    color: #deb75e !important;
+    /* fallback */
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) !important;
 }
 
@@ -4297,6 +4451,44 @@ html[data-theme="dark"] .discipline-card {
 html[data-theme="dark"] .discipline-card:hover {
     border-color: #cca353 !important;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-theme="dark"] .discipline-card.preview-active {
+    border-color: #cca353 !important;
+}
+
+html[data-theme="dark"] .discipline-toggle-btn {
+    background: rgba(42, 36, 31, 0.95);
+    border-color: rgba(216, 196, 170, 0.25);
+    color: var(--sand-beige-light, #f0ece1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .discipline-toggle-btn:hover {
+    background: #cca353;
+    border-color: #cca353;
+    color: #161311;
+    box-shadow: 0 4px 14px rgba(204, 163, 83, 0.35);
+}
+
+html[data-theme="dark"] .discipline-card.preview-active .discipline-toggle-btn {
+    background: rgba(20, 17, 15, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: rgba(204, 163, 83, 0.45);
+    color: #cca353;
+}
+
+html[data-theme="dark"] .discipline-card.preview-active .discipline-toggle-btn:hover {
+    background: #cca353;
+    border-color: #ffffff;
+    color: #161311;
+}
+
+html[data-theme="dark"] .discipline-image-overlay {
+    background: rgba(30, 25, 22, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 
 html[data-theme="dark"] .discipline-num {
@@ -4726,4 +4918,3 @@ html[data-theme="dark"] .process-preview-img,
 html[data-theme="dark"] .fan-card-img {
     background-color: #14100d !important;
 }
-

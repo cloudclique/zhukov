@@ -102,8 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
 
+    let lastLightboxOpenTime = 0;
+
     const openLightbox = (imgElement, setName = 'ARCHIVE') => {
         if (!lightbox || !lightboxImg) return;
+        lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
@@ -118,8 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const closeLightbox = () => {
+    const closeLightbox = (force = false) => {
         if (!lightbox) return;
+        if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
         
@@ -133,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            closeLightbox();
+            closeLightbox(true);
         });
     }
     
@@ -145,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
-            closeLightbox();
+            closeLightbox(true);
         }
     });
 

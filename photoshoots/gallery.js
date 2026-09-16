@@ -113,9 +113,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
+    let lastLightboxOpenTime = 0;
 
     const openLightbox = (imgElement, setName = 'GALLERY') => {
         if (!lightbox || !lightboxImg) return;
+        lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
@@ -131,8 +133,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const closeLightbox = () => {
+    const closeLightbox = (force = false) => {
         if (!lightbox) return;
+        if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
         
@@ -146,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            closeLightbox();
+            closeLightbox(true);
         });
     }
     
@@ -158,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
-            closeLightbox();
+            closeLightbox(true);
         }
     });
 
@@ -745,7 +748,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isAdmin && categoryId !== 'single-shots') {
                 headerContainer.innerHTML = `
-                    <h2 class="gallery-title editable" data-field="categoryName" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
+                    <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
                 `;
@@ -834,6 +837,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 invalidateCache('photoshoots');
                                 invalidateCache('gallery');
                                 await updateDoc(docRef, updates);
+
+                                // Update metadata tags document when a set or tag is renamed
+                                if (fieldName === 'categoryName' || fieldName === 'modelName' || fieldName === 'theme') {
+                                    const oldName = (currentRaw || '').trim();
+                                    if (oldName && oldName !== newVal) {
+                                        try {
+                                            const tagsRef = doc(db, 'metadata', 'tags');
+                                            const tagsSnap = await getDoc(tagsRef);
+                                            const tagArrayKey = fieldName === 'categoryName' ? 'categories' : (fieldName === 'modelName' ? 'models' : 'themes');
+                                            if (tagsSnap.exists()) {
+                                                const tagsData = tagsSnap.data();
+                                                let tagList = Array.isArray(tagsData[tagArrayKey]) ? [...tagsData[tagArrayKey]] : [];
+                                                const exactIdx = tagList.indexOf(oldName);
+                                                if (exactIdx !== -1) {
+                                                    tagList[exactIdx] = newVal;
+                                                } else {
+                                                    const ciIdx = tagList.findIndex(item => typeof item === 'string' && item.trim().toLowerCase() === oldName.toLowerCase());
+                                                    if (ciIdx !== -1) {
+                                                        tagList[ciIdx] = newVal;
+                                                    } else if (!tagList.includes(newVal)) {
+                                                        tagList.push(newVal);
+                                                    }
+                                                }
+                                                tagList = tagList.filter((item, i) => tagList.indexOf(item) === i);
+                                                await setDoc(tagsRef, { [tagArrayKey]: tagList }, { merge: true });
+                                            } else {
+                                                await setDoc(tagsRef, { [tagArrayKey]: [newVal] }, { merge: true });
+                                            }
+                                        } catch (tagErr) {
+                                            console.warn(`Could not update metadata tags for ${fieldName}:`, tagErr);
+                                        }
+                                    }
+                                }
+
                                 loadGallery(); // Reload to reflect changes globally
                             } catch (e) {
                                 console.error("Error updating field:", e);
@@ -1157,14 +1194,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let touchMoved = false;
                     let touchStartX = 0;
                     let touchStartY = 0;
-                    let lastOpenTime = 0;
 
                     const triggerLightbox = (e) => {
                         if (e.target.closest('.photo-admin-bar') || e.target.closest('.photo-admin-btn') || e.target.closest('.modal-overlay')) return;
                         if (wrapper.classList.contains('dragging')) return;
-                        const now = Date.now();
-                        if (now - lastOpenTime < 400) return;
-                        lastOpenTime = now;
+                        if (touchMoved) {
+                            touchMoved = false;
+                            return;
+                        }
                         openLightbox(img, categoryName || 'GALLERY');
                     };
 
@@ -1185,11 +1222,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
                     }, { passive: true });
-
-                    wrapper.addEventListener('touchend', (e) => {
-                        if (touchMoved) return;
-                        triggerLightbox(e);
-                    });
 
                     // Attach 3D Magnetic Tilt
                     attachTiltEffect(wrapper);

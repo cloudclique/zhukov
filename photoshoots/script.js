@@ -108,9 +108,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
+    let lastLightboxOpenTime = 0;
 
     const openLightbox = (imgElement, setName = 'PHOTOSHOOT') => {
         if (!lightbox || !lightboxImg) return;
+        lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
@@ -126,8 +128,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const closeLightbox = () => {
+    const closeLightbox = (force = false) => {
         if (!lightbox) return;
+        if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
         
@@ -141,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            closeLightbox();
+            closeLightbox(true);
         });
     }
     
@@ -153,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
-            closeLightbox();
+            closeLightbox(true);
         }
     });
 
@@ -804,14 +807,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let touchMoved = false;
                 let touchStartX = 0;
                 let touchStartY = 0;
-                let lastOpenTime = 0;
 
                 const triggerLightbox = (e) => {
                     if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
                     if (hasDragged) return;
-                    const now = Date.now();
-                    if (now - lastOpenTime < 400) return;
-                    lastOpenTime = now;
+                    if (touchMoved) {
+                        touchMoved = false;
+                        return;
+                    }
                     openLightbox(img, cat.categoryName || 'PHOTOSHOOT');
                 };
 
@@ -832,11 +835,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 }, { passive: true });
-
-                wrapper.addEventListener('touchend', (e) => {
-                    if (touchMoved) return;
-                    triggerLightbox(e);
-                });
                 
                 // Attach 3D Magnetic Tilt
                 attachTiltEffect(wrapper);

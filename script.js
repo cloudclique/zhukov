@@ -148,8 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
 
+    let lastLightboxOpenTime = 0;
+
     const openLightbox = (imgElement, setName = 'EDITORIAL ARCHIVE') => {
         if (!lightbox || !lightboxImg) return;
+        lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
@@ -164,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const closeLightbox = () => {
+    const closeLightbox = (force = false) => {
         if (!lightbox) return;
+        if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
         
@@ -179,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            closeLightbox();
+            closeLightbox(true);
         });
     }
     
@@ -191,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
-            closeLightbox();
+            closeLightbox(true);
         }
     });
 
@@ -753,6 +757,68 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('zhukov_logged_in');
             signOut(auth).catch((error) => {
                 console.error("Error signing out: ", error);
+            });
+        }
+    });
+
+    // =========================================================================
+    // Directions / Disciplines Image Preview Slider (Question mark -> Close X)
+    // =========================================================================
+    const disciplineCards = document.querySelectorAll('.discipline-card');
+    disciplineCards.forEach((card) => {
+        const toggleBtn = card.querySelector('.discipline-toggle-btn');
+        const overlay = card.querySelector('.discipline-image-overlay');
+
+        if (!toggleBtn) return;
+
+        const togglePreview = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const isActive = card.classList.contains('preview-active');
+            if (isActive) {
+                card.classList.remove('preview-active');
+                toggleBtn.setAttribute('aria-expanded', 'false');
+                toggleBtn.setAttribute('title', 'Preview image');
+                if (overlay) overlay.setAttribute('aria-hidden', 'true');
+            } else {
+                card.classList.add('preview-active');
+                toggleBtn.setAttribute('aria-expanded', 'true');
+                toggleBtn.setAttribute('title', 'Close preview');
+                if (overlay) overlay.setAttribute('aria-hidden', 'false');
+            }
+        };
+
+        toggleBtn.addEventListener('click', togglePreview);
+
+        // Clicking on the overlay image also slides it closed
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (card.classList.contains('preview-active')) {
+                    card.classList.remove('preview-active');
+                    toggleBtn.setAttribute('aria-expanded', 'false');
+                    toggleBtn.setAttribute('title', 'Preview image');
+                    overlay.setAttribute('aria-hidden', 'true');
+                }
+            });
+        }
+    });
+
+    // Close preview on Escape key press
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.discipline-card.preview-active').forEach((card) => {
+                card.classList.remove('preview-active');
+                const btn = card.querySelector('.discipline-toggle-btn');
+                const overlay = card.querySelector('.discipline-image-overlay');
+                if (btn) {
+                    btn.setAttribute('aria-expanded', 'false');
+                    btn.setAttribute('title', 'Preview image');
+                }
+                if (overlay) overlay.setAttribute('aria-hidden', 'true');
             });
         }
     });
