@@ -73,8 +73,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- 3D Tilt Effect Helper ---
+    // --- 3D Tilt Effect Helper (Mouse / Desktop Only) ---
+    const isHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const attachTiltEffect = (element) => {
+        if (!isHoverCapable) return;
         element.classList.add('tilt-card');
         
         const onMouseMove = (e) => {
@@ -88,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
             
-            // Scale tilt inversely with element size â€” big images tilt less
+            // Scale tilt inversely with element size — big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
@@ -99,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const onMouseLeave = () => {
             element.classList.remove('is-tilting');
-            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            element.style.transform = '';
         };
         
         element.addEventListener('mousemove', onMouseMove);
@@ -467,10 +469,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const wrapper = entry.target;
                     const img = wrapper.querySelector('img.row-img');
                     if (img && img.dataset.src) {
-                        img.src = img.dataset.src;
+                        const targetSrc = img.dataset.src;
                         img.removeAttribute('data-src');
-                        if (img.complete && img.naturalWidth && typeof img._reveal === 'function') {
-                            img._reveal();
+                        img.src = targetSrc;
+                        if (img.complete && img.naturalWidth > 0) {
+                            img.classList.add('is-loaded');
+                            wrapper.classList.add('img-loaded');
                         }
                     }
                     observer.unobserve(wrapper);
@@ -478,7 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }, {
             root: null,
-            rootMargin: '150px 200px', // 150px vertical buffer, 200px horizontal buffer
+            rootMargin: '600px 300px',
             threshold: 0
         });
 
@@ -732,7 +736,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!isMouseDown) scheduleAutoScroll();
             });
             scrollRow.addEventListener('touchstart', pauseAutoScroll, { passive: true });
+            scrollRow.addEventListener('touchmove', pauseAutoScroll, { passive: true });
             scrollRow.addEventListener('touchend', scheduleAutoScroll, { passive: true });
+            scrollRow.addEventListener('touchcancel', scheduleAutoScroll, { passive: true });
             scrollRow.addEventListener('scroll', () => {
                 if (isProgrammaticScroll) {
                     isProgrammaticScroll = false;
@@ -741,6 +747,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentScrollLeft = scrollRow.scrollLeft;
                 pauseAutoScroll();
                 scheduleAutoScroll();
+            }, { passive: true });
+
+            let windowScrollTimer = null;
+            window.addEventListener('scroll', () => {
+                pauseAutoScroll();
+                if (isVisible) {
+                    if (windowScrollTimer) clearTimeout(windowScrollTimer);
+                    windowScrollTimer = setTimeout(() => {
+                        scheduleAutoScroll();
+                    }, 800);
+                }
             }, { passive: true });
 
             const rowObserver = new IntersectionObserver((entries) => {
@@ -760,7 +777,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const imagesToShow = cat.urls.slice(0, limit);
             const hasMore = cat.urls.length > 5;
 
-            const createImgElem = (url, waveIndex) => {
+            const createImgElem = (url) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'img-container';
                 wrapper.setAttribute('draggable', 'false');
@@ -773,7 +790,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 img.className = 'row-img';
                 img.dataset.src = url;
                 img.dataset.fullUrl = url;
-                // Transparent placeholder
                 img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
                 img.draggable = false;
                 img.setAttribute('draggable', 'false');
@@ -782,26 +798,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return false;
                 });
 
-                const reveal = () => {
-                    wrapper.classList.add('is-sized');
-                    const delay = (waveIndex % 6) * 0.08;
-                    img.style.transitionDelay = `${delay}s`;
-                    requestAnimationFrame(() => {
-                        img.classList.add('is-revealed');
-                    });
-                    setTimeout(() => {
-                        wrapper.classList.add('img-loaded');
-                        img.style.transitionDelay = '';
-                    }, (delay + 0.65) * 1000);
+                const markLoaded = () => {
+                    img.classList.add('is-loaded');
+                    wrapper.classList.add('img-loaded');
                 };
-
-                img._reveal = reveal;
 
                 img.addEventListener('load', () => {
                     if (img.src && !img.src.startsWith('data:')) {
-                        reveal();
+                        markLoaded();
                     }
                 });
+
+                img.addEventListener('error', markLoaded);
 
                 // Tap & Click handler for lightbox
                 let touchMoved = false;
@@ -852,7 +860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                     wrapper.appendChild(delPhotoBtn);
                 }
-                
+
                 if (photoshootsViewportObserver) {
                     photoshootsViewportObserver.observe(wrapper);
                 }

@@ -984,6 +984,289 @@
 }
 
 /* ==========================================================================
+   Studio Gear & Camera Arsenal Section
+   ========================================================================== */
+.gear-section {
+    max-width: 1320px;
+    margin: 3.2rem auto 4.5rem;
+    padding: 0 clamp(1.2rem, 3.5vw, 3.5rem);
+    box-sizing: border-box;
+    scroll-margin-top: 100px;
+}
+
+.gear-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.gear-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #b32d2e;
+    display: inline-block;
+    margin-bottom: 0.45rem;
+}
+
+.gear-section-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: clamp(2.2rem, 3.8vw, 3rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #000000;
+    margin: 0 0 0.6rem 0;
+    line-height: 1.08;
+}
+
+.gear-section-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: #555555;
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+.gear-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+}
+
+/* ── 1. Flagship Camera Spotlight Banner ── */
+.gear-camera-banner {
+    background: #ffffff;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    border-radius: 6px;
+    padding: 1.6rem 2.2rem;
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    box-sizing: border-box;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.gear-camera-banner:hover {
+    border-color: #000000;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+}
+
+.gear-camera-img-box {
+    width: 160px;
+    height: 140px;
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.gear-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: block;
+    user-drag: none;
+    -webkit-user-drag: none;
+}
+
+.gear-img-light {
+    display: block;
+    mix-blend-mode: multiply;
+}
+
+.gear-img-dark {
+    display: none;
+    border-radius: 4px;
+}
+
+html[data-theme="dark"] .gear-img-light,
+.theme-dark .gear-img-light,
+[data-theme="dark"] .gear-img-light {
+    display: none !important;
+}
+
+html[data-theme="dark"] .gear-img-dark,
+.theme-dark .gear-img-dark,
+[data-theme="dark"] .gear-img-dark {
+    display: block !important;
+}
+
+.gear-camera-banner:hover .gear-img {
+    transform: scale(1.05);
+}
+
+.gear-camera-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    flex-grow: 1;
+}
+
+.gear-banner-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gear-banner-tag {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #b32d2e;
+    text-transform: uppercase;
+}
+
+.gear-banner-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    background: #f4f4f4;
+    color: #222222;
+    border-radius: 12px;
+    border: 1px solid #e8e8e8;
+}
+
+.gear-banner-title {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.85rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #000000;
+    margin: 0;
+    line-height: 1.1;
+}
+
+.gear-banner-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: #555555;
+    margin: 0;
+    max-width: 750px;
+}
+
+.gear-banner-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-top: 0.25rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.gear-highlight-item {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #222222;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* ── 2-5. 4-Column Optics Row ── */
+.gear-optics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.1rem;
+    width: 100%;
+}
+
+.gear-optic-card {
+    background: #ffffff;
+    border: 1px solid #e8e8e8;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.025);
+    border-radius: 6px;
+    padding: 1.25rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.8rem;
+    box-sizing: border-box;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.gear-optic-card:hover {
+    border-color: #000000;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.07);
+}
+
+.gear-optic-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    border-bottom: 1px solid #f4f4f4;
+    padding-bottom: 0.45rem;
+}
+
+.gear-optic-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #b32d2e;
+    text-transform: uppercase;
+}
+
+.gear-optic-pill {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.48rem;
+    background: #f4f4f4;
+    color: #222222;
+    border-radius: 10px;
+    border: 1px solid #e8e8e8;
+}
+
+.gear-optic-name {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 1.35rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #000000;
+    margin: 0;
+    line-height: 1.15;
+}
+
+.gear-optic-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.48;
+    color: #555555;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.gear-optic-role {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #777777;
+    padding-top: 0.55rem;
+    border-top: 1px solid #f4f4f4;
+}
+
+/* ==========================================================================
    4. Concluding Editorial Call to Action
    ========================================================================== */
 .about-cta-section {
@@ -1608,6 +1891,36 @@
         border-radius: 4px;
     }
 
+    /* ── Gear Section on Tablet/Mobile ── */
+    .gear-section {
+        margin: 2.5rem auto 3.2rem;
+        padding: 0 1.25rem;
+    }
+
+    .gear-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .gear-section-title {
+        font-size: clamp(1.85rem, 6.5vw, 2.4rem);
+    }
+
+    .gear-camera-banner {
+        padding: 1.35rem 1.5rem;
+        gap: 1.6rem;
+    }
+
+    .gear-camera-img-box {
+        width: 140px;
+        min-width: 140px;
+        height: 125px;
+    }
+
+    .gear-optics-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.9rem;
+    }
+
     /* ── CTA on Mobile ── */
     .about-cta-section {
         padding: 4rem 1.25rem;
@@ -1626,13 +1939,39 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
     .about-editorial-hero .hero-text-container {
         padding: 2.2rem 1rem 1.8rem 1rem;
     }
 
     .process-section {
         padding: 0 0.85rem;
+    }
+
+    .gear-section {
+        padding: 0 0.85rem;
+    }
+
+    .gear-camera-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.25rem 1rem;
+        gap: 1rem;
+    }
+
+    .gear-camera-img-box {
+        width: 100%;
+        height: 120px;
+    }
+
+    .gear-banner-meta,
+    .gear-banner-highlights {
+        justify-content: center;
+    }
+
+    .gear-optics-row {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
     }
 
     .process-step-card {
@@ -1949,4 +2288,111 @@ html[data-theme="dark"] .swipe-dot {
 
 html[data-theme="dark"] .swipe-dot.active {
     background: #cca353 !important;
+}
+
+/* ── Gear Section Dark Mode Harmonization ── */
+html[data-theme="dark"] .gear-section {
+    background: transparent !important;
+}
+
+html[data-theme="dark"] .gear-badge,
+[data-theme="dark"] .gear-badge,
+.theme-dark .gear-badge {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .gear-section-title,
+[data-theme="dark"] .gear-section-title,
+.theme-dark .gear-section-title {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .gear-section-subtitle,
+[data-theme="dark"] .gear-section-subtitle,
+.theme-dark .gear-section-subtitle {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .gear-camera-banner,
+html[data-theme="dark"] .gear-optic-card,
+[data-theme="dark"] .gear-camera-banner,
+[data-theme="dark"] .gear-optic-card,
+.theme-dark .gear-camera-banner,
+.theme-dark .gear-optic-card {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.14) !important;
+    color: #dcd3c5 !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-theme="dark"] .gear-camera-banner:hover,
+html[data-theme="dark"] .gear-optic-card:hover,
+[data-theme="dark"] .gear-camera-banner:hover,
+[data-theme="dark"] .gear-optic-card:hover,
+.theme-dark .gear-camera-banner:hover,
+.theme-dark .gear-optic-card:hover {
+    border-color: #cca353 !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] .gear-banner-tag,
+html[data-theme="dark"] .gear-optic-num,
+[data-theme="dark"] .gear-banner-tag,
+[data-theme="dark"] .gear-optic-num,
+.theme-dark .gear-banner-tag,
+.theme-dark .gear-optic-num {
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .gear-banner-badge,
+html[data-theme="dark"] .gear-optic-pill,
+[data-theme="dark"] .gear-banner-badge,
+[data-theme="dark"] .gear-optic-pill,
+.theme-dark .gear-banner-badge,
+.theme-dark .gear-optic-pill {
+    background: rgba(204, 163, 83, 0.12) !important;
+    color: #fae8a4 !important;
+    border-color: rgba(204, 163, 83, 0.3) !important;
+}
+
+html[data-theme="dark"] .gear-banner-title,
+html[data-theme="dark"] .gear-optic-name,
+[data-theme="dark"] .gear-banner-title,
+[data-theme="dark"] .gear-optic-name,
+.theme-dark .gear-banner-title,
+.theme-dark .gear-optic-name {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .gear-banner-desc,
+html[data-theme="dark"] .gear-optic-desc,
+[data-theme="dark"] .gear-banner-desc,
+[data-theme="dark"] .gear-optic-desc,
+.theme-dark .gear-banner-desc,
+.theme-dark .gear-optic-desc {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .gear-highlight-item,
+[data-theme="dark"] .gear-highlight-item,
+.theme-dark .gear-highlight-item {
+    color: #dcd3c5 !important;
+}
+
+html[data-theme="dark"] .gear-banner-highlights,
+html[data-theme="dark"] .gear-optic-top,
+html[data-theme="dark"] .gear-optic-role,
+[data-theme="dark"] .gear-banner-highlights,
+[data-theme="dark"] .gear-optic-top,
+[data-theme="dark"] .gear-optic-role,
+.theme-dark .gear-banner-highlights,
+.theme-dark .gear-optic-top,
+.theme-dark .gear-optic-role {
+    border-color: rgba(216, 196, 170, 0.12) !important;
+}
+
+html[data-theme="dark"] .gear-optic-role,
+[data-theme="dark"] .gear-optic-role,
+.theme-dark .gear-optic-role {
+    color: #9e8e7c !important;
 }

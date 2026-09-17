@@ -115,8 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const SLOT_COUNT = 8;
     let gallerySlots = []; // Array of { url, aspectRatio, setName }
 
-    // --- 3D Tilt Effect Helper ---
+    // --- 3D Tilt Effect Helper (Mouse / Desktop Only) ---
+    const isHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const attachTiltEffect = (element) => {
+        if (!isHoverCapable) return;
         element.classList.add('tilt-card');
         
         const onMouseMove = (e) => {
@@ -141,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const onMouseLeave = () => {
             element.classList.remove('is-tilting');
-            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            element.style.transform = '';
         };
         
         element.addEventListener('mousemove', onMouseMove);

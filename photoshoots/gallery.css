@@ -290,6 +290,9 @@
     border: 1px solid #ebebeb;
     background: #f5f5f5;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
 }
 
@@ -300,24 +303,17 @@
     object-fit: contain; /* Zero cropping on sides in masonry original ratio view */
     background: #f5f5f5;
     cursor: pointer;
-    opacity: 0;
-    transform: scale(0.98);
-    filter: brightness(0.95) contrast(1.02);
+    opacity: 1;
     -webkit-user-drag: none !important;
     user-drag: none !important;
     -webkit-user-select: none !important;
     user-select: none !important;
-    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
 }
 
-.masonry-img.is-revealed {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.masonry-img.is-revealed:hover {
-    transform: scale(1.03);
-    filter: brightness(1.02) contrast(1.05);
+@media (hover: hover) and (pointer: fine) {
+    .masonry-img:hover {
+        filter: brightness(1.02) contrast(1.03);
+    }
 }
 
 .vogue-loading-state {

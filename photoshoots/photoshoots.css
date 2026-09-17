@@ -366,7 +366,7 @@
 
 .scrollable-row .img-container {
     height: 270px;
-    min-width: 190px;
+    min-width: 140px;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -377,15 +377,11 @@
     overflow: hidden;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
     scroll-snap-align: start;
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease;
 }
 
 .scrollable-row .img-container:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
-}
-
-.scrollable-row .img-container.is-sized {
-    min-width: auto;
 }
 
 .row-img {
@@ -396,21 +392,19 @@
     border-radius: 0;
     flex-shrink: 0;
     cursor: pointer;
-    opacity: 0;
-    transform: scale(0.97);
-    filter: brightness(0.94) contrast(1.02);
-    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
     display: block;
+    opacity: 0;
+    transition: opacity 0.45s ease;
 }
 
-.row-img.is-revealed {
+.row-img.is-loaded {
     opacity: 1;
-    transform: scale(1);
 }
 
-.row-img.is-revealed:hover {
-    transform: scale(1.03);
-    filter: brightness(1.02) contrast(1.05);
+@media (hover: hover) and (pointer: fine) {
+    .row-img:hover {
+        filter: brightness(1.02) contrast(1.03);
+    }
 }
 
 /* Luxury Editorial End-Card Tile */

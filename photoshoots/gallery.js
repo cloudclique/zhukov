@@ -78,8 +78,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- 3D Tilt Effect Helper ---
+    // --- 3D Tilt Effect Helper (Mouse / Desktop Only) ---
+    const isHoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     const attachTiltEffect = (element) => {
+        if (!isHoverCapable) return;
         element.classList.add('tilt-card');
         
         const onMouseMove = (e) => {
@@ -93,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
             
-            // Scale tilt inversely with element size â€” big images tilt less
+            // Scale tilt inversely with element size — big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
@@ -104,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const onMouseLeave = () => {
             element.classList.remove('is-tilting');
-            element.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            element.style.transform = '';
         };
         
         element.addEventListener('mousemove', onMouseMove);
@@ -1131,63 +1133,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                     gridContainer.classList.remove('ratio-1-1');
                 }
 
-                if (galleryViewportObserver) {
-                    galleryViewportObserver.disconnect();
-                }
-
-                galleryViewportObserver = new IntersectionObserver((entries, observer) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const wrapper = entry.target;
-                            const img = wrapper.querySelector('img.masonry-img');
-                            if (img && img.dataset.src) {
-                                img.src = img.dataset.src;
-                                img.removeAttribute('data-src');
-                                if (img.complete && img.naturalWidth && typeof img._reveal === 'function') {
-                                    img._reveal();
-                                }
-                            }
-                            observer.unobserve(wrapper);
-                        }
-                    });
-                }, {
-                    root: null,
-                    rootMargin: '250px 0px',
-                    threshold: 0
-                });
-
                 currentUrls.forEach((url, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'masonry-item img-container';
                     
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
-                    img.dataset.src = url;
                     img.dataset.fullUrl = url;
-                    // Light SVG transparent placeholder to prevent broken image iconography
-                    img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
+                    img.src = url;
 
-                    const reveal = () => {
-                        const delay = Math.min((index % 6) * 0.05, 0.3); // Smooth staggered reveal
-                        img.style.transitionDelay = `${delay}s`;
-                        requestAnimationFrame(() => {
-                            img.classList.add('is-revealed');
-                            if (currentRatioMode !== '1:1') {
-                                layoutMasonry();
-                            }
-                        });
-                        setTimeout(() => {
-                            wrapper.classList.add('img-loaded');
-                            img.style.transitionDelay = '';
-                        }, (delay + 0.65) * 1000);
+                    const handleImageReady = () => {
+                        wrapper.classList.add('img-loaded');
+                        if (currentRatioMode !== '1:1') {
+                            layoutMasonry();
+                        }
                     };
 
-                    img._reveal = reveal;
+                    if (img.complete && img.naturalWidth > 0) {
+                        handleImageReady();
+                    } else {
+                        img.addEventListener('load', handleImageReady);
+                    }
 
-                    img.addEventListener('load', () => {
-                        if (img.src && !img.src.startsWith('data:')) {
-                            reveal();
-                        }
+                    img.addEventListener('error', () => {
+                        wrapper.classList.add('img-loaded');
                     });
                     
                     // Tap & Click handler for Lightbox
