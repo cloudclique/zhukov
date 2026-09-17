@@ -749,16 +749,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 scheduleAutoScroll();
             }, { passive: true });
 
-            let windowScrollTimer = null;
-            window.addEventListener('scroll', () => {
-                pauseAutoScroll();
-                if (isVisible) {
-                    if (windowScrollTimer) clearTimeout(windowScrollTimer);
-                    windowScrollTimer = setTimeout(() => {
-                        scheduleAutoScroll();
-                    }, 800);
-                }
-            }, { passive: true });
 
             const rowObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
