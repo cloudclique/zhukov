@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeList = document.getElementById('theme-list');
 
     let selectedFiles = [];
+    // Map from display name -> stable doc ID (populated by loadMetadata)
+    const categoryIdMap = new Map();
 
     // --- Fetch Metadata (Tags) ---
     const loadMetadata = async () => {
@@ -44,9 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.categories) {
                     data.categories.forEach(cat => {
-                        if (cat !== 'Single Shots') {
+                        // Support both legacy string entries and new {id, name} objects
+                        const name = (typeof cat === 'object' && cat !== null) ? cat.name : cat;
+                        const id   = (typeof cat === 'object' && cat !== null) ? cat.id   : cat;
+                        if (name && name !== 'Single Shots') {
+                            categoryIdMap.set(name, id);
                             const opt = document.createElement('option');
-                            opt.value = cat;
+                            opt.value = name;
                             categoryList.appendChild(opt);
                         }
                     });
@@ -73,13 +79,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const updateMetadata = async (category, model, theme) => {
+    const updateMetadata = async (category, stableId, model, theme) => {
         try {
             const tagsRef = doc(db, 'metadata', 'tags');
+            const tagsSnap = await getDoc(tagsRef);
             const updates = {};
 
             if (category && category !== 'Single Shots') {
-                updates.categories = arrayUnion(category);
+                // Build the updated categories array, replacing or adding the {id, name} entry
+                const existing = (tagsSnap.exists() && Array.isArray(tagsSnap.data().categories))
+                    ? tagsSnap.data().categories
+                    : [];
+                const newEntry = { id: stableId, name: category };
+                const alreadyPresent = existing.some(c =>
+                    (typeof c === 'object' && c !== null && c.id === stableId) ||
+                    (typeof c === 'string' && c === category)
+                );
+                if (!alreadyPresent) {
+                    // Use setDoc merge with arrayUnion for new entries
+                    updates.categories = arrayUnion(newEntry);
+                }
             }
             if (model) {
                 updates.models = arrayUnion(model);
@@ -252,6 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedFiles.length === 0) return;
 
         const category = categoryInput.value.trim() || 'Single Shots';
+        // Resolve stable doc ID: use existing one from map, or generate a new short unique ID
+        const stableDocId = (category !== 'Single Shots')
+            ? (categoryIdMap.get(category) || Date.now().toString(36) + Math.random().toString(36).substring(2, 6))
+            : null;
         const modelName = modelInput.value.trim();
         const theme = themeInput.value.trim();
         const description = descInput ? descInput.value.trim() : '';
@@ -321,9 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn("Could not update single_shots_order on upload:", orderErr);
                 }
             } else {
-                // Sanitize category to create a valid Firestore document ID (no slashes allowed)
-                const docId = category.replace(/[\/\\]/g, '-');
-                const photoSetRef = doc(db, 'photo_sets', docId);
+                // Use the stable document ID (immutable; survives category renames)
+                const photoSetRef = doc(db, 'photo_sets', stableDocId);
 
                 // In photo sets, galleries display images using rawUrls.reverse() (newest to oldest).
                 // Reversing the uploaded batch before arrayUnion ensures that the first uploaded
@@ -364,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 4. Update metadata tags
-            await updateMetadata(category, modelName, theme);
+            await updateMetadata(category, stableDocId, modelName, theme);
 
             // Invalidate cached photoshoots so fresh uploads appear immediately
             invalidateCache('photoshoots');

@@ -14,12 +14,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Auth UI Elements
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
-    
+
     // Gallery UI
     const headerContainer = document.getElementById('gallery-header');
     const gridContainer = document.getElementById('masonry-grid');
     const loadingState = document.getElementById('loading-state');
-    
+
     // Lightbox UI
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
@@ -32,11 +32,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (localStorage.getItem('zhukov_is_admin') === 'true') {
             isAdmin = true;
         }
-    } catch (e) {}
+    } catch (e) { }
     let currentRatioMode = 'original';
     try {
         currentRatioMode = localStorage.getItem('zhukov_gallery_ratio_mode') || 'original';
-    } catch (e) {}
+    } catch (e) { }
     const urlParams = new URLSearchParams(window.location.search);
     const categoryId = urlParams.get('id');
 
@@ -89,32 +89,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const attachTiltEffect = (element) => {
         if (!isHoverCapable) return;
         element.classList.add('tilt-card');
-        
+
         const onMouseMove = (e) => {
             const rect = element.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
+
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            
+
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
-            
+
             // Scale tilt inversely with element size — big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
-            
+
             element.classList.add('is-tilting');
             element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
         };
-        
+
         const onMouseLeave = () => {
             element.classList.remove('is-tilting');
             element.style.transform = '';
         };
-        
+
         element.addEventListener('mousemove', onMouseMove);
         element.addEventListener('mouseleave', onMouseLeave);
     };
@@ -128,13 +128,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
-        
+
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         lightboxImg.src = targetSrc;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'GALLERY').toUpperCase();
         }
-        
+
         lightbox.style.display = 'flex';
         requestAnimationFrame(() => {
             lightbox.classList.add('show');
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
-        
+
         setTimeout(() => {
             lightbox.style.display = 'none';
             if (lightboxImg) lightboxImg.src = '';
@@ -160,13 +160,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             closeLightbox(true);
         });
     }
-    
+
     if (lightbox) {
         lightbox.addEventListener('click', (e) => {
             closeLightbox();
         });
     }
-    
+
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
             closeLightbox(true);
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="skeleton skeleton-title" style="margin-bottom: 0.5rem; width: 300px;"></div>
                 <div class="skeleton skeleton-meta" style="width: 200px;"></div>
             `;
-            
+
             gridContainer.innerHTML = '';
             const spans = [20, 25, 18, 30, 22, 28, 19, 24, 27, 21, 26, 23];
             spans.forEach(span => {
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (categoryId === 'single-shots') {
                 categoryName = "Single Shots";
                 metaInfo = "Mixed Models | Mixed Themes";
-                
+
                 const [singleSnap, orderDoc] = await Promise.all([
                     getDocs(collection(db, 'single_shots')),
                     getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const setRef = doc(db, 'photo_sets', categoryId);
                 const setSnap = await getDoc(setRef);
-                
+
                 if (setSnap.exists()) {
                     const data = setSnap.data();
 
@@ -292,11 +292,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     categoryName = data.categoryName || categoryId;
                     description = data.description || '';
-                    
+
                     const modelName = data.modelName || 'Unknown';
                     const theme = data.theme || 'None';
                     const dateStr = data.date ? new Date(data.date).toLocaleDateString() : 'No Date';
-                    
+
                     if (isAdmin) {
                         metaInfo = `
                             <span class="editable" data-field="modelName" title="Double click to edit">${modelName}</span> | 
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else {
                         metaInfo = `${modelName} | ${theme} | ${dateStr}`;
                     }
-                    
+
                     if (data.urls && Array.isArray(data.urls)) {
                         let rawUrls = [...data.urls];
 
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         try {
                             const orderRef = doc(db, 'settings', 'single_shots_order');
                             await updateDoc(orderRef, { order: arrayRemove(...urls) });
-                        } catch (_) {}
+                        } catch (_) { }
                     } else {
                         await updateDoc(doc(db, 'photo_sets', categoryId), {
                             urls: arrayRemove(...urls),
@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
                 `;
             }
-            
+
             // Editable Fields Logic
             if (isAdmin && categoryId !== 'single-shots') {
                 const editables = headerContainer.querySelectorAll('.editable');
@@ -1009,16 +1009,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     el.style.cursor = 'pointer';
                     el.addEventListener('mouseenter', () => el.style.color = '#60a5fa');
                     el.addEventListener('mouseleave', () => el.style.color = '');
-                    
+
                     el.addEventListener('dblclick', (e) => {
                         // Prevent opening editor if clicking on an active link badge
                         if (e.target.closest('a')) return;
                         if (el.querySelector('input') || el.querySelector('textarea')) return;
-                        
+
                         const fieldName = el.getAttribute('data-field');
                         const isDescription = fieldName === 'description';
                         const currentRaw = el.getAttribute('data-raw') !== null ? el.getAttribute('data-raw') : el.innerText;
-                        
+
                         let input;
                         if (isDescription) {
                             input = document.createElement('textarea');
@@ -1035,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             input.type = fieldName === 'date' ? 'date' : 'text';
                             if (fieldName !== 'date') input.value = currentRaw;
                         }
-                        
+
                         input.style.padding = '6px 10px';
                         input.style.fontSize = 'inherit';
                         input.style.fontFamily = 'inherit';
@@ -1044,29 +1044,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         input.style.border = '1px solid #60a5fa';
                         input.style.borderRadius = '6px';
                         input.style.outline = 'none';
-                        
+
                         el.innerHTML = '';
                         el.appendChild(input);
                         input.focus();
-                        
+
                         const saveChange = async () => {
                             if (input.dataset.saving) return;
                             input.dataset.saving = "true";
-                            
+
                             let newVal = input.value.trim();
                             let hasChanged = false;
-                            
+
                             if (fieldName === 'date') {
                                 if (newVal) hasChanged = true;
                             } else {
                                 if (newVal !== currentRaw) hasChanged = true;
                             }
-                            
+
                             if (!hasChanged) {
                                 loadGallery();
                                 return;
                             }
-                            
+
                             try {
                                 const docRef = doc(db, 'photo_sets', categoryId);
                                 const updates = {};
@@ -1075,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 } else {
                                     updates[fieldName] = newVal;
                                 }
-                                
+
                                 invalidateCache('photoshoots');
                                 invalidateCache('gallery');
                                 await updateDoc(docRef, updates);
@@ -1091,21 +1091,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             if (tagsSnap.exists()) {
                                                 const tagsData = tagsSnap.data();
                                                 let tagList = Array.isArray(tagsData[tagArrayKey]) ? [...tagsData[tagArrayKey]] : [];
-                                                const exactIdx = tagList.indexOf(oldName);
-                                                if (exactIdx !== -1) {
-                                                    tagList[exactIdx] = newVal;
+
+                                                if (fieldName === 'categoryName') {
+                                                    // Categories are {id, name} objects (or legacy strings)
+                                                    // Find by stable ID first, then fall back to name match
+                                                    const idxById = tagList.findIndex(c => typeof c === 'object' && c !== null && c.id === categoryId);
+                                                    if (idxById !== -1) {
+                                                        tagList[idxById] = { ...tagList[idxById], name: newVal };
+                                                    } else {
+                                                        // Legacy string entry — upgrade it to {id, name}
+                                                        const idxByName = tagList.findIndex(c =>
+                                                            (typeof c === 'string' && c.trim().toLowerCase() === oldName.toLowerCase()) ||
+                                                            (typeof c === 'object' && c !== null && (c.name || '').trim().toLowerCase() === oldName.toLowerCase())
+                                                        );
+                                                        if (idxByName !== -1) {
+                                                            const existing = tagList[idxByName];
+                                                            tagList[idxByName] = { id: categoryId, name: newVal };
+                                                            // Remove any leftover duplicate with old name
+                                                            tagList = tagList.filter((c, i) => i === idxByName || (
+                                                                typeof c === 'string' ? c !== oldName : (c.name !== oldName || i === idxByName)
+                                                            ));
+                                                        } else {
+                                                            tagList.push({ id: categoryId, name: newVal });
+                                                        }
+                                                    }
                                                 } else {
-                                                    const ciIdx = tagList.findIndex(item => typeof item === 'string' && item.trim().toLowerCase() === oldName.toLowerCase());
-                                                    if (ciIdx !== -1) {
-                                                        tagList[ciIdx] = newVal;
-                                                    } else if (!tagList.includes(newVal)) {
-                                                        tagList.push(newVal);
+                                                    // models / themes — plain string arrays
+                                                    const exactIdx = tagList.indexOf(oldName);
+                                                    if (exactIdx !== -1) {
+                                                        tagList[exactIdx] = newVal;
+                                                    } else {
+                                                        const ciIdx = tagList.findIndex(item => typeof item === 'string' && item.trim().toLowerCase() === oldName.toLowerCase());
+                                                        if (ciIdx !== -1) {
+                                                            tagList[ciIdx] = newVal;
+                                                        } else if (!tagList.includes(newVal)) {
+                                                            tagList.push(newVal);
+                                                        }
                                                     }
                                                 }
-                                                tagList = tagList.filter((item, i) => tagList.indexOf(item) === i);
+
+                                                tagList = tagList.filter((item, i) => {
+                                                    if (typeof item === 'object' && item !== null) {
+                                                        return tagList.findIndex(c => typeof c === 'object' && c !== null && c.id === item.id) === i;
+                                                    }
+                                                    return tagList.indexOf(item) === i;
+                                                });
                                                 await setDoc(tagsRef, { [tagArrayKey]: tagList }, { merge: true });
                                             } else {
-                                                await setDoc(tagsRef, { [tagArrayKey]: [newVal] }, { merge: true });
+                                                const newEntry = fieldName === 'categoryName'
+                                                    ? [{ id: categoryId, name: newVal }]
+                                                    : [newVal];
+                                                await setDoc(tagsRef, { [tagArrayKey]: newEntry }, { merge: true });
                                             }
                                         } catch (tagErr) {
                                             console.warn(`Could not update metadata tags for ${fieldName}:`, tagErr);
@@ -1120,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 loadGallery();
                             }
                         };
-                        
+
                         input.addEventListener('blur', saveChange);
                         input.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter' && !isDescription) {
@@ -1135,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 });
             }
-            
+
             // Admin Action Buttons (Archive + Delete)
             if (isAdmin && categoryId !== 'single-shots') {
                 const adminGroup = document.createElement('div');
@@ -1229,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentRatioMode = mode;
                 try {
                     localStorage.setItem('zhukov_gallery_ratio_mode', mode);
-                } catch (e) {}
+                } catch (e) { }
 
                 const switcher = document.getElementById('gallery-ratio-switcher');
                 if (switcher) {
@@ -1397,7 +1433,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUrls.forEach((url, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = `masonry-item img-container ${selectedPhotoUrls.has(url) ? 'is-selected' : ''}`;
-                    
+
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
                     img.dataset.fullUrl = url;
@@ -1419,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     img.addEventListener('error', () => {
                         wrapper.classList.add('img-loaded');
                     });
-                    
+
                     // Tap & Click handler for Lightbox or Selection
                     let touchMoved = false;
                     let touchStartX = 0;
@@ -1478,7 +1514,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                         wrapper.appendChild(selectBadge);
                     }
-                    
+
                     // Admin Photo Action Buttons (Move, Archive, Delete)
                     if (isAdmin) {
                         const adminBar = document.createElement('div');
@@ -1549,11 +1585,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             wrapper.appendChild(badge);
                         }
                     }
-                    
+
                     // Admin Drag and Drop Reordering (Available for all sets including single-shots)
                     if (isAdmin) {
                         wrapper.draggable = !isSelectionMode;
-                        
+
                         wrapper.addEventListener('dragstart', (e) => {
                             if (isSelectionMode) {
                                 e.preventDefault();
@@ -1564,34 +1600,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                             e.dataTransfer.effectAllowed = 'move';
                             e.dataTransfer.setData('text/plain', index);
                         });
-                        
+
                         wrapper.addEventListener('dragend', () => {
                             wrapper.classList.remove('dragging');
                         });
-                        
+
                         wrapper.addEventListener('dragover', (e) => {
                             if (isSelectionMode) return;
                             e.preventDefault(); // Necessary to allow dropping
                             e.dataTransfer.dropEffect = 'move';
                             wrapper.classList.add('drag-over');
                         });
-                        
+
                         wrapper.addEventListener('dragleave', () => {
                             wrapper.classList.remove('drag-over');
                         });
-                        
+
                         wrapper.addEventListener('drop', async (e) => {
                             if (isSelectionMode) return;
                             e.preventDefault();
                             wrapper.classList.remove('drag-over');
-                            
+
                             const dropIndex = index;
                             if (draggedIndex === null || draggedIndex === dropIndex) return;
-                            
+
                             // Reorder array locally
                             const item = currentUrls.splice(draggedIndex, 1)[0];
                             currentUrls.splice(dropIndex, 0, item);
-                            
+
                             // Save to Firestore immediately
                             try {
                                 if (categoryId === 'single-shots') {
@@ -1606,12 +1642,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 console.error("Error saving new order:", err);
                                 alert("Failed to save order.");
                             }
-                            
+
                             // Re-render grid to reflect changes
                             renderGrid();
                         });
                     }
-                    
+
                     gridContainer.appendChild(wrapper);
                     if (galleryViewportObserver) {
                         galleryViewportObserver.observe(wrapper);
@@ -1640,7 +1676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadingState.innerText = "An error occurred while loading the gallery.";
         }
     };
-    
+
     // Initial Load
     if (categoryId) {
         loadGallery();
