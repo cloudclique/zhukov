@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { invalidateCache } from "../site-cache.js";
+import { CLOUDFLARE_WORKER_URL } from "../cloudflare-storage.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const uploadedUrls = [];
-            const workerUrl = 'https://zhukov-studio.dener4826.workers.dev';
+            const workerUrl = CLOUDFLARE_WORKER_URL;
 
             // Process and Upload Sequentially
             for (let i = 0; i < selectedFiles.length; i++) {

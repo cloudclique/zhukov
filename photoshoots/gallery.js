@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, arrayUnion, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -585,6 +586,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 await deleteDoc(doc(db, 'single_shots', d.id));
                             });
                         }
+                        try {
+                            const orderRef = doc(db, 'settings', 'single_shots_order');
+                            await updateDoc(orderRef, { order: arrayRemove(...urls) });
+                        } catch (_) {}
                     } else {
                         await updateDoc(doc(db, 'photo_sets', categoryId), {
                             urls: arrayRemove(...urls),
@@ -592,6 +597,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             archivedUrls: arrayRemove(...urls)
                         });
                     }
+
+                    // Also delete all affected images from Cloudflare R2 bucket
+                    await deleteFromCloudflare(urls);
 
                     // Animate out and remove matching wrappers in-place
                     const wrappersToRemove = [];
@@ -924,7 +932,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     invalidateCache('photoshoots');
                     invalidateCache('gallery');
                     invalidateCache('archived');
-                    await deleteDoc(doc(db, 'photo_sets', categoryId));
+
+                    // Gather all image URLs from the photoshoot set before deleting the document
+                    const setRef = doc(db, 'photo_sets', categoryId);
+                    const setSnap = await getDoc(setRef);
+                    let urlsToDelete = [];
+                    if (setSnap.exists()) {
+                        const data = setSnap.data();
+                        const setUrls = Array.isArray(data.urls) ? data.urls : [];
+                        const adultUrls = Array.isArray(data.adultUrls) ? data.adultUrls : [];
+                        const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                        urlsToDelete = Array.from(new Set([...setUrls, ...adultUrls, ...archivedUrls, ...(currentUrls || [])]));
+                    } else if (currentUrls && currentUrls.length > 0) {
+                        urlsToDelete = [...currentUrls];
+                    }
+
+                    await deleteDoc(setRef);
+
+                    // Delete all photos belonging to this photoshoot set from Cloudflare R2 bucket
+                    if (urlsToDelete.length > 0) {
+                        await deleteFromCloudflare(urlsToDelete);
+                    }
+
                     window.location.href = '/photoshoots/'; // Redirect back
                 } catch (error) {
                     console.error("Error deleting photo set:", error);

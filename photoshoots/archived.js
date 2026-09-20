@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -367,7 +368,26 @@ document.addEventListener('DOMContentLoaded', () => {
             invalidateCache('photoshoots');
             invalidateCache('gallery');
             invalidateCache('archived');
-            await deleteDoc(doc(db, 'photo_sets', categoryId));
+
+            // Gather all image URLs from the photoshoot set before deleting the document
+            const setRef = doc(db, 'photo_sets', categoryId);
+            const setSnap = await getDoc(setRef);
+            let urlsToDelete = [];
+            if (setSnap.exists()) {
+                const data = setSnap.data();
+                const setUrls = Array.isArray(data.urls) ? data.urls : [];
+                const adultUrls = Array.isArray(data.adultUrls) ? data.adultUrls : [];
+                const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                urlsToDelete = Array.from(new Set([...setUrls, ...adultUrls, ...archivedUrls]));
+            }
+
+            await deleteDoc(setRef);
+
+            // Delete all photos belonging to this photoshoot set from Cloudflare R2 bucket
+            if (urlsToDelete.length > 0) {
+                await deleteFromCloudflare(urlsToDelete);
+            }
+
             if (rowElement) {
                 rowElement.style.transition = 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
                 rowElement.style.opacity = '0';
