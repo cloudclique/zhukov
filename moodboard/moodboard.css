@@ -34,9 +34,12 @@ body.moodboard-body {
     -webkit-user-select: none;
 }
 
-body.moodboard-body #site-header-slot {
+body.moodboard-body:not(.inside-board) #site-header-slot {
     width: 100%;
-    position: relative;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     z-index: 10000 !important;
     background: #ffffff;
 }
@@ -304,11 +307,32 @@ html.moodboard-loading-direct .moodboard-loader {
     display: flex;
     flex-direction: column;
     padding: 0;
+    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px));
     margin: 0;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
+    box-sizing: border-box;
+    transition: padding-top 0.25s ease;
+}
+
+body.moodboard-body.header-is-scrolled .dashboard-view {
+    padding-top: calc(var(--site-header-scrolled-height, 67px) + var(--site-banner-height, 0px));
+}
+
+body.moodboard-body.touch-scroll-mode .dashboard-view,
+body.moodboard-body.touch-scroll-mode.header-is-scrolled .dashboard-view {
+    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px)) !important;
+    transition: none !important;
+}
+
+@media (max-width: 768px) {
+    .dashboard-view,
+    body.moodboard-body.header-is-scrolled .dashboard-view {
+        padding-top: calc(60px + var(--site-banner-height, 0px)) !important;
+        transition: none !important;
+    }
 }
 
 .dashboard-main-content {

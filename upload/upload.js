@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const uploadedUrls = [];
-            const workerUrl = 'https://long-sky-4aa4.dener4826.workers.dev';
+            const workerUrl = 'https://zhukov-studio.dener4826.workers.dev';
 
             // Process and Upload Sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
@@ -270,9 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. Process Image to WebP
                 const webpBlob = await processImage(selectedFiles[i]);
 
-                // 2. Upload to ImgBB via Worker
+                // 2. Upload to Cloudflare R2 via Worker
+                const safePrefix = category.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const uniqueFileName = `${safePrefix}_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}.webp`;
                 const formData = new FormData();
-                formData.append('image', webpBlob, `image_${i}.webp`);
+                formData.append('image', webpBlob, uniqueFileName);
 
                 const uploadRes = await fetch(workerUrl, {
                     method: 'POST',
@@ -293,9 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 3. Save to Firestore
             if (category === 'Single Shots') {
                 const singleShotsRef = collection(db, 'single_shots');
-                for (const url of uploadedUrls) {
+                for (let j = 0; j < uploadedUrls.length; j++) {
+                    statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving reference ${j + 1} of ${uploadedUrls.length} to database...</span>`;
                     await addDoc(singleShotsRef, {
-                        url, modelName, theme, description, date,
+                        url: uploadedUrls[j], modelName, theme, description, date,
                         isAdult: isAdult,
                         uploadedAt: date,
                         uploadedBy: auth.currentUser.uid
@@ -320,27 +323,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Sanitize category to create a valid Firestore document ID (no slashes allowed)
                 const docId = category.replace(/[\/\\]/g, '-');
                 const photoSetRef = doc(db, 'photo_sets', docId);
+
                 // In photo sets, galleries display images using rawUrls.reverse() (newest to oldest).
                 // Reversing the uploaded batch before arrayUnion ensures that the first uploaded
                 // image is placed at index 0 (the top of the gallery), followed by subsequent images.
                 const reversedBatch = [...uploadedUrls].reverse();
-                const updateData = {
+
+                // 1. Save base photoshoot metadata
+                const baseData = {
                     categoryName: category,
                     modelName,
                     theme,
                     date,
-                    urls: arrayUnion(...reversedBatch),
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid
                 };
                 if (isAdult) {
-                    updateData.adultUrls = arrayUnion(...reversedBatch);
-                    updateData.isAdult = true;
+                    baseData.isAdult = true;
                 }
                 if (description) {
-                    updateData.description = description;
+                    baseData.description = description;
                 }
-                await setDoc(photoSetRef, updateData, { merge: true });
+                await setDoc(photoSetRef, baseData, { merge: true });
+
+                // 2. Append URLs in safe chunks of 20 to prevent Firestore batch or field transform limits
+                const CHUNK_SIZE = 20;
+                const totalChunks = Math.ceil(reversedBatch.length / CHUNK_SIZE);
+                for (let c = 0; c < totalChunks; c++) {
+                    const chunk = reversedBatch.slice(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE);
+                    statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving batch ${c + 1} of ${totalChunks} to database...</span>`;
+                    const chunkUpdate = {
+                        urls: arrayUnion(...chunk)
+                    };
+                    if (isAdult) {
+                        chunkUpdate.adultUrls = arrayUnion(...chunk);
+                    }
+                    await setDoc(photoSetRef, chunkUpdate, { merge: true });
+                }
             }
 
             // 4. Update metadata tags

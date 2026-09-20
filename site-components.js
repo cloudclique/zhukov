@@ -16,7 +16,7 @@ const BANNER_DESTINATION_URL = '';
 
 (function () {
     const HEADER_CACHE_KEY = 'zhukov_cached_header_v19';
-    const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v18';
+    const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v19';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
     const THEME_KEY = 'zhukov_theme';
 
@@ -145,6 +145,103 @@ const BANNER_DESTINATION_URL = '';
 
         // Two-Stage Header Controller: Anchors top element cleanly to bottom of header in both states
         let isScrolled = false;
+        let isTouchMode = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+        let wheelFoldDelta = 0;
+        let wheelFoldActive = false;
+        let wheelResetTimer = null;
+
+        if (isTouchMode && window.innerWidth > 768) {
+            document.body.classList.add('touch-scroll-mode');
+        }
+
+        function resetTouchInlineStyles() {
+            if (topBar) {
+                topBar.style.maxHeight = '';
+                topBar.style.opacity = '';
+                topBar.style.paddingTop = '';
+                topBar.style.paddingBottom = '';
+                topBar.style.borderBottomColor = '';
+            }
+            const masthead = header ? header.querySelector('.vogue-masthead-container') : null;
+            if (masthead) {
+                masthead.style.maxHeight = '';
+                masthead.style.opacity = '';
+                masthead.style.paddingTop = '';
+                masthead.style.paddingBottom = '';
+            }
+            const scrolledLogo = header ? header.querySelector('.vogue-scrolled-logo') : null;
+            if (scrolledLogo) {
+                scrolledLogo.style.opacity = '';
+                scrolledLogo.style.transform = '';
+                scrolledLogo.style.pointerEvents = '';
+            }
+        }
+
+        function getScrollY() {
+            const dv = document.getElementById('dashboard-view');
+            const dvScroll = dv ? dv.scrollTop : 0;
+            const winScroll = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
+            return Math.max(dvScroll, winScroll);
+        }
+
+        function resetScrollToTop() {
+            window.scrollTo(0, 0);
+            const dv = document.getElementById('dashboard-view');
+            if (dv) dv.scrollTop = 0;
+        }
+
+        function scrollByDelta(delta) {
+            const dv = document.getElementById('dashboard-view');
+            if (dv && dv.scrollHeight > dv.clientHeight) {
+                dv.scrollTop += delta;
+            } else {
+                window.scrollBy(0, delta);
+            }
+        }
+
+        function updateTouchHeaderTransform() {
+            if (window.innerWidth <= 768) return;
+            const scrollY = getScrollY();
+            const unscrolledH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-unscrolled-height')) || 206;
+            const scrolledH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-scrolled-height')) || 67;
+            const maxCollapse = Math.max(1, unscrolledH - scrolledH);
+            const progress = Math.min(1, Math.max(0, scrollY / maxCollapse));
+
+            if (topBar) {
+                const topBarProg = Math.min(1, progress * 2.5);
+                topBar.style.maxHeight = `${(1 - topBarProg) * 40}px`;
+                topBar.style.opacity = `${1 - topBarProg}`;
+                topBar.style.paddingTop = `${(1 - topBarProg) * 0.45}rem`;
+                topBar.style.paddingBottom = `${(1 - topBarProg) * 0.45}rem`;
+                topBar.style.borderBottomColor = topBarProg >= 0.9 ? 'transparent' : '';
+            }
+
+            const masthead = header ? header.querySelector('.vogue-masthead-container') : null;
+            if (masthead) {
+                masthead.style.maxHeight = `${(1 - progress) * 120}px`;
+                masthead.style.opacity = `${1 - Math.min(1, progress * 1.3)}`;
+                masthead.style.paddingTop = `${(1 - progress) * 1.1}rem`;
+                masthead.style.paddingBottom = `${(1 - progress) * 0.8}rem`;
+            }
+
+            const scrolledLogo = header ? header.querySelector('.vogue-scrolled-logo') : null;
+            if (scrolledLogo) {
+                const logoProg = Math.min(1, Math.max(0, (progress - 0.25) / 0.75));
+                scrolledLogo.style.opacity = `${logoProg}`;
+                scrolledLogo.style.transform = `translateY(-50%) translateX(${-15 * (1 - logoProg)}px)`;
+                scrolledLogo.style.pointerEvents = logoProg > 0.5 ? 'auto' : 'none';
+            }
+
+            if (header) {
+                if (progress >= 0.95) {
+                    header.classList.add('is-scrolled');
+                } else {
+                    header.classList.remove('is-scrolled');
+                }
+            }
+
+            isScrolled = (progress >= 0.95);
+        }
 
         function setScrolledState(scrolled) {
             if (scrolled === isScrolled) return;
@@ -159,79 +256,126 @@ const BANNER_DESTINATION_URL = '';
             if (navContainer) {
                 navContainer.classList.toggle('is-scrolled', isScrolled);
             }
+            syncHeaderHeight();
+            setTimeout(syncHeaderHeight, 260);
         }
 
         function syncHeaderHeight() {
             const slot = document.getElementById('site-header-slot');
-            if (slot && window.innerWidth > 768 && !isScrolled) {
+            if (slot && window.innerWidth > 768) {
                 const h = slot.offsetHeight;
-                if (h > 150) {
-                    document.documentElement.style.setProperty('--site-header-unscrolled-height', `${h}px`);
+                if (!isScrolled) {
+                    if (h > 150) {
+                        document.documentElement.style.setProperty('--site-header-unscrolled-height', `${h}px`);
+                    }
+                } else {
+                    if (h > 40 && h < 120) {
+                        document.documentElement.style.setProperty('--site-header-scrolled-height', `${h}px`);
+                    }
                 }
             }
         }
         syncHeaderHeight();
-        window.addEventListener('resize', syncHeaderHeight);
+        window.addEventListener('resize', () => {
+            syncHeaderHeight();
+            if (isTouchMode) updateTouchHeaderTransform();
+        });
 
-        // Wheel interceptor: first scroll from top shrinks header while anchoring content right beneath it
+        // Wheel interceptor for desktop (mouse): folds in one go on 1 scroll down, unfolds in one go on 1 scroll up
         window.addEventListener('wheel', (e) => {
-            const winScroll = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
+            if (isTouchMode) {
+                isTouchMode = false;
+                document.body.classList.remove('touch-scroll-mode');
+                resetTouchInlineStyles();
+            }
 
-            // At very top, first scroll down only shrinks header and anchors top element to bottom of shrunk header
-            if (!isScrolled && winScroll <= 1 && e.deltaY > 0) {
-                e.preventDefault();
+            const scrollY = getScrollY();
+
+            // 1. Initial scroll down at top: fold header in one go and allow continuous scroll
+            if (!isScrolled && scrollY <= 2 && e.deltaY > 0) {
+                wheelFoldActive = true;
+                wheelFoldDelta += e.deltaY;
                 setScrolledState(true);
-                window.scrollTo(0, 0);
+
+                // Absorb the initial fold delta (100px) to keep scroll at 0 for a single notch
+                if (wheelFoldDelta <= 100) {
+                    e.preventDefault();
+                    resetScrollToTop();
+                } else {
+                    const excess = wheelFoldDelta - 100;
+                    if (excess > 0 && excess <= e.deltaY) {
+                        scrollByDelta(excess);
+                        e.preventDefault();
+                    }
+                }
+
+                clearTimeout(wheelResetTimer);
+                wheelResetTimer = setTimeout(() => {
+                    wheelFoldActive = false;
+                    wheelFoldDelta = 0;
+                }, 250);
                 return;
             }
 
-            // At very top, scrolling up expands header and anchors top element to bottom of extended header
-            if (isScrolled && winScroll <= 0 && e.deltaY < 0) {
+            // 2. If wheelFoldActive and user continues scrolling down at the top:
+            if (wheelFoldActive && e.deltaY > 0 && scrollY <= 2) {
+                wheelFoldDelta += e.deltaY;
+                if (wheelFoldDelta <= 100) {
+                    e.preventDefault();
+                    resetScrollToTop();
+                }
+                clearTimeout(wheelResetTimer);
+                wheelResetTimer = setTimeout(() => {
+                    wheelFoldActive = false;
+                    wheelFoldDelta = 0;
+                }, 250);
+                return;
+            }
+
+            // 3. Scroll up near top: 1 scroll up unfolds the header back to full masthead
+            if (isScrolled && (scrollY <= 60 || scrollY + e.deltaY <= 0) && e.deltaY < 0) {
                 e.preventDefault();
                 setScrolledState(false);
-                window.scrollTo(0, 0);
+                resetScrollToTop();
+                wheelFoldActive = false;
+                wheelFoldDelta = 0;
+                clearTimeout(wheelResetTimer);
                 return;
             }
         }, { passive: false });
 
-        // Touch gesture handler for mobile devices
-        let touchStartY = 0;
+        // Touch event handlers for mobile/tablet devices
         window.addEventListener('touchstart', (e) => {
-            if (e.touches && e.touches.length === 1) {
-                touchStartY = e.touches[0].clientY;
+            if (!isTouchMode) {
+                isTouchMode = true;
+                if (window.innerWidth > 768) {
+                    document.body.classList.add('touch-scroll-mode');
+                }
             }
         }, { passive: true });
 
-        window.addEventListener('touchmove', (e) => {
-            if (!e.touches || e.touches.length !== 1) return;
-            const currentY = e.touches[0].clientY;
-            const deltaY = touchStartY - currentY;
-            const winScroll = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
-
-            if (!isScrolled && winScroll <= 1 && deltaY > 15) {
-                setScrolledState(true);
-            } else if (isScrolled && winScroll <= 0 && deltaY < -15) {
-                setScrolledState(false);
-            }
-        }, { passive: true });
-
-        // Standard scroll handler (for keyboard navigation, scrollbar drag, hash links)
+        // Standard scroll handler (for touch smooth transformation, keyboard navigation, scrollbar drag)
         let ticking = false;
         function updateScrollState() {
-            const dv = document.getElementById('dashboard-view');
-            const dvScroll = dv ? dv.scrollTop : 0;
-            const winScroll = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
-            const scrollY = Math.max(dvScroll, winScroll);
+            if (isTouchMode) {
+                updateTouchHeaderTransform();
+                ticking = false;
+                return;
+            }
 
-            if (!isScrolled && scrollY > 20) {
+            const scrollY = getScrollY();
+
+            if (!isScrolled && scrollY > 60) {
                 setScrolledState(true);
-            } else if (isScrolled && scrollY <= 0) {
-                setScrolledState(false);
             }
             ticking = false;
         }
 
         function onScroll() {
+            if (isTouchMode) {
+                updateTouchHeaderTransform();
+                return;
+            }
             if (!ticking) {
                 requestAnimationFrame(updateScrollState);
                 ticking = true;
@@ -239,14 +383,24 @@ const BANNER_DESTINATION_URL = '';
         }
 
         window.addEventListener('scroll', onScroll, { passive: true });
-        document.addEventListener('scroll', onScroll, { passive: true });
+        document.addEventListener('scroll', onScroll, { passive: true, capture: true });
 
-        const dv = document.getElementById('dashboard-view');
-        if (dv) {
-            dv.addEventListener('scroll', onScroll, { passive: true });
+        function attachDashboardScroll() {
+            const dv = document.getElementById('dashboard-view');
+            if (dv && !dv.__zhukovScrollAttached) {
+                dv.__zhukovScrollAttached = true;
+                dv.addEventListener('scroll', onScroll, { passive: true });
+            }
         }
+        attachDashboardScroll();
+        document.addEventListener('DOMContentLoaded', attachDashboardScroll);
+        window.addEventListener('load', attachDashboardScroll);
 
-        updateScrollState();
+        if (isTouchMode) {
+            updateTouchHeaderTransform();
+        } else {
+            updateScrollState();
+        }
 
         // Dispatch headerLoaded event for page scripts
         document.dispatchEvent(new CustomEvent('headerLoaded', {
@@ -314,6 +468,18 @@ const BANNER_DESTINATION_URL = '';
         }
     }
 
+    function initFooterBehavior() {
+        const cookieBtn = document.getElementById('footer-cookie-btn');
+        if (cookieBtn) {
+            cookieBtn.onclick = (e) => {
+                e.preventDefault();
+                if (typeof window.openCookiePreferences === 'function') {
+                    window.openCookiePreferences();
+                }
+            };
+        }
+    }
+
     // Load Footer Component
     async function loadFooter() {
         const footerSlot = document.getElementById('site-footer-slot') || document.getElementById('site-footer');
@@ -323,6 +489,7 @@ const BANNER_DESTINATION_URL = '';
         const cached = sessionStorage.getItem(FOOTER_CACHE_KEY);
         if (cached && footerSlot.children.length === 0) {
             footerSlot.innerHTML = cached;
+            initFooterBehavior();
         }
 
         // Fetch fresh footer
@@ -333,81 +500,279 @@ const BANNER_DESTINATION_URL = '';
                 if (html !== cached || footerSlot.children.length === 0) {
                     sessionStorage.setItem(FOOTER_CACHE_KEY, html);
                     footerSlot.innerHTML = html;
+                    initFooterBehavior();
                 }
             }
         } catch (err) {
             console.warn('Could not fetch /footer.html:', err);
         }
 
+        initFooterBehavior();
         document.dispatchEvent(new CustomEvent('footerLoaded', { detail: { footerSlot } }));
     }
 
-    // Necessary Cookies Consent Banner for first-time visitors
-    function initCookieConsent() {
-        if (localStorage.getItem(COOKIE_CONSENT_KEY)) return;
-        if (document.getElementById('cookie-consent-banner')) return;
+    // =========================================================================
+    // =========================================================================
+    // Comprehensive Privacy & Cookie Consent Controller
+    // Accounts for all storage features: Auth, SWR & Local Cache,
+    // IndexedDB, Service Worker, UI Preferences, and Anonymous Analytics.
+    // =========================================================================
+    function getStoredConsent() {
+        try {
+            const raw = localStorage.getItem(COOKIE_CONSENT_KEY);
+            if (!raw) return null;
+            if (raw === 'accepted' || raw === 'all') {
+                return { necessary: true, preferences: true, analytics: true, timestamp: Date.now() };
+            }
+            if (raw === 'necessary') {
+                return { necessary: true, preferences: false, analytics: false, timestamp: Date.now() };
+            }
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                return {
+                    necessary: true,
+                    preferences: parsed.preferences === true,
+                    analytics: parsed.analytics === true,
+                    timestamp: parsed.timestamp || Date.now()
+                };
+            }
+        } catch (e) {}
+        return null;
+    }
 
-        const banner = document.createElement('div');
+    function showCookieToast(message) {
+        let toast = document.querySelector('.cookie-toast');
+        if (toast) toast.remove();
+        toast = document.createElement('div');
+        toast.className = 'cookie-toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 2500);
+        });
+    }
+
+    function applyConsentSettings(consent) {
+        if (!consent) return;
+
+        // 1. Analytics consent enforcement
+        const analyticsDisabled = !consent.analytics;
+        window['ga-disable-G-NZFRW735QB'] = analyticsDisabled;
+
+        if (typeof window.gtag === 'function') {
+            window.gtag('consent', 'update', {
+                analytics_storage: consent.analytics ? 'granted' : 'denied'
+            });
+        }
+
+        // Clean up GA cookies if analytics consent is revoked
+        if (analyticsDisabled) {
+            try {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    const eqPos = cookie.indexOf('=');
+                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    if (name.startsWith('_ga') || name.startsWith('_gid') || name.startsWith('_gat')) {
+                        document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+                        document.cookie = `${name}=; Path=/; Domain=.${window.location.hostname}; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // 2. Preferences consent enforcement
+        if (consent.preferences === false) {
+            // Remove non-essential UI preferences from localStorage when consent is revoked
+            try {
+                localStorage.removeItem('zhukov_gallery_ratio_mode');
+            } catch (e) {}
+        }
+
+        document.dispatchEvent(new CustomEvent('zhukovCookieConsentUpdated', {
+            detail: consent
+        }));
+    }
+
+    function showCookieConsentBanner(force = false) {
+        const existingConsent = getStoredConsent();
+        if (!force && existingConsent) {
+            applyConsentSettings(existingConsent);
+            return;
+        }
+
+        let banner = document.getElementById('cookie-consent-banner');
+        if (banner) banner.remove();
+
+        banner = document.createElement('div');
         banner.id = 'cookie-consent-banner';
         banner.className = 'cookie-consent-container';
         banner.setAttribute('role', 'dialog');
         banner.setAttribute('aria-live', 'polite');
-        banner.setAttribute('aria-label', 'Cookie Consent');
+        banner.setAttribute('aria-label', 'Cookie and Data Storage Preferences');
+
+        // When opened via settings/footer (force=true), show details open by default so user sees their saved preferences
+        const isDetailsOpen = Boolean(force);
+        const initialPref = existingConsent ? existingConsent.preferences === true : true;
+        const initialAnalytics = existingConsent ? existingConsent.analytics === true : true;
+
         banner.innerHTML = `
             <div class="cookie-consent-card">
                 <div class="cookie-header-row">
-                    <span class="cookie-tag">PRIVACY &amp; SECURITY</span>
+                    <span class="cookie-tag">PRIVACY &amp; LOCAL STORAGE</span>
                     <button class="cookie-close-btn" id="cookie-close-x" aria-label="Dismiss">&times;</button>
                 </div>
-                <h3 class="cookie-title">Necessary Cookies</h3>
+                <h3 class="cookie-title">Privacy &amp; Data Storage</h3>
                 <p class="cookie-desc">
-                    We use strictly necessary cookies and local storage to enable core site features, secure authentication, and layout preferences. No tracking or marketing cookies are used.
+                    We use local storage, session caching, and minimal cookies to deliver high-performance offline portfolios, preserve your viewing preferences, and securely authenticate studio administration.
                 </p>
-                <div class="cookie-actions">
-                    <button id="cookie-accept-btn" class="cookie-btn cookie-btn-accept">Accept Necessary</button>
-                    <button id="cookie-details-toggle" class="cookie-link-btn" type="button">Details</button>
+
+                <div id="cookie-details-box" class="cookie-details-content" style="${isDetailsOpen ? 'display: block;' : 'display: none;'}">
+                    <div class="cookie-category-item">
+                        <div class="cookie-cat-header">
+                            <span class="cookie-cat-title">Strictly Necessary</span>
+                            <span class="cookie-cat-status">Always Active</span>
+                        </div>
+                        <p class="cookie-cat-desc">
+                            Required for core operations: Firebase Auth admin session, 0ms SWR caching (<code class="cookie-code">site-cache.js</code> &amp; Firestore IndexedDB), and offline Service Worker delivery.
+                        </p>
+                    </div>
+
+                    <div class="cookie-category-item">
+                        <div class="cookie-cat-header">
+                            <span class="cookie-cat-title">Viewing Preferences</span>
+                            <label class="cookie-switch" aria-label="Toggle Preferences Storage">
+                                <input type="checkbox" id="cookie-pref-checkbox" ${initialPref ? 'checked' : ''}>
+                                <span class="cookie-slider"></span>
+                            </label>
+                        </div>
+                        <p class="cookie-cat-desc">
+                            Stores layout and visual preferences, such as Gallery aspect ratio mode (1:1 square vs original) and light/dark theme selection.
+                        </p>
+                    </div>
+
+                    <div class="cookie-category-item">
+                        <div class="cookie-cat-header">
+                            <span class="cookie-cat-title">Anonymous Analytics</span>
+                            <label class="cookie-switch" aria-label="Toggle Analytics Storage">
+                                <input type="checkbox" id="cookie-analytics-checkbox" ${initialAnalytics ? 'checked' : ''}>
+                                <span class="cookie-slider"></span>
+                            </label>
+                        </div>
+                        <p class="cookie-cat-desc">
+                            Anonymous performance and traffic telemetry (Firebase Measurement) to monitor page speeds and gallery engagement without personal profiling.
+                        </p>
+                    </div>
                 </div>
-                <div id="cookie-details-box" class="cookie-details-content" style="display: none;">
-                    <ul>
-                        <li><strong>Authentication:</strong> Firebase authentication session</li>
-                        <li><strong>Preferences:</strong> Local UI preferences &amp; fast modular caching</li>
-                        <li><strong>Performance:</strong> High-speed offline asset delivery</li>
-                    </ul>
+
+                <div class="cookie-actions">
+                    <button id="cookie-accept-all-btn" class="cookie-btn cookie-btn-accept">Accept All</button>
+                    <button id="cookie-save-preferences-btn" class="cookie-btn cookie-btn-secondary" style="${isDetailsOpen ? 'display: inline-block;' : 'display: none;'}">Save Preferences</button>
+                    <button id="cookie-accept-necessary-btn" class="cookie-btn cookie-btn-secondary">Necessary Only</button>
+                    <button id="cookie-details-toggle" class="cookie-link-btn" type="button">${isDetailsOpen ? 'Hide Details' : 'Customize'}</button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(banner);
 
-        setTimeout(() => {
-            banner.classList.add('show');
-        }, 500);
+        requestAnimationFrame(() => {
+            setTimeout(() => banner.classList.add('show'), 50);
+        });
 
-        const closeConsent = () => {
-            localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
+        const closeBanner = (consentObj, toastMessage) => {
+            localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(consentObj));
+            applyConsentSettings(consentObj);
             banner.classList.remove('show');
             banner.classList.add('hide');
-            setTimeout(() => {
-                banner.remove();
-            }, 350);
+            setTimeout(() => banner.remove(), 350);
+            if (toastMessage) {
+                showCookieToast(toastMessage);
+            }
         };
 
-        const acceptBtn = banner.querySelector('#cookie-accept-btn');
-        if (acceptBtn) acceptBtn.addEventListener('click', closeConsent);
-
+        const prefCheckbox = banner.querySelector('#cookie-pref-checkbox');
+        const analyticsCheckbox = banner.querySelector('#cookie-analytics-checkbox');
+        const acceptAllBtn = banner.querySelector('#cookie-accept-all-btn');
+        const savePreferencesBtn = banner.querySelector('#cookie-save-preferences-btn');
+        const acceptNecessaryBtn = banner.querySelector('#cookie-accept-necessary-btn');
         const closeX = banner.querySelector('#cookie-close-x');
-        if (closeX) closeX.addEventListener('click', closeConsent);
-
         const detailsToggle = banner.querySelector('#cookie-details-toggle');
         const detailsBox = banner.querySelector('#cookie-details-box');
+
+        // 1. Accept All: enables everything
+        if (acceptAllBtn) {
+            acceptAllBtn.addEventListener('click', () => {
+                if (prefCheckbox) prefCheckbox.checked = true;
+                if (analyticsCheckbox) analyticsCheckbox.checked = true;
+                closeBanner({
+                    necessary: true,
+                    preferences: true,
+                    analytics: true,
+                    timestamp: Date.now()
+                }, 'All cookies and local storage accepted.');
+            });
+        }
+
+        // 2. Save Preferences: explicitly saves current switch states
+        if (savePreferencesBtn) {
+            savePreferencesBtn.addEventListener('click', () => {
+                const pref = Boolean(prefCheckbox?.checked);
+                const analytics = Boolean(analyticsCheckbox?.checked);
+                closeBanner({
+                    necessary: true,
+                    preferences: pref,
+                    analytics: analytics,
+                    timestamp: Date.now()
+                }, 'Cookie preferences saved successfully.');
+            });
+        }
+
+        // 3. Necessary Only: disables non-essential
+        if (acceptNecessaryBtn) {
+            acceptNecessaryBtn.addEventListener('click', () => {
+                if (prefCheckbox) prefCheckbox.checked = false;
+                if (analyticsCheckbox) analyticsCheckbox.checked = false;
+                closeBanner({
+                    necessary: true,
+                    preferences: false,
+                    analytics: false,
+                    timestamp: Date.now()
+                }, 'Only strictly necessary storage enabled.');
+            });
+        }
+
+        // 4. Close button
+        if (closeX) {
+            closeX.addEventListener('click', () => {
+                banner.classList.remove('show');
+                banner.classList.add('hide');
+                setTimeout(() => banner.remove(), 350);
+            });
+        }
+
+        // 5. Details Toggle
         if (detailsToggle && detailsBox) {
             detailsToggle.addEventListener('click', () => {
                 const isHidden = detailsBox.style.display === 'none';
                 detailsBox.style.display = isHidden ? 'block' : 'none';
-                detailsToggle.textContent = isHidden ? 'Hide Details' : 'Details';
+                detailsToggle.textContent = isHidden ? 'Hide Details' : 'Customize';
+                if (savePreferencesBtn) {
+                    savePreferencesBtn.style.display = isHidden ? 'inline-block' : 'none';
+                }
             });
         }
     }
+
+    function initCookieConsent() {
+        showCookieConsentBanner(false);
+    }
+
+    window.openCookiePreferences = () => showCookieConsentBanner(true);
 
     // Synchronize banner height into CSS variable --site-banner-height
     let bannerResizeObserver = null;

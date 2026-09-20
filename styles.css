@@ -1992,11 +1992,24 @@ body.editorial-body {
     padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px));
     overflow-x: clip;
     min-height: 100vh;
-    transition: padding-top 0.28s cubic-bezier(0.2, 0, 0, 1);
+    transition: padding-top 0.25s ease;
 }
 
 body.editorial-body.header-is-scrolled {
-    padding-top: calc(50px + var(--site-banner-height, 0px));
+    padding-top: calc(var(--site-header-scrolled-height, 67px) + var(--site-banner-height, 0px));
+}
+
+/* Touch Scroll Mode: header transforms continuously with finger without jumping */
+body.editorial-body.touch-scroll-mode,
+body.editorial-body.touch-scroll-mode.header-is-scrolled {
+    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px)) !important;
+    transition: none !important;
+}
+
+.touch-scroll-mode .vogue-top-bar,
+.touch-scroll-mode .vogue-masthead-container,
+.touch-scroll-mode .vogue-scrolled-logo {
+    transition: none !important;
 }
 
 @media (max-width: 768px) {
@@ -2146,17 +2159,19 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 /* Mini Scrolled Logo (Left side of nav on same height level as nav items) */
 .vogue-scrolled-logo {
+    position: absolute;
+    left: 3.5vw;
+    top: 50%;
+    transform: translateY(-50%) translateX(-15px);
     display: inline-flex;
     flex-direction: column;
     align-items: flex-start;
     text-decoration: none;
     opacity: 0;
     pointer-events: none;
-    transform: translateX(-15px);
-    width: 0;
-    overflow: hidden;
     white-space: nowrap;
-    transition: opacity 0.25s ease, transform 0.25s ease, width 0.25s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 2;
 }
 
 .vogue-scrolled-logo .brand-name.scrolled-name {
@@ -2208,7 +2223,7 @@ body.moodboard-body .vogue-header .brand-subtitle {
 /* ── 3. Hairline Divider & Navigation Row ──────────────────────────────── */
 .vogue-nav-bar {
     border-top: 1px solid #e5e5e5;
-    padding: 0.85rem 3.5vw;
+    padding: 1.3rem 3.5vw;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -2319,21 +2334,13 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 .vogue-header.is-scrolled .vogue-nav-bar {
     border-top-color: transparent;
-    padding: 0.65rem 3.5vw;
-    justify-content: space-between;
+    padding: 1.3rem 3.5vw;
 }
 
 .vogue-header.is-scrolled .vogue-scrolled-logo {
     opacity: 1;
     pointer-events: auto;
-    transform: translateX(0);
-    width: auto;
-    margin-right: 2rem;
-}
-
-.vogue-header.is-scrolled .vogue-nav-links {
-    margin-left: auto;
-    margin-right: auto;
+    transform: translateY(-50%) translateX(0);
 }
 
 /* ── 4. 1-to-1 Vogue Hero Section with Diagonal Cutout Image ───────────── */
@@ -3740,33 +3747,50 @@ body.editorial-body .gallery-item:hover img {
     font-size: 0.78rem;
     line-height: 1.55;
     color: #555555;
-    margin: 0 0 1.2rem 0;
+    margin: 0 0 1rem 0;
 }
 
 .cookie-actions {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.cookie-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.65rem 1.15rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    white-space: nowrap;
 }
 
 .cookie-btn-accept {
     background: #000000;
     color: #ffffff;
     border: 1px solid #000000;
-    padding: 0.65rem 1.4rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: all 0.22s ease;
 }
 
 .cookie-btn-accept:hover {
     background: #b32d2e;
     border-color: #b32d2e;
+}
+
+.cookie-btn-secondary {
+    background: transparent;
+    color: #333333;
+    border: 1px solid #cccccc;
+}
+
+.cookie-btn-secondary:hover {
+    background: #f5f5f5;
+    border-color: #000000;
+    color: #000000;
 }
 
 .cookie-link-btn {
@@ -3791,20 +3815,180 @@ body.editorial-body .gallery-item:hover img {
 
 .cookie-details-content {
     margin-top: 0.85rem;
+    margin-bottom: 1rem;
     padding-top: 0.85rem;
     border-top: 1px solid #f0f0f0;
     font-size: 0.72rem;
     color: #666666;
-    line-height: 1.6;
+    line-height: 1.5;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 0.35rem;
 }
 
-.cookie-details-content ul {
+.cookie-details-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cookie-details-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+.cookie-category-item {
+    padding: 0.65rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cookie-category-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.cookie-category-item:first-child {
+    padding-top: 0;
+}
+
+.cookie-cat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.cookie-cat-title {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #1a1a1a;
+    text-transform: uppercase;
+}
+
+.cookie-cat-status {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #888888;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.2rem 0.45rem;
+    border-radius: 2px;
+}
+
+.cookie-cat-desc {
     margin: 0;
-    padding-left: 1.1rem;
+    font-size: 0.7rem;
+    color: #666666;
+    line-height: 1.45;
 }
 
-.cookie-details-content li {
-    margin-bottom: 0.35rem;
+.cookie-code {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+/* Minimal Editorial Switch */
+.cookie-switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.cookie-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.cookie-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;
+    transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 18px;
+}
+
+.cookie-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.cookie-switch input:checked+.cookie-slider {
+    background-color: #000000;
+}
+
+.cookie-switch input:checked+.cookie-slider:before {
+    transform: translateX(14px);
+}
+
+/* Footer Cookie Link */
+.footer-cookie-link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.footer-cookie-link:hover {
+    opacity: 1;
+    color: #b32d2e;
+}
+
+/* ── Cookie Preferences Toast Notification ────────────────────────────── */
+.cookie-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #000000;
+    color: #ffffff;
+    padding: 0.75rem 1.4rem;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    z-index: 100002;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+.cookie-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+html[data-theme="dark"] .cookie-toast {
+    background: #1c1815;
+    color: var(--sand-beige-primary, #fae8a4);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
 }
 
 @media (max-width: 768px) {
@@ -3823,13 +4007,14 @@ body.editorial-body .gallery-item:hover img {
     .cookie-actions {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.6rem;
+        gap: 0.5rem;
     }
 
-    .cookie-btn-accept {
+    .cookie-btn-accept,
+    .cookie-btn-secondary {
         width: 100%;
         text-align: center;
-        padding: 0.75rem 1.2rem;
+        padding: 0.7rem 1.2rem;
     }
 
     .cookie-link-btn {
@@ -4598,10 +4783,24 @@ html[data-theme="dark"] .cookie-desc {
 html[data-theme="dark"] .cookie-btn-accept {
     background: #cca353 !important;
     color: #120e0b !important;
+    border-color: #cca353 !important;
 }
 
 html[data-theme="dark"] .cookie-btn-accept:hover {
     background: #fae8a4 !important;
+    border-color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-btn-secondary {
+    background: transparent !important;
+    color: var(--sand-beige-primary) !important;
+    border: 1px solid rgba(212, 175, 55, 0.3) !important;
+}
+
+html[data-theme="dark"] .cookie-btn-secondary:hover {
+    background: rgba(212, 175, 55, 0.1) !important;
+    border-color: #cca353 !important;
+    color: #fae8a4 !important;
 }
 
 html[data-theme="dark"] .cookie-link-btn {
@@ -4618,8 +4817,46 @@ html[data-theme="dark"] .cookie-close-btn {
 
 html[data-theme="dark"] .cookie-details-content {
     background: #120f0d !important;
-    border: 1px solid var(--dark-espresso-border) !important;
+    border-top: 1px solid var(--dark-espresso-border) !important;
     color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .cookie-category-item {
+    border-bottom: 1px solid rgba(216, 196, 170, 0.1) !important;
+}
+
+html[data-theme="dark"] .cookie-cat-title {
+    color: var(--sand-beige-primary) !important;
+}
+
+html[data-theme="dark"] .cookie-cat-status {
+    background: rgba(212, 175, 55, 0.15) !important;
+    color: #cca353 !important;
+}
+
+html[data-theme="dark"] .cookie-cat-desc {
+    color: var(--sand-beige-muted) !important;
+}
+
+html[data-theme="dark"] .cookie-code {
+    background: rgba(212, 175, 55, 0.1) !important;
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-slider {
+    background-color: #2a221a !important;
+}
+
+html[data-theme="dark"] .cookie-slider:before {
+    background-color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .cookie-switch input:checked+.cookie-slider {
+    background-color: #cca353 !important;
+}
+
+html[data-theme="dark"] .footer-cookie-link:hover {
+    color: #fae8a4 !important;
 }
 
 /* ── Lightbox Modal in Dark Mode ────────────────────────────────────────── */
