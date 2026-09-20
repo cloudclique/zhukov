@@ -2963,11 +2963,15 @@ body.editorial-body .gallery-item:hover img {
 }
 
 .footer-columns-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 3rem;
-    padding-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2.5rem;
+    padding-bottom: 2rem;
     border-bottom: 1px solid #222222;
+}
+
+.footer-col {
+    min-width: 0;
 }
 
 .footer-col-heading {
@@ -3001,19 +3005,29 @@ body.editorial-body .gallery-item:hover img {
 }
 
 .footer-links-list li {
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.45rem;
 }
 
-.footer-links-list a {
+.footer-links-list a,
+.footer-links-list button {
     color: #cccccc;
     text-decoration: none;
     font-family: 'Inter', sans-serif;
     font-size: 0.8rem;
     letter-spacing: 0.05em;
     transition: color 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.footer-links-list a:hover {
+.footer-links-list a svg,
+.footer-links-list button svg {
+    flex-shrink: 0;
+}
+
+.footer-links-list a:hover,
+.footer-links-list button:hover {
     color: #ffffff;
 }
 
@@ -3086,8 +3100,15 @@ body.editorial-body .gallery-item:hover img {
     }
 
     .footer-columns-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .footer-columns-row {
         grid-template-columns: 1fr;
-        gap: 2.5rem;
+        gap: 2rem;
     }
 }
 
@@ -3937,24 +3958,24 @@ body.editorial-body .gallery-item:hover img {
     transform: translateX(14px);
 }
 
-/* Footer Cookie Link */
+/* Footer Cookie Link — matches Impressum link styling exactly */
 .footer-cookie-link {
     background: transparent;
     border: none;
     padding: 0;
-    font-family: inherit;
-    font-size: inherit;
-    color: inherit;
+    margin: 0;
     cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease, color 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    color: #cccccc;
+    text-decoration: none;
+    line-height: inherit;
+    transition: color 0.25s ease;
 }
 
 .footer-cookie-link:hover {
-    opacity: 1;
-    color: #b32d2e;
+    color: #ffffff;
 }
 
 /* ── Cookie Preferences Toast Notification ────────────────────────────── */
@@ -4748,11 +4769,13 @@ html[data-theme="dark"] .footer-info-list li strong {
     color: var(--sand-beige-primary) !important;
 }
 
-html[data-theme="dark"] .footer-links-list a {
+html[data-theme="dark"] .footer-links-list a,
+html[data-theme="dark"] .footer-links-list button {
     color: var(--sand-beige-muted) !important;
 }
 
-html[data-theme="dark"] .footer-links-list a:hover {
+html[data-theme="dark"] .footer-links-list a:hover,
+html[data-theme="dark"] .footer-links-list button:hover {
     color: #fae8a4 !important;
 }
 
