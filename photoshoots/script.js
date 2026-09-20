@@ -1,4 +1,4 @@
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+﻿import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
@@ -13,13 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Auth UI Elements
     const loginBtn = document.getElementById('login-btn-header');
     const logoutBtn = document.getElementById('logout-btn');
-    
+
     // Gallery & Sort UI
     const sortSelect = document.getElementById('sort-select');
     const sortOrderBtn = document.getElementById('sort-order-btn');
     const categoriesContainer = document.getElementById('categories-container');
     const noResults = document.getElementById('no-results');
-    
+
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxSetName = document.getElementById('lightbox-set-name');
@@ -78,32 +78,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const attachTiltEffect = (element) => {
         if (!isHoverCapable) return;
         element.classList.add('tilt-card');
-        
+
         const onMouseMove = (e) => {
             const rect = element.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            
+
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
-            
+
             const deltaX = (x - centerX) / centerX;
             const deltaY = (y - centerY) / centerY;
-            
+
             // Scale tilt inversely with element size — big images tilt less
             const maxTilt = Math.max(1.5, Math.min(10, 1800 / (rect.width + rect.height)));
             const rotateX = (-deltaY * maxTilt).toFixed(2);
             const rotateY = (deltaX * maxTilt).toFixed(2);
-            
+
             element.classList.add('is-tilting');
             element.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.03, 1.03, 1.03)`;
         };
-        
+
         const onMouseLeave = () => {
             element.classList.remove('is-tilting');
             element.style.transform = '';
         };
-        
+
         element.addEventListener('mousemove', onMouseMove);
         element.addEventListener('mouseleave', onMouseLeave);
     };
@@ -117,13 +117,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
-        
+
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         lightboxImg.src = targetSrc;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
         }
-        
+
         lightbox.style.display = 'flex';
         requestAnimationFrame(() => {
             lightbox.classList.add('show');
@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!force && Date.now() - lastLightboxOpenTime < 350) return;
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
-        
+
         setTimeout(() => {
             lightbox.style.display = 'none';
             if (lightboxImg) lightboxImg.src = '';
@@ -149,13 +149,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             closeLightbox(true);
         });
     }
-    
+
     if (lightbox) {
         lightbox.addEventListener('click', (e) => {
             closeLightbox();
         });
     }
-    
+
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
             closeLightbox(true);
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const loadedCategories = [];
-            
+
             // 1. Fetch Single Shots (filtered if not 18+ and not archived for public)
             const [singleSnap, orderDoc] = await Promise.all([
                 getDocs(collection(db, 'single_shots')),
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const singleUrls = [];
             const singleItems = [];
             let latestSingleDate = '1970-01-01T00:00:00.000Z';
-            
+
             singleSnap.forEach(doc => {
                 const data = doc.data();
                 if (!isAdmin && data.archived === true) return; // Hide archived single shots for non-admins
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     latestSingleDate = data.date;
                 }
             });
-            
+
             // Sort by custom order or newest to oldest
             const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
             const orderMap = new Map();
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (data.archived === true || allImagesArchived) return;
 
                     let visibleUrls = [...data.urls];
-                    
+
                     // Filter out individually archived photos for non-admins
                     if (!isAdmin) {
                         visibleUrls = visibleUrls.filter(url => !archivedUrls.includes(url));
@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Header
             const headerDiv = document.createElement('div');
             headerDiv.className = 'category-header';
-            
+
             const infoDiv = document.createElement('div');
             infoDiv.className = 'category-info';
 
@@ -543,7 +543,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
             viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
             actionsDiv.appendChild(viewSetBtn);
-            
+
             // Admin Action Buttons (Archive + Delete)
             if (isAdmin && cat.categoryId !== 'single-shots') {
                 const archCatBtn = document.createElement('button');
@@ -775,7 +775,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     e.preventDefault();
                     return false;
                 });
-                
+
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.dataset.src = url;
@@ -833,12 +833,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
                 }, { passive: true });
-                
+
                 // Attach 3D Magnetic Tilt
                 attachTiltEffect(wrapper);
 
                 wrapper.appendChild(img);
-                
+
                 // Delete Photo Button
                 if (isAdmin) {
                     const delPhotoBtn = document.createElement('button');
@@ -919,9 +919,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sortBy = sortSelect.value;
         const currentOrder = sortOrderBtn.getAttribute('data-order');
         if (sortBy === 'date') {
-            sortOrderBtn.innerText = currentOrder === 'asc' ? 'Old-New â†“' : 'New-Old â†‘';
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'Old-New ↓' : 'New-Old ↑';
         } else {
-            sortOrderBtn.innerText = currentOrder === 'asc' ? 'A-Z â†“' : 'Z-A â†‘';
+            sortOrderBtn.innerText = currentOrder === 'asc' ? 'A-Z ↓' : 'Z-A ↑';
         }
     };
 
@@ -929,7 +929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSortButtonText();
         renderGallery();
     });
-    
+
     sortOrderBtn.addEventListener('click', () => {
         const currentOrder = sortOrderBtn.getAttribute('data-order');
         if (currentOrder === 'asc') {
