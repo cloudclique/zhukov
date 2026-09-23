@@ -4,6 +4,10 @@ import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
+// --- CONFIGURATION ---
+// Change this number to control how many images per photoshoot set are shown in Flow Mode:
+const FLOW_VIEW_IMAGES_PER_SET = 9;
+
 // Initialize Firebase Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
@@ -21,14 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const sortSelect          = document.getElementById('sort-select');
     const sortOrderBtn        = document.getElementById('sort-order-btn');
     const categoriesContainer = document.getElementById('categories-container');
+    const flowContainer       = document.getElementById('flow-container');
+    const viewFlowBtn         = document.getElementById('view-flow-btn');
+    const viewSetsBtn         = document.getElementById('view-sets-btn');
     const archivedEmpty       = document.getElementById('archived-empty');
     const accessDenied        = document.getElementById('access-denied');
     const loadingMsg          = document.getElementById('loading-msg');
+
+    // View state: 'flow' is default
+    let currentView = localStorage.getItem('zhukov_archived_view') || 'flow';
 
     // Lightbox UI
     const lightbox        = document.getElementById('lightbox');
     const lightboxImg     = document.getElementById('lightbox-img');
     const lightboxSetName = document.getElementById('lightbox-set-name');
+    const lightboxActions = document.getElementById('lightbox-actions');
+    const lightboxViewSetBtn = document.getElementById('lightbox-view-set-btn');
     const closeBtn        = document.querySelector('#lightbox-close, .lightbox .close, .close');
 
     // Data State
@@ -43,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (archivedBanner) archivedBanner.style.display = 'none';
         if (sortBar) sortBar.style.display = 'none';
         if (categoriesContainer) categoriesContainer.style.display = 'none';
+        if (flowContainer) flowContainer.style.display = 'none';
         if (archivedEmpty) archivedEmpty.style.display = 'none';
 
         if (state === 'loading') {
@@ -59,7 +72,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (state === 'content') {
             if (archivedBanner) archivedBanner.style.display = 'flex';
             if (sortBar) sortBar.style.display = 'flex';
-            if (categoriesContainer) categoriesContainer.style.display = 'block';
+            if (currentView === 'flow') {
+                if (flowContainer) flowContainer.style.display = 'block';
+                if (categoriesContainer) categoriesContainer.style.display = 'none';
+            } else {
+                if (flowContainer) flowContainer.style.display = 'none';
+                if (categoriesContainer) categoriesContainer.style.display = 'block';
+            }
         } else if (state === 'error') {
             if (loadingMsg) {
                 loadingMsg.style.color = '#ef4444';
@@ -107,15 +126,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastLightboxOpenTime = 0;
 
-    const openLightbox = (imgElement, setName = 'ARCHIVE') => {
+    const openLightbox = (imgElement, setName = 'ARCHIVE', categoryId = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
         
-        lightboxImg.src = imgElement.dataset.src || imgElement.src;
+        lightboxImg.src = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         if (lightboxSetName) {
-            lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
+            lightboxSetName.innerHTML = '';
+            if (categoryId) {
+                const link = document.createElement('a');
+                link.className = 'lightbox-set-name-link';
+                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
+                link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase() + ' \u2192';
+                link.title = `View full ${setName || 'photoshoot'} editorial`;
+                link.addEventListener('click', (e) => e.stopPropagation());
+                lightboxSetName.appendChild(link);
+            } else {
+                lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
+            }
+        }
+
+        // View Set Button under the image
+        if (lightboxActions && lightboxViewSetBtn) {
+            if (categoryId) {
+                const targetCat = categoriesData.find(c => c.categoryId === categoryId);
+                const count = (targetCat && Array.isArray(targetCat.urls)) ? targetCat.urls.length : 0;
+                const setDisplayName = targetCat ? (targetCat.categoryName || setName) : setName;
+
+                const btnText = lightboxViewSetBtn.querySelector('.btn-text');
+                const label = count > 1 ? `VIEW SET (${count} PHOTOS)` : 'VIEW FULL SET';
+                if (btnText) {
+                    btnText.textContent = label;
+                } else {
+                    lightboxViewSetBtn.textContent = `${label} \u2192`;
+                }
+
+                lightboxViewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
+                lightboxViewSetBtn.title = `View full ${setDisplayName} editorial`;
+                lightboxActions.style.display = 'flex';
+            } else {
+                lightboxActions.style.display = 'none';
+            }
         }
         
         lightbox.style.display = 'flex';
@@ -133,9 +186,23 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             lightbox.style.display = 'none';
             if (lightboxImg) lightboxImg.src = '';
+            if (lightboxSetName) lightboxSetName.textContent = 'ARCHIVE';
+            if (lightboxActions) lightboxActions.style.display = 'none';
             activeOriginImg = null;
         }, 300);
     };
+
+    if (lightboxActions) {
+        lightboxActions.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
+
+    if (lightboxViewSetBtn) {
+        lightboxViewSetBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 
     if (closeBtn) {
         closeBtn.addEventListener('click', (e) => {
@@ -169,31 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 showViewState('empty');
             } else {
                 showViewState('content');
-                renderArchivedGallery();
+                renderCurrentView();
             }
         } else {
             // Show skeleton loading state on cold load
-            showViewState('content');
-            categoriesContainer.innerHTML = '';
-            for (let i = 0; i < 2; i++) {
-                categoriesContainer.innerHTML += `
-                    <div class="category-row">
-                        <div class="category-header">
-                            <div style="width: 100%;">
-                                <div class="skeleton skeleton-text skeleton-title"></div>
-                                <div class="skeleton skeleton-text skeleton-meta"></div>
-                            </div>
-                        </div>
-                        <div class="scrollable-row-wrapper">
-                            <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
-                                <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
-                                <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
-                                <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            showSkeletonLoading();
         }
 
         try {
@@ -229,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showViewState('empty');
                 } else {
                     showViewState('content');
-                    renderArchivedGallery();
+                    renderCurrentView();
                 }
             } else {
                 setCachedData(cacheKey, loaded);
@@ -405,13 +452,333 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Render Gallery Rows ---
-    let archivedViewportObserver = null;
+    // --- Cold Load Skeleton Helper ---
+    const showSkeletonLoading = () => {
+        showViewState('content');
+        if (currentView === 'flow') {
+            if (flowContainer) {
+                flowContainer.style.display = 'block';
+                if (categoriesContainer) categoriesContainer.style.display = 'none';
+                flowContainer.innerHTML = '';
+                const skeletonHeights = [320, 260, 380, 300, 240, 350, 280, 400];
+                for (let i = 0; i < 8; i++) {
+                    const skel = document.createElement('div');
+                    skel.className = 'masonry-item skeleton';
+                    skel.style.position = 'relative';
+                    skel.style.height = `${skeletonHeights[i]}px`;
+                    skel.style.marginBottom = '16px';
+                    flowContainer.appendChild(skel);
+                }
+            }
+        } else {
+            if (flowContainer) flowContainer.style.display = 'none';
+            if (categoriesContainer) {
+                categoriesContainer.style.display = 'block';
+                categoriesContainer.innerHTML = '';
+                for (let i = 0; i < 2; i++) {
+                    categoriesContainer.innerHTML += `
+                        <div class="category-row">
+                            <div class="category-header">
+                                <div style="width: 100%;">
+                                    <div class="skeleton skeleton-text skeleton-title"></div>
+                                    <div class="skeleton skeleton-text skeleton-meta"></div>
+                                </div>
+                            </div>
+                            <div class="scrollable-row-wrapper">
+                                <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
+                                    <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
+                                    <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
+                                    <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+    };
 
-    const renderArchivedGallery = () => {
-        if (!categoriesContainer) return;
+    // --- Sort Categories Data Helper ---
+    const sortCategories = () => {
         const sortBy = sortSelect ? sortSelect.value : 'date';
         const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'desc';
+
+        categoriesData.sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = new Date(a.date || 0).getTime();
+                const dateB = new Date(b.date || 0).getTime();
+                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+            } else {
+                let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+                let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+                if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+            }
+        });
+    };
+
+    // ==========================================================================
+    // FLOW VIEW — SMART SEAMLESS MASONRY ENGINE (Archived Sets)
+    // ==========================================================================
+    let masonryRaf = null;
+    const scheduleMasonryLayout = () => {
+        if (masonryRaf) cancelAnimationFrame(masonryRaf);
+        masonryRaf = requestAnimationFrame(() => {
+            if (currentView === 'flow' && flowContainer) {
+                layoutMasonry();
+            }
+        });
+    };
+
+    const layoutMasonry = () => {
+        if (!flowContainer) return;
+        const items = Array.from(flowContainer.querySelectorAll('.masonry-item'));
+        if (items.length === 0) return;
+
+        const containerWidth = flowContainer.getBoundingClientRect().width;
+        if (!containerWidth) return;
+
+        const isMobile = window.innerWidth <= 500;
+        const isTablet = window.innerWidth <= 800;
+        const isLaptop = window.innerWidth <= 1200;
+
+        let numCols = 4;
+        if (isTablet || isMobile) {
+            numCols = 2;
+        } else if (isLaptop) {
+            numCols = 3;
+        }
+
+        const gap = isMobile ? 8 : (isTablet ? 12 : 16);
+        const colWidth = (containerWidth - (numCols - 1) * gap) / numCols;
+        const colHeights = new Array(numCols).fill(0);
+
+        flowContainer.style.position = 'relative';
+
+        items.forEach(wrapper => {
+            const img = wrapper.querySelector('img.masonry-img');
+            const ratio = (img && img.naturalWidth && img.naturalHeight)
+                ? (img.naturalWidth / img.naturalHeight)
+                : 0.75;
+
+            const isWide = ratio > 1.35;
+            let bestCol = 0;
+            let spanCols = 1;
+
+            if (isWide && numCols >= 2) {
+                let bestPairCol = -1;
+                let bestPairTop = Infinity;
+
+                for (let c = 0; c < numCols - 1; c++) {
+                    const heightDiff = Math.abs(colHeights[c] - colHeights[c + 1]);
+                    if (heightDiff <= 20) {
+                        const pairTop = Math.max(colHeights[c], colHeights[c + 1]);
+                        if (pairTop < bestPairTop) {
+                            bestPairTop = pairTop;
+                            bestPairCol = c;
+                        }
+                    }
+                }
+
+                let minSingleCol = 0;
+                let minSingleHeight = colHeights[0];
+                for (let c = 1; c < numCols; c++) {
+                    if (colHeights[c] < minSingleHeight) {
+                        minSingleHeight = colHeights[c];
+                        minSingleCol = c;
+                    }
+                }
+
+                if (bestPairCol !== -1 && bestPairTop <= minSingleHeight + 30) {
+                    spanCols = 2;
+                    bestCol = bestPairCol;
+                } else {
+                    spanCols = 1;
+                    bestCol = minSingleCol;
+                }
+            } else {
+                let minCol = 0;
+                let minHeight = colHeights[0];
+                for (let c = 1; c < numCols; c++) {
+                    if (colHeights[c] < minHeight) {
+                        minHeight = colHeights[c];
+                        minCol = c;
+                    }
+                }
+                bestCol = minCol;
+                spanCols = 1;
+            }
+
+            const itemWidth = spanCols === 2 ? Math.round(colWidth * 2 + gap) : Math.round(colWidth);
+            const top = spanCols === 2
+                ? Math.max(colHeights[bestCol], colHeights[bestCol + 1])
+                : colHeights[bestCol];
+            const left = Math.round(bestCol * (colWidth + gap));
+            const itemHeight = Math.round(itemWidth / ratio);
+
+            wrapper.style.position = 'absolute';
+            wrapper.style.left = `${left}px`;
+            wrapper.style.top = `${top}px`;
+            wrapper.style.width = `${itemWidth}px`;
+            wrapper.style.height = `${itemHeight}px`;
+
+            const newHeight = top + itemHeight + gap;
+            colHeights[bestCol] = newHeight;
+            if (spanCols === 2) {
+                colHeights[bestCol + 1] = newHeight;
+            }
+        });
+
+        const maxHeight = Math.max(...colHeights);
+        flowContainer.style.height = `${maxHeight}px`;
+    };
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (currentView === 'flow') {
+                layoutMasonry();
+            }
+        }, 80);
+    });
+
+    const renderFlowView = () => {
+        if (archivedViewportObserver) {
+            archivedViewportObserver.disconnect();
+        }
+        if (categoriesContainer) categoriesContainer.style.display = 'none';
+        if (flowContainer) {
+            flowContainer.style.display = 'block';
+            flowContainer.innerHTML = '';
+        }
+
+        if (categoriesData.length === 0) {
+            showViewState('empty');
+            return;
+        }
+
+        sortCategories();
+
+        const flowItems = [];
+        categoriesData.forEach(cat => {
+            const limit = typeof FLOW_VIEW_IMAGES_PER_SET === 'number' && FLOW_VIEW_IMAGES_PER_SET > 0 ? FLOW_VIEW_IMAGES_PER_SET : 9;
+            const urls = (cat.urls || []).slice(0, limit);
+            urls.forEach(url => {
+                flowItems.push({ url, cat });
+            });
+        });
+
+        if (flowItems.length === 0) {
+            showViewState('empty');
+            return;
+        }
+
+        const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+        flowItems.forEach(({ url, cat }) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'masonry-item img-container';
+
+            const img = document.createElement('img');
+            img.className = 'masonry-img';
+            img.dataset.fullUrl = url;
+            img.src = url;
+            img.alt = cat.categoryName || 'Archived Photo';
+
+            const handleImageReady = () => {
+                wrapper.classList.add('img-loaded');
+                scheduleMasonryLayout();
+            };
+
+            if (img.complete && img.naturalWidth > 0) {
+                handleImageReady();
+            } else {
+                img.addEventListener('load', handleImageReady);
+            }
+
+            img.addEventListener('error', () => {
+                wrapper.classList.add('img-loaded');
+            });
+
+            // Tap & Click handler for Lightbox
+            let touchMoved = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            const triggerLightbox = (e) => {
+                if (e.target.closest('.flow-set-link')) return;
+                if (touchMoved) {
+                    touchMoved = false;
+                    return;
+                }
+                openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId);
+            };
+
+            wrapper.addEventListener('click', triggerLightbox);
+
+            wrapper.addEventListener('touchstart', (e) => {
+                touchMoved = false;
+                if (e.touches && e.touches[0]) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            wrapper.addEventListener('touchmove', (e) => {
+                if (e.touches && e.touches[0]) {
+                    if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
+                        touchMoved = true;
+                    }
+                }
+            }, { passive: true });
+
+            // Append image first as card base
+            wrapper.appendChild(img);
+
+            // Subtle editorial hover overlay (appended ON TOP of image)
+            if (cat.categoryId) {
+                const overlay = document.createElement('div');
+                overlay.className = 'flow-item-overlay';
+
+                const info = document.createElement('div');
+                info.className = 'flow-item-info';
+
+                const title = document.createElement('span');
+                title.className = 'flow-item-title';
+                title.textContent = cat.categoryName || (cat.categoryId === 'single-shots' ? 'Single Shots' : 'Photoshoot');
+
+                const link = document.createElement('a');
+                link.className = 'flow-set-link';
+                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                link.innerHTML = `View Set &rarr;`;
+                link.title = `View full ${escapeHtml(cat.categoryName || 'Single Shots')} editorial`;
+                link.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                info.appendChild(title);
+                info.appendChild(link);
+                overlay.appendChild(info);
+                wrapper.appendChild(overlay);
+            }
+
+            attachTiltEffect(wrapper);
+            flowContainer.appendChild(wrapper);
+        });
+
+        scheduleMasonryLayout();
+    };
+
+    // ==========================================================================
+    // SETS VIEW — ORIGINAL HORIZONTAL SERIES (Kept 100% Intact)
+    // ==========================================================================
+    let archivedViewportObserver = null;
+
+    const renderSetsView = () => {
+        if (flowContainer) flowContainer.style.display = 'none';
+        if (categoriesContainer) categoriesContainer.style.display = 'block';
 
         categoriesContainer.innerHTML = '';
 
@@ -447,20 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Sort categories
-        categoriesData.sort((a, b) => {
-            if (sortBy === 'date') {
-                const dateA = new Date(a.date || 0).getTime();
-                const dateB = new Date(b.date || 0).getTime();
-                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-            } else {
-                let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
-                let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
-                if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-                if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-                return 0;
-            }
-        });
+        sortCategories();
 
         categoriesData.forEach(cat => {
             const rowDiv = document.createElement('div');
@@ -531,35 +885,38 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             scrollRow.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.row-nav-arrow')) return;
-                e.preventDefault();
+                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
                 isMouseDown = true;
                 hasDragged = false;
                 startX = e.pageX - scrollRow.offsetLeft;
                 scrollLeftStart = scrollRow.scrollLeft;
-                scrollRow.classList.add('is-dragging');
                 pauseAutoScroll();
             });
 
             const onRowMouseMove = (e) => {
                 if (!isMouseDown) return;
-                e.preventDefault();
                 const x = e.pageX - scrollRow.offsetLeft;
                 const walk = (x - startX) * 1.5;
-                if (Math.abs(walk) > 5) {
+                if (Math.abs(walk) > 6) {
                     hasDragged = true;
+                    scrollRow.classList.add('is-dragging');
+                    e.preventDefault();
                 }
-                scrollRow.scrollLeft = scrollLeftStart - walk;
-                pauseAutoScroll();
+                if (hasDragged) {
+                    scrollRow.scrollLeft = scrollLeftStart - walk;
+                    pauseAutoScroll();
+                }
             };
 
             const onRowMouseUp = () => {
                 if (isMouseDown) {
                     isMouseDown = false;
                     scrollRow.classList.remove('is-dragging');
-                    setTimeout(() => {
-                        hasDragged = false;
-                    }, 60);
+                    if (hasDragged) {
+                        setTimeout(() => {
+                            hasDragged = false;
+                        }, 80);
+                    }
                     scheduleAutoScroll();
                 }
             };
@@ -754,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 img.addEventListener('click', () => {
                     if (hasDragged) return;
-                    openLightbox(img, cat.categoryName || 'ARCHIVE');
+                    openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId);
                 });
                 
                 attachTiltEffect(wrapper);
@@ -767,8 +1124,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return wrapper;
             };
 
-            imagesToShow.forEach((url, i) => {
-                scrollRow.appendChild(createImgElem(url, i));
+            imagesToShow.forEach((url) => {
+                scrollRow.appendChild(createImgElem(url));
             });
 
             // Luxury End-Card Tile
@@ -823,13 +1180,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Sort Listeners ---
-    if (sortSelect) {
-        sortSelect.addEventListener('change', () => {
-            renderArchivedGallery();
+    // --- Master Render Function ---
+    const renderCurrentView = () => {
+        if (currentView === 'flow') {
+            renderFlowView();
+        } else {
+            renderSetsView();
+        }
+    };
+
+    // --- View Mode Switcher ---
+    const setViewMode = (mode) => {
+        currentView = mode;
+        localStorage.setItem('zhukov_archived_view', mode);
+
+        if (viewFlowBtn && viewSetsBtn) {
+            if (mode === 'flow') {
+                viewFlowBtn.classList.add('active');
+                viewSetsBtn.classList.remove('active');
+            } else {
+                viewSetsBtn.classList.add('active');
+                viewFlowBtn.classList.remove('active');
+            }
+        }
+
+        renderCurrentView();
+    };
+
+    if (viewFlowBtn) {
+        viewFlowBtn.addEventListener('click', () => {
+            if (currentView !== 'flow') setViewMode('flow');
         });
     }
-    
+
+    if (viewSetsBtn) {
+        viewSetsBtn.addEventListener('click', () => {
+            if (currentView !== 'sets') setViewMode('sets');
+        });
+    }
+
+    // Initialize switcher buttons state
+    if (viewFlowBtn && viewSetsBtn) {
+        if (currentView === 'flow') {
+            viewFlowBtn.classList.add('active');
+            viewSetsBtn.classList.remove('active');
+        } else {
+            viewSetsBtn.classList.add('active');
+            viewFlowBtn.classList.remove('active');
+        }
+    }
+
+    // --- Event Listeners for Sort ---
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            renderCurrentView();
+        });
+    }
+
     if (sortOrderBtn) {
         sortOrderBtn.addEventListener('click', () => {
             const current = sortOrderBtn.getAttribute('data-order');
@@ -838,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sortOrderBtn.innerText = sortSelect.value === 'date'
                 ? (next === 'asc' ? 'Old-New ↓' : 'New-Old ↑')
                 : (next === 'asc' ? 'A-Z ↓' : 'Z-A ↑');
-            renderArchivedGallery();
+            renderCurrentView();
         });
     }
 
