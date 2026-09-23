@@ -122,12 +122,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
+    let isLightboxHistoryActive = false;
+    let isHandlingHistoryBack = false;
+
+    // Reset any stale lightbox state if page was restored/reloaded with state active
+    if (window.history && window.history.state && window.history.state.zhukovLightbox) {
+        try {
+            window.history.replaceState(null, '', window.location.href);
+        } catch (e) {}
+    }
 
     const openLightbox = (imgElement, setName = 'GALLERY') => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
+
+        // Manage browser history for phone back action / gesture
+        if (!isLightboxHistoryActive) {
+            try {
+                history.pushState({ zhukovLightbox: true }, '', window.location.href);
+                isLightboxHistoryActive = true;
+            } catch (e) {}
+        }
 
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         lightboxImg.src = targetSrc;
@@ -141,9 +158,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const closeLightbox = (force = false) => {
+    const closeLightbox = (force = false, fromPopstate = false) => {
         if (!lightbox) return;
         if (!force && Date.now() - lastLightboxOpenTime < 350) return;
+
+        // If closed via UI action (close button, backdrop tap, Escape key) rather than browser popstate,
+        // pop the history entry we pushed so browser history remains clean.
+        if (!fromPopstate && isLightboxHistoryActive) {
+            isLightboxHistoryActive = false;
+            isHandlingHistoryBack = true;
+            try {
+                history.back();
+            } catch (e) {
+                isHandlingHistoryBack = false;
+            }
+        } else {
+            isLightboxHistoryActive = false;
+        }
+
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
 
@@ -170,6 +202,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
             closeLightbox(true);
+        }
+    });
+
+    window.addEventListener('popstate', (e) => {
+        if (isHandlingHistoryBack) {
+            isHandlingHistoryBack = false;
+            return;
+        }
+        if (lightbox && (lightbox.classList.contains('show') || isLightboxHistoryActive)) {
+            closeLightbox(true, true);
         }
     });
 

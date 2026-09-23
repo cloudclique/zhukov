@@ -123,14 +123,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
-
     let lastLightboxOpenTime = 0;
+    let isLightboxHistoryActive = false;
+    let isHandlingHistoryBack = false;
+
+    // Reset any stale lightbox state if page was restored/reloaded with state active
+    if (window.history && window.history.state && window.history.state.zhukovLightbox) {
+        try {
+            window.history.replaceState(null, '', window.location.href);
+        } catch (e) {}
+    }
 
     const openLightbox = (imgElement, setName = 'ARCHIVE', categoryId = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
+
+        // Manage browser history for phone back action / gesture
+        if (!isLightboxHistoryActive) {
+            try {
+                history.pushState({ zhukovLightbox: true }, '', window.location.href);
+                isLightboxHistoryActive = true;
+            } catch (e) {}
+        }
         
         lightboxImg.src = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         if (lightboxSetName) {
@@ -141,7 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
                 link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase() + ' \u2192';
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
-                link.addEventListener('click', (e) => e.stopPropagation());
+                link.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (isLightboxHistoryActive) {
+                        try {
+                            history.replaceState(null, '', window.location.href);
+                            isLightboxHistoryActive = false;
+                        } catch (err) {}
+                    }
+                });
                 lightboxSetName.appendChild(link);
             } else {
                 lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
@@ -177,9 +201,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const closeLightbox = (force = false) => {
+    const closeLightbox = (force = false, fromPopstate = false) => {
         if (!lightbox) return;
         if (!force && Date.now() - lastLightboxOpenTime < 350) return;
+
+        // If closed via UI action (close button, backdrop tap, Escape key) rather than browser popstate,
+        // pop the history entry we pushed so browser history remains clean.
+        if (!fromPopstate && isLightboxHistoryActive) {
+            isLightboxHistoryActive = false;
+            isHandlingHistoryBack = true;
+            try {
+                history.back();
+            } catch (e) {
+                isHandlingHistoryBack = false;
+            }
+        } else {
+            isLightboxHistoryActive = false;
+        }
+
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
         
@@ -201,6 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lightboxViewSetBtn) {
         lightboxViewSetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (isLightboxHistoryActive) {
+                try {
+                    history.replaceState(null, '', window.location.href);
+                    isLightboxHistoryActive = false;
+                } catch (err) {}
+            }
         });
     }
 
@@ -220,6 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
             closeLightbox(true);
+        }
+    });
+
+    window.addEventListener('popstate', (e) => {
+        if (isHandlingHistoryBack) {
+            isHandlingHistoryBack = false;
+            return;
+        }
+        if (lightbox && (lightbox.classList.contains('show') || isLightboxHistoryActive)) {
+            closeLightbox(true, true);
         }
     });
 
@@ -708,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let touchStartY = 0;
 
             const triggerLightbox = (e) => {
-                if (e.target.closest('.flow-set-link')) return;
+                if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && e.target.closest('.flow-set-link')) return;
                 if (touchMoved) {
                     touchMoved = false;
                     return;
@@ -1231,8 +1286,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners for Sort ---
+    const updateSortButtonText = () => {
+        if (!sortSelect || !sortOrderBtn) return;
+        const current = sortOrderBtn.getAttribute('data-order');
+        sortOrderBtn.innerText = sortSelect.value === 'date'
+            ? (current === 'asc' ? 'Old-New ↓' : 'New-Old ↑')
+            : (current === 'asc' ? 'A-Z ↓' : 'Z-A ↑');
+    };
+
     if (sortSelect) {
         sortSelect.addEventListener('change', () => {
+            updateSortButtonText();
             renderCurrentView();
         });
     }
@@ -1242,12 +1306,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const current = sortOrderBtn.getAttribute('data-order');
             const next = current === 'asc' ? 'desc' : 'asc';
             sortOrderBtn.setAttribute('data-order', next);
-            sortOrderBtn.innerText = sortSelect.value === 'date'
-                ? (next === 'asc' ? 'Old-New ↓' : 'New-Old ↑')
-                : (next === 'asc' ? 'A-Z ↓' : 'Z-A ↑');
+            updateSortButtonText();
             renderCurrentView();
         });
     }
+
+    // Ensure sort button displays correct initial state
+    updateSortButtonText();
 
     // --- Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {

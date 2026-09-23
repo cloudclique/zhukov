@@ -269,7 +269,7 @@
     }
 }
 
-/* Subtle Editorial Hover Overlay for Flow View Cards */
+/* Subtle Editorial Hover Overlay for Flow View Cards (Desktop Only) */
 .flow-item-overlay {
     position: absolute;
     inset: 0;
@@ -292,6 +292,22 @@
     .masonry-item:hover .flow-item-overlay {
         opacity: 1;
         transition: opacity 0.04s ease-out; /* Immediate appearance on mouse hover — zero lag */
+    }
+
+    .masonry-item:hover .flow-set-link {
+        pointer-events: auto;
+    }
+}
+
+/* Strictly hide and disable overlay and button in mobile view or on touch devices */
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+    .flow-item-overlay,
+    .flow-item-info,
+    .flow-set-link {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 }
 
@@ -338,7 +354,7 @@
     border: 1px solid rgba(255, 255, 255, 0.4);
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
     flex-shrink: 0;
-    pointer-events: auto;
+    pointer-events: none;
     transform: translateZ(15px);
     -webkit-transform: translateZ(15px);
     cursor: pointer;

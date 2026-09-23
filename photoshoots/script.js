@@ -124,12 +124,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Editorial Fine-Art Lightbox Logic ---
     let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
+    let isLightboxHistoryActive = false;
+    let isHandlingHistoryBack = false;
+
+    // Reset any stale lightbox state if page was restored/reloaded with state active
+    if (window.history && window.history.state && window.history.state.zhukovLightbox) {
+        try {
+            window.history.replaceState(null, '', window.location.href);
+        } catch (e) {}
+    }
 
     const openLightbox = (imgElement, setName = 'PHOTOSHOOT', categoryId = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
+
+        // Manage browser history for phone back action / gesture
+        if (!isLightboxHistoryActive) {
+            try {
+                history.pushState({ zhukovLightbox: true }, '', window.location.href);
+                isLightboxHistoryActive = true;
+            } catch (e) {}
+        }
 
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         lightboxImg.src = targetSrc;
@@ -141,7 +158,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
                 link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'PHOTOSHOOT')).toUpperCase() + ' \u2192';
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
-                link.addEventListener('click', (e) => e.stopPropagation());
+                link.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (isLightboxHistoryActive) {
+                        try {
+                            history.replaceState(null, '', window.location.href);
+                            isLightboxHistoryActive = false;
+                        } catch (err) {}
+                    }
+                });
                 lightboxSetName.appendChild(link);
             } else {
                 lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
@@ -177,9 +202,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const closeLightbox = (force = false) => {
+    const closeLightbox = (force = false, fromPopstate = false) => {
         if (!lightbox) return;
         if (!force && Date.now() - lastLightboxOpenTime < 350) return;
+
+        // If closed via UI action (close button, backdrop tap, Escape key) rather than browser popstate,
+        // pop the history entry we pushed so browser history remains clean.
+        if (!fromPopstate && isLightboxHistoryActive) {
+            isLightboxHistoryActive = false;
+            isHandlingHistoryBack = true;
+            try {
+                history.back();
+            } catch (e) {
+                isHandlingHistoryBack = false;
+            }
+        } else {
+            isLightboxHistoryActive = false;
+        }
+
         lightbox.classList.remove('show');
         document.body.classList.remove('lightbox-open');
 
@@ -201,6 +241,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (lightboxViewSetBtn) {
         lightboxViewSetBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (isLightboxHistoryActive) {
+                try {
+                    history.replaceState(null, '', window.location.href);
+                    isLightboxHistoryActive = false;
+                } catch (err) {}
+            }
         });
     }
 
@@ -220,6 +266,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (lightbox && e.key === 'Escape' && lightbox.classList.contains('show')) {
             closeLightbox(true);
+        }
+    });
+
+    window.addEventListener('popstate', (e) => {
+        if (isHandlingHistoryBack) {
+            isHandlingHistoryBack = false;
+            return;
+        }
+        if (lightbox && (lightbox.classList.contains('show') || isLightboxHistoryActive)) {
+            closeLightbox(true, true);
         }
     });
 
@@ -565,8 +621,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Sort Categories Data Helper ---
     const sortCategories = () => {
-        const sortBy = sortSelect ? sortSelect.value : 'category';
-        const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'asc';
+        const sortBy = sortSelect ? sortSelect.value : 'date';
+        const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'desc';
 
         categoriesData.sort((a, b) => {
             if (sortBy === 'date') {
@@ -780,7 +836,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let touchStartY = 0;
 
             const triggerLightbox = (e) => {
-                if (e.target.closest('.flow-set-link') || e.target.closest('.delete-photo-btn')) return;
+                if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && e.target.closest('.flow-set-link')) return;
+                if (e.target.closest('.delete-photo-btn')) return;
                 if (touchMoved) {
                     touchMoved = false;
                     return;
@@ -1361,6 +1418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Event Listeners for Sort ---
     const updateSortButtonText = () => {
+        if (!sortSelect || !sortOrderBtn) return;
         const sortBy = sortSelect.value;
         const currentOrder = sortOrderBtn.getAttribute('data-order');
         if (sortBy === 'date') {
@@ -1370,21 +1428,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    sortSelect.addEventListener('change', () => {
-        updateSortButtonText();
-        renderCurrentView();
-    });
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            updateSortButtonText();
+            renderCurrentView();
+        });
+    }
 
-    sortOrderBtn.addEventListener('click', () => {
-        const currentOrder = sortOrderBtn.getAttribute('data-order');
-        if (currentOrder === 'asc') {
-            sortOrderBtn.setAttribute('data-order', 'desc');
-        } else {
-            sortOrderBtn.setAttribute('data-order', 'asc');
-        }
-        updateSortButtonText();
-        renderCurrentView();
-    });
+    if (sortOrderBtn) {
+        sortOrderBtn.addEventListener('click', () => {
+            const currentOrder = sortOrderBtn.getAttribute('data-order');
+            if (currentOrder === 'asc') {
+                sortOrderBtn.setAttribute('data-order', 'desc');
+            } else {
+                sortOrderBtn.setAttribute('data-order', 'asc');
+            }
+            updateSortButtonText();
+            renderCurrentView();
+        });
+    }
+
+    // Ensure sort button displays correct initial state
+    updateSortButtonText();
 
     // Initial Load
     await loadPhotos();
