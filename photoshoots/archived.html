@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — Archived Photoshoots</title>
     <link rel="stylesheet" href="/styles.css?v=45">
-    <link rel="stylesheet" href="photoshoots.css?v=48">
+    <link rel="stylesheet" href="photoshoots.css?v=50">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -103,25 +103,27 @@
         <!-- Sort Bar (Matches Photoshoots) -->
         <div class="sort-bar" id="sort-bar" style="display:none;">
             <div class="sort-controls-right">
-                <!-- View Mode Switcher -->
-                <div class="photoshoots-view-switcher" id="photoshoots-view-switcher" role="group" aria-label="View Mode">
-                    <button type="button" class="view-switch-btn active" id="view-flow-btn" data-view="flow" title="Flow View (Continuous Masonry)">
-                        <svg class="view-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="8" height="11" rx="0.5"/>
-                            <rect x="13" y="3" width="8" height="7" rx="0.5"/>
-                            <rect x="13" y="12" width="8" height="9" rx="0.5"/>
-                            <rect x="3" y="16" width="8" height="5" rx="0.5"/>
-                        </svg>
-                        <span>Flow View</span>
-                    </button>
-                    <button type="button" class="view-switch-btn" id="view-sets-btn" data-view="sets" title="Sets View (Editorial Rows)">
-                        <svg class="view-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="4" rx="0.5"/>
-                            <rect x="3" y="10" width="18" height="4" rx="0.5"/>
-                            <rect x="3" y="16" width="18" height="4" rx="0.5"/>
-                        </svg>
-                        <span>Sets View</span>
-                    </button>
+                <!-- View Mode Switcher Slot -->
+                <div class="photoshoots-view-switcher-slot" id="photoshoots-view-switcher-slot">
+                    <div class="photoshoots-view-switcher" id="photoshoots-view-switcher" role="group" aria-label="View Mode">
+                        <button type="button" class="view-switch-btn active" id="view-flow-btn" data-view="flow" title="Flow View (Continuous Masonry)">
+                            <svg class="view-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="8" height="11" rx="0.5"/>
+                                <rect x="13" y="3" width="8" height="7" rx="0.5"/>
+                                <rect x="13" y="12" width="8" height="9" rx="0.5"/>
+                                <rect x="3" y="16" width="8" height="5" rx="0.5"/>
+                            </svg>
+                            <span>Flow View</span>
+                        </button>
+                        <button type="button" class="view-switch-btn" id="view-sets-btn" data-view="sets" title="Sets View (Editorial Rows)">
+                            <svg class="view-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="4" rx="0.5"/>
+                                <rect x="3" y="10" width="18" height="4" rx="0.5"/>
+                                <rect x="3" y="16" width="18" height="4" rx="0.5"/>
+                            </svg>
+                            <span>Sets View</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="sort-group">
                     <label for="sort-select" class="sort-label">ORDER BY</label>
@@ -180,7 +182,7 @@
         </div>
     </div>
 
-    <script type="module" src="archived.js?v=50"></script>
+    <script type="module" src="archived.js?v=52"></script>
 </body>
 
 </html>

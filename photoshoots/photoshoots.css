@@ -91,6 +91,13 @@
 }
 
 /* Luxury Segmented View Switcher (Flow View vs Sets View) */
+.photoshoots-view-switcher-slot {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
 .photoshoots-view-switcher {
     display: inline-flex;
     align-items: center;
@@ -256,11 +263,16 @@
     object-fit: contain; /* Zero cropping on sides in masonry original ratio view */
     background: #f5f5f5;
     cursor: pointer;
-    opacity: 1;
+    opacity: 0;
     -webkit-user-drag: none !important;
     user-drag: none !important;
     -webkit-user-select: none !important;
     user-select: none !important;
+    transition: opacity 0.35s ease-out;
+}
+
+.masonry-item.img-loaded .masonry-img {
+    opacity: 1;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1054,7 +1066,127 @@
         pointer-events: none !important;
         transform: translate(-50%, 25px) !important;
     }
+
+    .photoshoots-view-switcher-slot {
+        display: contents !important;
+    }
 }
+
+/* ── Mid & Desktop Floating View Switcher (When Hidden Behind Header) ── */
+@media (min-width: 769px) {
+    .photoshoots-view-switcher.is-floating {
+        position: fixed !important;
+        bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 990 !important;
+        background: rgba(255, 255, 255, 0.92) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        border-radius: 9999px !important;
+        padding: 5px !important;
+        gap: 4px !important;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        animation: switcherDesktopSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        max-width: calc(100vw - 32px) !important;
+        transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn {
+        border-radius: 9999px !important;
+        padding: 8px 18px !important;
+        font-size: 0.68rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.12em !important;
+        white-space: nowrap !important;
+        gap: 6px !important;
+        color: #555555 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn .view-icon {
+        width: 13px !important;
+        height: 13px !important;
+        stroke: currentColor !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn:hover {
+        color: #000000 !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn.active {
+        background: #111111 !important;
+        color: #ffffff !important;
+        border-radius: 9999px !important;
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn.active .view-icon {
+        stroke: #ffffff !important;
+    }
+
+    .photoshoots-view-switcher.is-floating .view-switch-btn.active:hover {
+        background: #000000 !important;
+        color: #ffffff !important;
+    }
+
+    /* Floating switcher Dark Mode overrides for Desktop / Mid */
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating {
+        background: rgba(23, 19, 16, 0.92) !important;
+        border-color: rgba(216, 196, 170, 0.25) !important;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating .view-switch-btn {
+        color: #ad9f8d !important;
+    }
+
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating .view-switch-btn:hover {
+        color: #fae8a4 !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating .view-switch-btn.active {
+        background: #cca353 !important;
+        color: #0f0d0b !important;
+        border: none !important;
+        box-shadow: 0 3px 12px rgba(204, 163, 83, 0.35) !important;
+    }
+
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating .view-switch-btn.active .view-icon {
+        stroke: #0f0d0b !important;
+    }
+
+    html[data-theme="dark"] .photoshoots-view-switcher.is-floating .view-switch-btn.active:hover {
+        background: #dfb461 !important;
+        color: #0f0d0b !important;
+    }
+
+    /* Hide floating switcher when lightbox modal is open */
+    body.lightbox-open .photoshoots-view-switcher.is-floating {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: translate(-50%, 25px) !important;
+        transition: opacity 0.25s ease, transform 0.25s ease !important;
+    }
+}
+
+@keyframes switcherDesktopSlideUp {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 20px) scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+
 
 @media (max-width: 480px) {
     .sort-bar {

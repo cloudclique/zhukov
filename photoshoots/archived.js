@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         items.forEach(wrapper => {
             const img = wrapper.querySelector('img.masonry-img');
-            const ratio = (img && img.naturalWidth && img.naturalHeight)
+            const ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
                 ? (img.naturalWidth / img.naturalHeight)
                 : 0.75;
 
@@ -699,9 +699,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 80);
     });
 
+    let flowViewportObserver = null;
+
     const renderFlowView = () => {
         if (archivedViewportObserver) {
             archivedViewportObserver.disconnect();
+        }
+        if (flowViewportObserver) {
+            flowViewportObserver.disconnect();
         }
         if (categoriesContainer) categoriesContainer.style.display = 'none';
         if (flowContainer) {
@@ -715,6 +720,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         sortCategories();
+
+        flowViewportObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const wrapper = entry.target;
+                    const img = wrapper.querySelector('img.masonry-img');
+                    if (img && img.dataset.src) {
+                        const targetSrc = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        img.src = targetSrc;
+                        if (img.complete && img.naturalWidth > 0) {
+                            wrapper.classList.add('img-loaded');
+                            scheduleMasonryLayout();
+                        }
+                    }
+                    observer.unobserve(wrapper);
+                }
+            });
+        }, {
+            root: null,
+            rootMargin: '600px 200px',
+            threshold: 0
+        });
 
         const flowItems = [];
         categoriesData.forEach(cat => {
@@ -739,7 +767,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const img = document.createElement('img');
             img.className = 'masonry-img';
             img.dataset.fullUrl = url;
-            img.src = url;
+            img.dataset.src = url;
+            img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
+            img.loading = 'lazy';
+            img.decoding = 'async';
             img.alt = cat.categoryName || 'Archived Photo';
 
             const handleImageReady = () => {
@@ -747,14 +778,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 scheduleMasonryLayout();
             };
 
-            if (img.complete && img.naturalWidth > 0) {
+            if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:image/svg+xml')) {
                 handleImageReady();
             } else {
-                img.addEventListener('load', handleImageReady);
+                img.addEventListener('load', () => {
+                    if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                        handleImageReady();
+                    }
+                });
             }
 
             img.addEventListener('error', () => {
-                wrapper.classList.add('img-loaded');
+                if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                    wrapper.classList.add('img-loaded');
+                }
             });
 
             // Tap & Click handler for Lightbox
@@ -821,6 +858,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             attachTiltEffect(wrapper);
             flowContainer.appendChild(wrapper);
+            if (flowViewportObserver) {
+                flowViewportObserver.observe(wrapper);
+            }
         });
 
         scheduleMasonryLayout();
@@ -832,6 +872,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let archivedViewportObserver = null;
 
     const renderSetsView = () => {
+        if (flowViewportObserver) {
+            flowViewportObserver.disconnect();
+        }
         if (flowContainer) flowContainer.style.display = 'none';
         if (categoriesContainer) categoriesContainer.style.display = 'block';
 
@@ -1260,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         renderCurrentView();
+        requestSwitcherUpdate();
     };
 
     if (viewFlowBtn) {
@@ -1284,6 +1328,93 @@ document.addEventListener('DOMContentLoaded', () => {
             viewFlowBtn.classList.remove('active');
         }
     }
+
+    // --- Floating View Switcher on Desktop/Mid when Hidden Behind Header ---
+    const viewSwitcher = document.getElementById('photoshoots-view-switcher');
+    let viewSwitcherSlot = document.getElementById('photoshoots-view-switcher-slot');
+    const headerSlot = document.getElementById('site-header-slot');
+
+    // Fallback: auto-create slot wrapper if missing in DOM
+    if (!viewSwitcherSlot && viewSwitcher && viewSwitcher.parentNode) {
+        viewSwitcherSlot = document.createElement('div');
+        viewSwitcherSlot.className = 'photoshoots-view-switcher-slot';
+        viewSwitcherSlot.id = 'photoshoots-view-switcher-slot';
+        viewSwitcher.parentNode.insertBefore(viewSwitcherSlot, viewSwitcher);
+        viewSwitcherSlot.appendChild(viewSwitcher);
+    }
+
+    let naturalSwitcherWidth = 0;
+    let naturalSwitcherHeight = 0;
+    let isFloating = false;
+    let switcherRaf = null;
+
+    const measureSwitcherDimensions = () => {
+        if (!viewSwitcher) return;
+        if (!viewSwitcher.classList.contains('is-floating')) {
+            const rect = viewSwitcher.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                naturalSwitcherWidth = Math.round(rect.width);
+                naturalSwitcherHeight = Math.round(rect.height);
+            }
+        }
+    };
+
+    const updateFloatingSwitcherState = () => {
+        if (!viewSwitcher || !viewSwitcherSlot) return;
+
+        // On mobile (<= 768px), CSS handles the fixed bottom switcher automatically
+        if (window.innerWidth <= 768) {
+            if (isFloating) {
+                isFloating = false;
+                viewSwitcher.classList.remove('is-floating');
+                viewSwitcherSlot.style.width = '';
+                viewSwitcherSlot.style.height = '';
+            }
+            return;
+        }
+
+        measureSwitcherDimensions();
+
+        // Calculate header bottom edge in viewport
+        const headerRect = headerSlot ? headerSlot.getBoundingClientRect() : null;
+        const headerBottom = headerRect ? headerRect.bottom : (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-scrolled-height')) || 70);
+
+        // Slot rect in viewport (slot stays in normal flow in sort bar)
+        const slotRect = viewSwitcherSlot.getBoundingClientRect();
+
+        // Hysteresis: enter floating when slotRect.bottom <= headerBottom,
+        // exit floating when slotRect.bottom > headerBottom + 4
+        if (!isFloating && slotRect.bottom <= headerBottom) {
+            isFloating = true;
+            if (naturalSwitcherWidth && naturalSwitcherHeight) {
+                viewSwitcherSlot.style.width = `${naturalSwitcherWidth}px`;
+                viewSwitcherSlot.style.height = `${naturalSwitcherHeight}px`;
+            }
+            viewSwitcher.classList.add('is-floating');
+        } else if (isFloating && slotRect.bottom > headerBottom + 4) {
+            isFloating = false;
+            viewSwitcher.classList.remove('is-floating');
+            viewSwitcherSlot.style.width = '';
+            viewSwitcherSlot.style.height = '';
+            measureSwitcherDimensions();
+        }
+    };
+
+    const requestSwitcherUpdate = () => {
+        if (switcherRaf) cancelAnimationFrame(switcherRaf);
+        switcherRaf = requestAnimationFrame(updateFloatingSwitcherState);
+    };
+
+    window.addEventListener('scroll', requestSwitcherUpdate, { passive: true });
+    window.addEventListener('resize', () => {
+        if (!isFloating) measureSwitcherDimensions();
+        requestSwitcherUpdate();
+    }, { passive: true });
+    document.addEventListener('scroll', requestSwitcherUpdate, { passive: true, capture: true });
+
+    // Initial check
+    measureSwitcherDimensions();
+    requestSwitcherUpdate();
 
     // --- Event Listeners for Sort ---
     const updateSortButtonText = () => {

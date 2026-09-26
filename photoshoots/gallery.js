@@ -1374,7 +1374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 items.forEach(wrapper => {
                     const img = wrapper.querySelector('img.masonry-img');
                     // Accurate natural aspect ratio (fallback 0.75 for portrait placeholders)
-                    const ratio = (img && img.naturalWidth && img.naturalHeight)
+                    const ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
                         ? (img.naturalWidth / img.naturalHeight)
                         : 0.75;
 
@@ -1466,6 +1466,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
+                if (galleryViewportObserver) {
+                    galleryViewportObserver.disconnect();
+                }
+
+                galleryViewportObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const wrapper = entry.target;
+                            const img = wrapper.querySelector('img.masonry-img');
+                            if (img && img.dataset.src) {
+                                const targetSrc = img.dataset.src;
+                                img.removeAttribute('data-src');
+                                img.src = targetSrc;
+                                if (img.complete && img.naturalWidth > 0) {
+                                    wrapper.classList.add('img-loaded');
+                                    if (currentRatioMode !== '1:1') {
+                                        layoutMasonry();
+                                    }
+                                }
+                            }
+                            observer.unobserve(wrapper);
+                        }
+                    });
+                }, {
+                    root: null,
+                    rootMargin: '600px 200px',
+                    threshold: 0
+                });
+
                 if (currentRatioMode === '1:1') {
                     gridContainer.classList.add('ratio-1-1');
                 } else {
@@ -1479,7 +1508,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
                     img.dataset.fullUrl = url;
-                    img.src = url;
+                    img.dataset.src = url;
+                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
 
                     const handleImageReady = () => {
                         wrapper.classList.add('img-loaded');
@@ -1488,14 +1520,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     };
 
-                    if (img.complete && img.naturalWidth > 0) {
+                    if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:image/svg+xml')) {
                         handleImageReady();
                     } else {
-                        img.addEventListener('load', handleImageReady);
+                        img.addEventListener('load', () => {
+                            if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                                handleImageReady();
+                            }
+                        });
                     }
 
                     img.addEventListener('error', () => {
-                        wrapper.classList.add('img-loaded');
+                        if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                            wrapper.classList.add('img-loaded');
+                        }
                     });
 
                     // Tap & Click handler for Lightbox or Selection

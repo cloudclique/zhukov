@@ -23,12 +23,6 @@ const CAL_CACHE_KEY = 'zhukov_calendar_availability_v2';
 let displayedYear = new Date().getFullYear();
 let displayedMonth = new Date().getMonth(); // 0-indexed
 
-// In-Modal Calendar State
-let modalDisplayedYear = new Date().getFullYear();
-let modalDisplayedMonth = new Date().getMonth();
-let selectedBookingDate = null;
-let modalViewHistory = [];
-let activeTopicKey = null;
 
 // Availability Sets
 let unavailableDates = new Set(); // Specific ISO format dates: 'YYYY-MM-DD'
@@ -62,42 +56,9 @@ let mainCalActionBar = null;
 let mainCalSelectedText = null;
 let mainCalConfirmBtn = null;
 
-// UI DOM References - Contact Modal
-let contactModal = null;
-let modalBackBtn = null;
-let modalCloseBtn = null;
-let modalStepIndicator = null;
-let topicsView = null;
-let calendarView = null;
-let modalCalDaysGrid = null;
-let modalCalMonthHeading = null;
-let modalCalPrevBtn = null;
-let modalCalNextBtn = null;
-let modalCalTodayBtn = null;
-let modalSelectedDateText = null;
-let modalConfirmDateBtn = null;
 
 // ── Pre-Written Email Templates ─────────────────────────────────────────
 const EMAIL_TEMPLATES = {
-    info: {
-        kicker: 'GENERAL INQUIRY',
-        headline: 'GET INFORMATION',
-        subject: 'General question',
-        body: `Hello Stanislav,
-
-I would like to request further information regarding your photography services:
-
-- Inquiry Category: [Commercial Rates / Editorial Concepts / Location Scouting / Private Shoot]
-- Project / Brand: [Your Name or Organization]
-- Estimated Timeline: [e.g. October 2026 / Winter Season]
-
-Specific Questions:
-[Please write your questions or project vision here]
-
-Best regards,
-[Your Name]
-[Your Phone / Website]`
-    },
     booking: {
         kicker: 'PHOTOSHOOT RESERVATION',
         headline: 'BOOK A PHOTOSHOOT',
@@ -107,69 +68,20 @@ Best regards,
 I would like to book a photoshoot session with you on: ${dateKey || '[Selected Date]'}
 
 Session Specifications:
-- Shoot Type: [High-Fashion Editorial / Commercial Campaign / Private Portrait / Lookbook]
+- Shoot Type: [Editorial Concepts / Contemporary Glamour / Sensual Portraiture & Boudoir / Cosplay (SFW/NSFW)]
+- Collaboration: [Paid Commission / TFP Collaboration]
 - Preferred Location: [Studio / Outdoor Natural Light / On-Location]
 - Estimated Duration: [Half-Day (4 Hours) / Full-Day (8 Hours)]
 - Creative Direction / Mood: [Brief concept description, references, or moodboard link]
 
 Contact Details:
-- Client / Brand: [Your Name or Brand Name]
-- Telephone / WhatsApp: [Your Phone Number]
+- Name / Handle: [Your Name or Handle]
+- Contact: [Phone / WhatsApp / Telegram / Instagram]
 
-Looking forward to confirming date availability and production logistics.
+Looking forward to confirming date availability and details.
 
 Best regards,
 [Your Name]`
-    },
-    bug: {
-        kicker: 'TECHNICAL REPORT',
-        headline: 'BUG REPORT',
-        subject: 'Technical Report: Website Issue on zhukov.studio',
-        body: `Hello Stanislav & Web Team,
-
-I encountered an issue while browsing zhukov.studio:
-
-- Page URL: ${window.location.href}
-- Device / Operating System: [e.g. iPhone iOS 18 / Windows 11 PC / macOS]
-- Browser: [e.g. Safari / Google Chrome / Firefox]
-
-Problem Summary:
-[Describe the bug, glitch, or broken behavior here]
-
-Steps to Reproduce:
-1. 
-2. 
-3. 
-
-Expected Behavior:
-[What did you expect to happen?]
-
-Thank you,
-[Your Name]`
-    },
-    legal: {
-        kicker: 'LEGAL & ADMINISTRATIVE',
-        headline: 'LEGAL REQUEST',
-        subject: 'Legal Communication / Rights Notice — ZHUKOV Photography',
-        body: `To: Stanislav Zhukov (ZHUKOV Photography Studio)
-
-I am submitting a formal legal or administrative inquiry regarding:
-
-- Subject Matter: [DDG § 5 Notice / Copyright & Image Rights / Licensing Request / Data Privacy / Other]
-- Inquiring Party / Entity: [Full Legal Name / Company / Legal Representation]
-- Relevant Content or URL: [Link to image, webpage, or specific publication]
-
-Statement of Request / Notice:
-[Please detail the context, legal basis, and specific details of this communication]
-
-Official Contact Details:
-- Mailing Address: [Street, Postal Code, City, Country]
-- Telephone: [Official Phone Number]
-- Email Address: [Official Contact Email]
-
-Sincerely,
-[Full Legal Name]
-[Title / Legal Representation]`
     }
 };
 
@@ -362,131 +274,8 @@ function createDayCell(dayNum, dateKey, isOtherMonth, todayKey) {
     return cell;
 }
 
-// ── In-Modal Calendar Rendering Engine ──────────────────────────────────
-function renderModalCalendar() {
-    if (!modalCalDaysGrid || !modalCalMonthHeading) return;
-
-    modalCalMonthHeading.textContent = `${MONTH_NAMES[modalDisplayedMonth]} ${modalDisplayedYear}`;
-    modalCalDaysGrid.innerHTML = '';
-
-    const todayKey = getTodayKey();
-    const firstDay = new Date(modalDisplayedYear, modalDisplayedMonth, 1);
-    const startDayIndex = (firstDay.getDay() + 6) % 7;
-    const daysInMonth = new Date(modalDisplayedYear, modalDisplayedMonth + 1, 0).getDate();
-    const daysInPrevMonth = new Date(modalDisplayedYear, modalDisplayedMonth, 0).getDate();
-
-    // 1. Previous Month Padding Days
-    for (let i = startDayIndex - 1; i >= 0; i--) {
-        const dayNum = daysInPrevMonth - i;
-        const prevMonth = modalDisplayedMonth === 0 ? 11 : modalDisplayedMonth - 1;
-        const prevYear = modalDisplayedMonth === 0 ? modalDisplayedYear - 1 : modalDisplayedYear;
-        const dateKey = formatDateKey(prevYear, prevMonth, dayNum);
-
-        const cell = createModalDayCell(dayNum, dateKey, true, todayKey);
-        modalCalDaysGrid.appendChild(cell);
-    }
-
-    // 2. Current Month Days
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateKey = formatDateKey(modalDisplayedYear, modalDisplayedMonth, day);
-        const cell = createModalDayCell(day, dateKey, false, todayKey);
-        modalCalDaysGrid.appendChild(cell);
-    }
-
-    // 3. Next Month Padding Days
-    const totalRendered = startDayIndex + daysInMonth;
-    const paddingNeeded = (7 - (totalRendered % 7)) % 7;
-    for (let nextDay = 1; nextDay <= paddingNeeded; nextDay++) {
-        const nextMonth = modalDisplayedMonth === 11 ? 0 : modalDisplayedMonth + 1;
-        const nextYear = modalDisplayedMonth === 11 ? modalDisplayedYear + 1 : modalDisplayedYear;
-        const dateKey = formatDateKey(nextYear, nextMonth, nextDay);
-
-        const cell = createModalDayCell(nextDay, dateKey, true, todayKey);
-        modalCalDaysGrid.appendChild(cell);
-    }
-}
-
-function createModalDayCell(dayNum, dateKey, isOtherMonth, todayKey) {
-    const cell = document.createElement('div');
-    cell.className = 'cal-day-cell';
-    cell.dataset.date = dateKey;
-    cell.setAttribute('role', 'gridcell');
-
-    const isUnavailable = isDateUnavailable(dateKey);
-    const isToday = dateKey === todayKey;
-    const isPast = dateKey < todayKey;
-    const isSelected = (selectedBookingDate === dateKey);
-
-    if (isOtherMonth) cell.classList.add('is-other-month');
-    if (isToday) cell.classList.add('is-today');
-    if (isPast) cell.classList.add('is-past');
-    if (isSelected) cell.classList.add('is-selected');
-
-    if (isUnavailable) {
-        cell.classList.add('is-booked');
-    } else if (!isPast && !isOtherMonth) {
-        cell.classList.add('is-open');
-    }
-
-    let badgeText = 'OPEN';
-    if (isUnavailable) {
-        badgeText = 'BOOKED';
-    } else if (isPast) {
-        badgeText = 'PAST';
-    } else if (isOtherMonth) {
-        badgeText = '';
-    }
-
-    cell.setAttribute('aria-label', `${dateKey}: ${badgeText || 'Date'}`);
-
-    const numSpan = document.createElement('span');
-    numSpan.className = 'cal-day-num';
-    numSpan.textContent = dayNum;
-
-    const badgeSpan = document.createElement('span');
-    badgeSpan.className = 'cal-day-badge';
-    badgeSpan.textContent = isSelected ? 'SELECTED' : badgeText;
-
-    cell.appendChild(numSpan);
-    cell.appendChild(badgeSpan);
-
-    // Modal date selection click listener
-    cell.addEventListener('click', () => {
-        if (isOtherMonth) return;
-        if (isPast) {
-            showToast("Selected date is in the past.", false);
-            return;
-        }
-        if (isUnavailable) {
-            showToast("This date is already booked. Please choose an open date.", false);
-            return;
-        }
-
-        // Select this date
-        selectedBookingDate = dateKey;
-
-        // Format friendly date
-        const [y, m, d] = dateKey.split('-').map(Number);
-        const dt = new Date(y, m - 1, d);
-        const formattedDate = dt.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
-        if (modalSelectedDateText) {
-            modalSelectedDateText.textContent = formattedDate;
-        }
-        if (modalConfirmDateBtn) {
-            modalConfirmDateBtn.disabled = false;
-        }
-
-        renderModalCalendar();
-    });
-
-    return cell;
-}
+// In-modal calendar retired
+function renderModalCalendar() {}
 
 // ── DOM Visual Update Helper for Main Calendar Cell ─────────────────────
 function updateCellVisual(cell, dateKey, willBeUnavailable) {
@@ -824,155 +613,10 @@ function openEmailClientForTopic(topicKey, chosenDate = null) {
     const subjectStr = typeof template.subject === 'function' ? template.subject(chosenDate) : template.subject;
     const bodyStr = typeof template.body === 'function' ? template.body(chosenDate) : template.body;
 
-    closeContactModal();
     showToast("Opening your email app...");
 
     const mailtoUri = `mailto:contact@zhukov.studio?subject=${encodeURIComponent(subjectStr)}&body=${encodeURIComponent(bodyStr)}`;
     window.location.href = mailtoUri;
-}
-
-// ── Contact Topic Popup Modal Controller ────────────────────────────────
-function initContactModal() {
-    contactModal = document.getElementById('contact-modal');
-    modalBackBtn = document.getElementById('contact-modal-back');
-    modalCloseBtn = document.getElementById('contact-modal-close');
-    modalStepIndicator = document.getElementById('modal-step-indicator');
-    topicsView = document.getElementById('modal-topics-view');
-    calendarView = document.getElementById('modal-calendar-view');
-
-    // Modal Calendar Controls
-    modalCalDaysGrid = document.getElementById('modal-cal-days-grid');
-    modalCalMonthHeading = document.getElementById('modal-cal-month-heading');
-    modalCalPrevBtn = document.getElementById('modal-cal-prev-btn');
-    modalCalNextBtn = document.getElementById('modal-cal-next-btn');
-    modalCalTodayBtn = document.getElementById('modal-cal-today-btn');
-    modalSelectedDateText = document.getElementById('modal-selected-date-text');
-    modalConfirmDateBtn = document.getElementById('modal-confirm-date-btn');
-
-    // Open Modal Trigger Button
-    const contactBtn = document.getElementById('contact-cta-btn');
-    if (contactBtn) {
-        contactBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openContactModal();
-        });
-    }
-
-    // Modal Close Triggers
-    if (modalCloseBtn) {
-        modalCloseBtn.addEventListener('click', closeContactModal);
-    }
-    if (contactModal) {
-        contactModal.addEventListener('click', (e) => {
-            if (e.target === contactModal) {
-                closeContactModal();
-            }
-        });
-    }
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && contactModal && !contactModal.classList.contains('hidden')) {
-            closeContactModal();
-        }
-    });
-
-    // Modal Back Button
-    if (modalBackBtn) {
-        modalBackBtn.addEventListener('click', () => {
-            switchModalView('topics');
-        });
-    }
-
-    // Topic Selection Cards: Click to open email directly (or open calendar for booking)
-    document.querySelectorAll('.topic-card-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const topic = btn.dataset.topic;
-            activeTopicKey = topic;
-
-            if (topic === 'booking') {
-                // Topic 2: Go to In-Modal Calendar to choose date
-                switchModalView('calendar');
-            } else {
-                // Topic 1, 3, or 4: Open email app directly with tailored pre-written message
-                openEmailClientForTopic(topic);
-            }
-        });
-    });
-
-    // In-Modal Calendar Navigation
-    if (modalCalPrevBtn) {
-        modalCalPrevBtn.addEventListener('click', () => {
-            modalDisplayedMonth--;
-            if (modalDisplayedMonth < 0) {
-                modalDisplayedMonth = 11;
-                modalDisplayedYear--;
-            }
-            renderModalCalendar();
-        });
-    }
-    if (modalCalNextBtn) {
-        modalCalNextBtn.addEventListener('click', () => {
-            modalDisplayedMonth++;
-            if (modalDisplayedMonth > 11) {
-                modalDisplayedMonth = 0;
-                modalDisplayedYear++;
-            }
-            renderModalCalendar();
-        });
-    }
-    if (modalCalTodayBtn) {
-        modalCalTodayBtn.addEventListener('click', () => {
-            const now = new Date();
-            modalDisplayedYear = now.getFullYear();
-            modalDisplayedMonth = now.getMonth();
-            renderModalCalendar();
-        });
-    }
-
-    // Modal Confirm Date Button: Open email app directly with the chosen date!
-    if (modalConfirmDateBtn) {
-        modalConfirmDateBtn.addEventListener('click', () => {
-            if (!selectedBookingDate) return;
-            openEmailClientForTopic('booking', selectedBookingDate);
-        });
-    }
-}
-
-function openContactModal() {
-    if (!contactModal) return;
-    selectedBookingDate = null;
-    if (modalSelectedDateText) modalSelectedDateText.textContent = 'None selected';
-    if (modalConfirmDateBtn) modalConfirmDateBtn.disabled = true;
-
-    // Match main calendar's current month
-    modalDisplayedYear = displayedYear;
-    modalDisplayedMonth = displayedMonth;
-
-    switchModalView('topics');
-    contactModal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeContactModal() {
-    if (!contactModal) return;
-    contactModal.classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-function switchModalView(viewName) {
-    // Hide all view panels
-    if (topicsView) topicsView.classList.add('hidden');
-    if (calendarView) calendarView.classList.add('hidden');
-
-    if (viewName === 'topics') {
-        if (topicsView) topicsView.classList.remove('hidden');
-        if (modalStepIndicator) modalStepIndicator.textContent = 'CONTACT INQUIRY';
-        if (modalBackBtn) modalBackBtn.classList.add('hidden');
-    } else if (viewName === 'calendar') {
-        if (calendarView) calendarView.classList.remove('hidden');
-        if (modalStepIndicator) modalStepIndicator.textContent = 'CHOOSE A DATE';
-        if (modalBackBtn) modalBackBtn.classList.remove('hidden');
-        renderModalCalendar();
-    }
 }
 
 // ── Main Calendar Month Navigation Controls ─────────────────────────────
@@ -1131,7 +775,6 @@ function initContactApp() {
     initInteractionEngine();
     initFirestoreSync();
     initAuth();
-    initContactModal();
     initImpressumDrawer();
 }
 

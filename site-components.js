@@ -16,7 +16,7 @@ const BANNER_DESTINATION_URL = '';
 
 (function () {
     const HEADER_CACHE_KEY = 'zhukov_cached_header_v19';
-    const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v21';
+    const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v22';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
     const THEME_KEY = 'zhukov_theme';
 
