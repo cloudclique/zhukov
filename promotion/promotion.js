@@ -3,6 +3,13 @@
 // Full visual builder for Admin with clean native rendering for visitors
 // ==========================================================================
 
+import { app, db } from '../firebase-config.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
 const STORAGE_KEY = 'zhukov_promotion_builder_data';
 
 // Default starter template for new visitors / reset
@@ -212,7 +219,11 @@ function slugify(text) {
         .replace(/-+$/, '');
 }
 
-// Check Admin Status
+// ── Firebase Auth & Role Verification ─────────────────────────────────────
+let currentFirebaseUser = null;
+let isUserVerifiedAdmin = false;
+
+// Check Admin Status (cached flag or query override)
 function checkIsAdmin() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('admin') === 'true') {
@@ -220,6 +231,67 @@ function checkIsAdmin() {
         return true;
     }
     return localStorage.getItem('zhukov_is_admin') === 'true';
+}
+
+// Initialize Firebase Authentication & Role Check
+function initPromotionAuth() {
+    isUserVerifiedAdmin = checkIsAdmin();
+
+    onAuthStateChanged(auth, async (user) => {
+        currentFirebaseUser = user;
+        if (user) {
+            localStorage.setItem('zhukov_logged_in', 'true');
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'admin') {
+                    isUserVerifiedAdmin = true;
+                    localStorage.setItem('zhukov_is_admin', 'true');
+                } else {
+                    if (!new URLSearchParams(window.location.search).get('admin')) {
+                        isUserVerifiedAdmin = false;
+                        localStorage.removeItem('zhukov_is_admin');
+                    }
+                }
+            } catch (err) {
+                console.warn("Could not verify user admin role in Firestore:", err);
+            }
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(user, isUserVerifiedAdmin);
+            }
+        } else {
+            localStorage.removeItem('zhukov_logged_in');
+            if (!new URLSearchParams(window.location.search).get('admin')) {
+                isUserVerifiedAdmin = false;
+                localStorage.removeItem('zhukov_is_admin');
+            }
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(null, false);
+            }
+        }
+        setupAdminControls();
+        renderPage();
+    });
+
+    // Delegated click listeners for header login/logout
+    document.addEventListener('click', (e) => {
+        const loginTarget = e.target.closest('#login-btn-header');
+        if (loginTarget) {
+            localStorage.setItem('zhukov_logged_in', 'true');
+            signInWithPopup(auth, provider).catch(error => {
+                console.error("Sign-in error:", error);
+                showToast("Sign in error: " + (error.message || error));
+            });
+        }
+
+        const logoutTarget = e.target.closest('#logout-btn');
+        if (logoutTarget) {
+            localStorage.removeItem('zhukov_logged_in');
+            localStorage.removeItem('zhukov_is_admin');
+            signOut(auth).then(() => {
+                showToast("Logged out");
+            }).catch(error => console.error(error));
+        }
+    });
 }
 
 // ── Preset Storage & URL Routing Helpers ─────────────────────────────────
@@ -241,10 +313,105 @@ function loadAllPresets() {
     return savedPresets;
 }
 
-function saveAllPresets(presets) {
+// ── Firestore Cloud Sync Functions ─────────────────────────────────────────
+async function syncSinglePresetToFirestore(preset) {
+    if (!preset || !db) return;
+    const cleanPayload = {
+        id: preset.id,
+        title: preset.title,
+        slug: preset.slug,
+        description: preset.description || '',
+        isDefault: !!preset.isDefault,
+        pageData: preset.pageData || [],
+        createdAt: preset.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: auth.currentUser?.email || (checkIsAdmin() ? 'admin' : 'unknown')
+    };
+
+    const writes = [
+        setDoc(doc(db, 'promotions', preset.slug), cleanPayload, { merge: true })
+    ];
+    if (preset.id && preset.id !== preset.slug) {
+        writes.push(setDoc(doc(db, 'promotions', preset.id), cleanPayload, { merge: true }));
+    }
+    if (preset.isDefault) {
+        writes.push(setDoc(doc(db, 'promotions', 'default'), cleanPayload, { merge: true }));
+    }
+    await Promise.all(writes);
+}
+
+async function syncPresetsToFirestore(presets) {
+    if (!db) return;
+    try {
+        // 1. Sync full presets registry to settings/promotion_presets
+        await setDoc(doc(db, 'settings', 'promotion_presets'), {
+            presets: presets,
+            updatedAt: new Date().toISOString(),
+            updatedBy: auth.currentUser?.email || (checkIsAdmin() ? 'admin' : 'unknown')
+        }, { merge: true });
+
+        // 2. Also ensure each preset exists as a standalone document in /promotions/{slug}
+        if (Array.isArray(presets)) {
+            await Promise.all(presets.map(p => syncSinglePresetToFirestore(p)));
+        }
+    } catch (err) {
+        console.error("Firestore syncPresets error:", err);
+        throw err;
+    }
+}
+
+async function saveDefaultPageToFirestore(showFeedback = true) {
+    if (!db) return;
+    try {
+        const pagePayload = {
+            id: 'default',
+            slug: 'default',
+            title: 'Editorial Promotion',
+            isDefault: true,
+            pageData: JSON.parse(JSON.stringify(pageData)),
+            updatedAt: new Date().toISOString(),
+            updatedBy: auth.currentUser?.email || (checkIsAdmin() ? 'admin' : 'unknown')
+        };
+
+        await Promise.all([
+            setDoc(doc(db, 'promotions', 'default'), pagePayload, { merge: true }),
+            setDoc(doc(db, 'settings', 'promotion_page'), pagePayload, { merge: true })
+        ]);
+
+        if (showFeedback) {
+            showToast('Page layout saved to Firestore ✓');
+        }
+    } catch (err) {
+        console.error("Failed to save default promotion page to Firestore:", err);
+        if (showFeedback) {
+            if (!auth.currentUser) {
+                showToast('Saved locally in browser. (Sign in with Google in header to save to Firestore)', 4500);
+            } else {
+                showToast(`Saved locally (Firestore: ${err.code || err.message})`, 4500);
+            }
+        }
+    }
+}
+
+async function saveAllPresets(presets, showNotice = false) {
     savedPresets = presets;
     try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets)); } catch (_) {}
-    syncPresetsToFirestore(presets);
+    try {
+        await syncPresetsToFirestore(presets);
+        if (showNotice) {
+            showToast('Presets synced to Firestore ✓');
+        }
+    } catch (err) {
+        console.error("Firestore saveAllPresets error:", err);
+        if (showNotice) {
+            if (!auth.currentUser) {
+                showToast('Saved locally in browser. (Sign in with Google in header to sync to Firestore)', 4500);
+            } else {
+                showToast(`Saved locally (Firestore notice: ${err.code || err.message})`, 4500);
+            }
+        }
+        throw err;
+    }
 }
 
 // Detect preset requested in URL via query, pathname segment, or hash
@@ -287,7 +454,8 @@ function findPresetByQuery(query) {
 }
 
 // ── 1. Initialization ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+function initPromotionApp() {
+    initPromotionAuth();
     loadAllPresets();
     loadPageData();
     renderPage();
@@ -323,7 +491,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (testModal === 'json') {
         setTimeout(() => { openJsonModal(); }, 100);
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPromotionApp);
+} else {
+    initPromotionApp();
+}
 
 function loadPageData() {
     loadAllPresets();
@@ -374,7 +548,7 @@ function loadPageData() {
     }
 }
 
-function savePageData(showFeedback = true) {
+async function savePageData(showFeedback = true) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pageData)); } catch (_) {}
 
     // If currently editing an existing preset, keep preset updated in sync
@@ -383,19 +557,29 @@ function savePageData(showFeedback = true) {
         if (idx !== -1) {
             savedPresets[idx].pageData = JSON.parse(JSON.stringify(pageData));
             savedPresets[idx].updatedAt = new Date().toISOString();
-            saveAllPresets(savedPresets);
-            if (showFeedback) {
-                showToast(`Saved layout to preset "${savedPresets[idx].title}" ✓`);
+            try {
+                await saveAllPresets(savedPresets, false);
+                if (showFeedback) {
+                    showToast(`Saved layout to preset "${savedPresets[idx].title}" & Firestore ✓`);
+                }
+            } catch (err) {
+                if (showFeedback) {
+                    if (!auth.currentUser) {
+                        showToast(`Saved locally. (Sign in with Google in header to save to Firestore cloud)`, 4500);
+                    } else {
+                        showToast(`Saved locally (Firestore: ${err.code || err.message})`, 4500);
+                    }
+                }
             }
             setupAdminControls();
             return;
         }
     }
 
-    if (showFeedback) {
-        showToast('Page layout saved successfully ✓');
-    }
+    // Saving default page to Firestore
+    await saveDefaultPageToFirestore(showFeedback);
 }
+window.savePageData = savePageData;
 
 // ── 2. Core Page Rendering ────────────────────────────────────────────────
 function renderPage() {
@@ -1206,6 +1390,15 @@ function setupAdminControls() {
                 <span>PRESET: ${escapeHtml(currentActivePreset.title)}</span>
             </div>
         ` : ''}
+        ${auth.currentUser ? `
+            <div class="active-preset-pill" style="border-color:rgba(16,185,129,0.35); color:#10b981;" title="Connected to Firestore as ${escapeHtml(auth.currentUser.email || 'Admin')}">
+                <span>☁️ Synced</span>
+            </div>
+        ` : `
+            <button type="button" class="admin-bar-btn" onclick="document.getElementById('login-btn-header')?.click()" style="color:#cca353; border-color:rgba(204,163,83,0.4);" title="Sign in with Google to save directly to Firestore cloud">
+                <span>☁️ Sign In (Cloud)</span>
+            </button>
+        `}
         <div class="admin-bar-divider"></div>
         <button type="button" class="admin-bar-btn ${isPreviewMode ? 'btn-active' : ''}" id="btn-toggle-preview" onclick="toggleVisitorPreview()">
             <span>${isPreviewMode ? '✏️ Edit Mode' : '👁️ Preview as Visitor'}</span>
@@ -1339,7 +1532,7 @@ window.updatePresetUrlPreview = function () {
     }
 };
 
-window.createNewPresetFromCanvas = function () {
+window.createNewPresetFromCanvas = async function () {
     const titleInput = document.getElementById('preset-title-input');
     const descInput = document.getElementById('preset-desc-input');
     const defaultCheck = document.getElementById('preset-is-default-checkbox');
@@ -1379,7 +1572,6 @@ window.createNewPresetFromCanvas = function () {
     };
 
     savedPresets.unshift(newPreset);
-    saveAllPresets(savedPresets);
     currentActivePreset = newPreset;
 
     const fullUrl = window.location.origin + '/promotion/' + encodeURIComponent(finalSlug);
@@ -1392,10 +1584,20 @@ window.createNewPresetFromCanvas = function () {
 
     closeAllModals();
     setupAdminControls();
-    showToast(`Created new preset "${newPreset.title}"! Public URL copied to clipboard.`);
+
+    try {
+        await saveAllPresets(savedPresets);
+        showToast(`Created preset "${newPreset.title}" & saved to Firestore! URL copied.`);
+    } catch (err) {
+        if (!auth.currentUser) {
+            showToast(`Created preset "${newPreset.title}" locally! (Sign in to sync to Firestore cloud)`, 4500);
+        } else {
+            showToast(`Created preset locally (Firestore: ${err.code || err.message})`, 4500);
+        }
+    }
 };
 
-window.updateSelectedOrActivePreset = function () {
+window.updateSelectedOrActivePreset = async function () {
     const selectEl = document.getElementById('select-preset-to-update');
     const titleInput = document.getElementById('preset-title-input');
     const descInput = document.getElementById('preset-desc-input');
@@ -1442,7 +1644,6 @@ window.updateSelectedOrActivePreset = function () {
     targetPreset.updatedAt = new Date().toISOString();
     targetPreset.pageData = JSON.parse(JSON.stringify(pageData));
 
-    saveAllPresets(savedPresets);
     currentActivePreset = targetPreset;
 
     const fullUrl = window.location.origin + '/promotion/' + encodeURIComponent(targetPreset.slug);
@@ -1455,7 +1656,17 @@ window.updateSelectedOrActivePreset = function () {
 
     closeAllModals();
     setupAdminControls();
-    showToast(`Updated preset "${targetPreset.title}" with current build! Public URL copied.`);
+
+    try {
+        await saveAllPresets(savedPresets);
+        showToast(`Updated preset "${targetPreset.title}" in Firestore! URL copied.`);
+    } catch (err) {
+        if (!auth.currentUser) {
+            showToast(`Updated preset "${targetPreset.title}" locally! (Sign in to sync to Firestore cloud)`, 4500);
+        } else {
+            showToast(`Updated preset locally (Firestore: ${err.code || err.message})`, 4500);
+        }
+    }
 };
 
 // Backwards compatibility alias
@@ -1491,23 +1702,25 @@ window.copyPresetPublicUrl = function (slug) {
     showToast(`Copied public URL: /promotion/${slug}`);
 };
 
-window.setPresetAsDefault = function (presetId) {
+window.setPresetAsDefault = async function (presetId) {
     savedPresets.forEach(p => {
         p.isDefault = (p.id === presetId);
     });
-    saveAllPresets(savedPresets);
+    try {
+        await saveAllPresets(savedPresets);
+    } catch (_) {}
     renderCustomPresetsList();
     const p = savedPresets.find(x => x.id === presetId);
     showToast(`Preset "${p ? p.title : ''}" is now the default /promotion/ page.`);
 };
 
-window.deleteCustomPreset = function (presetId) {
+window.deleteCustomPreset = async function (presetId) {
     const p = savedPresets.find(x => x.id === presetId);
     if (!p) return;
     if (!confirm(`Are you sure you want to delete preset "${p.title}"? Normal users will no longer be able to access /promotion/${p.slug}.`)) return;
 
     savedPresets = savedPresets.filter(x => x.id !== presetId);
-    saveAllPresets(savedPresets);
+    try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
 
     if (currentActivePreset && currentActivePreset.id === presetId) {
         currentActivePreset = null;
@@ -1515,7 +1728,21 @@ window.deleteCustomPreset = function (presetId) {
 
     renderCustomPresetsList();
     setupAdminControls();
-    showToast(`Deleted preset "${p.title}"`);
+
+    try {
+        await Promise.all([
+            deleteDoc(doc(db, 'promotions', p.slug)),
+            deleteDoc(doc(db, 'promotions', p.id)),
+            setDoc(doc(db, 'settings', 'promotion_presets'), {
+                presets: savedPresets,
+                updatedAt: new Date().toISOString()
+            }, { merge: true })
+        ]);
+        showToast(`Deleted preset "${p.title}" from Firestore`);
+    } catch (err) {
+        console.warn("Could not delete preset from Firestore:", err);
+        showToast(`Deleted preset "${p.title}" locally`);
+    }
 };
 
 function renderCustomPresetsList() {
@@ -1627,42 +1854,78 @@ window.applyPresetTemplate = function (type) {
     closeAllModals();
 };
 
-// ── Firestore Optional Cloud Sync ─────────────────────────────────────────
-async function syncPresetsToFirestore(presets) {
-    try {
-        const { db } = await import('../firebase-config.js');
-        const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-        if (db) {
-            await setDoc(doc(db, 'settings', 'promotion_presets'), {
-                presets: presets,
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
-        }
-    } catch (_) {
-        // Silently skip if Firestore is offline or unauthenticated
-    }
-}
-
+// ── Firestore Loading & Cloud Synchronization ──────────────────────────────
 async function loadPresetsFromFirestore() {
+    if (!db) return;
     try {
-        const fetchPromise = (async () => {
-            const { db } = await import('../firebase-config.js');
-            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-            if (db) {
-                const snap = await getDoc(doc(db, 'settings', 'promotion_presets'));
-                if (snap.exists() && Array.isArray(snap.data()?.presets) && snap.data().presets.length > 0) {
-                    const cloudPresets = snap.data().presets;
-                    const localMap = new Map(savedPresets.map(p => [p.slug, p]));
-                    cloudPresets.forEach(cp => localMap.set(cp.slug, cp));
-                    savedPresets = Array.from(localMap.values());
-                    try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
-                }
+        let loadedFromCloud = false;
+
+        // 1. Fetch settings/promotion_presets
+        try {
+            const presetsSnap = await getDoc(doc(db, 'settings', 'promotion_presets'));
+            if (presetsSnap.exists() && Array.isArray(presetsSnap.data()?.presets) && presetsSnap.data().presets.length > 0) {
+                const cloudPresets = presetsSnap.data().presets;
+                const localMap = new Map(savedPresets.map(p => [p.slug, p]));
+                cloudPresets.forEach(cp => {
+                    if (cp && cp.slug) localMap.set(cp.slug, cp);
+                });
+                savedPresets = Array.from(localMap.values());
+                loadedFromCloud = true;
             }
-        })();
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 1200));
-        await Promise.race([fetchPromise, timeoutPromise]);
-    } catch (_) {
-        // Silently skip if offline or timed out
+        } catch (e) {
+            console.warn("Could not read settings/promotion_presets:", e);
+        }
+
+        // 2. Fetch /promotions collection documents
+        try {
+            const collSnap = await getDocs(collection(db, 'promotions'));
+            if (!collSnap.empty) {
+                const localMap = new Map(savedPresets.map(p => [p.slug, p]));
+                collSnap.forEach(snap => {
+                    const data = snap.data();
+                    if (data && data.slug && Array.isArray(data.pageData)) {
+                        if (data.slug === 'default') {
+                            if (!getRequestedPresetQuery()) {
+                                const localRaw = localStorage.getItem(STORAGE_KEY);
+                                if (!localRaw || !checkIsAdmin()) {
+                                    pageData = JSON.parse(JSON.stringify(data.pageData));
+                                }
+                            }
+                        } else {
+                            localMap.set(data.slug, data);
+                        }
+                    }
+                });
+                savedPresets = Array.from(localMap.values());
+                loadedFromCloud = true;
+            }
+        } catch (collErr) {
+            console.warn("Could not list /promotions collection:", collErr);
+        }
+
+        // 3. If a specific preset slug was requested and not yet in savedPresets, fetch directly
+        const reqQuery = getRequestedPresetQuery();
+        if (reqQuery) {
+            const slug = slugify(reqQuery);
+            if (!savedPresets.some(p => p.slug === slug || p.id === reqQuery)) {
+                try {
+                    const directSnap = await getDoc(doc(db, 'promotions', slug));
+                    if (directSnap.exists() && directSnap.data()?.pageData) {
+                        const directData = directSnap.data();
+                        savedPresets.push(directData);
+                        loadedFromCloud = true;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        if (loadedFromCloud) {
+            try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
+            renderCustomPresetsList();
+            setupAdminControls();
+        }
+    } catch (err) {
+        console.warn("Could not load presets from Firestore:", err);
     }
 }
 
