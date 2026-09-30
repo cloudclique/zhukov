@@ -1109,8 +1109,8 @@
 html[data-theme="dark"] .vogue-gallery-main,
 html[data-theme="dark"] .gallery-nav-breadcrumb,
 html[data-theme="dark"] .gallery-header {
-    background: #0f0d0b !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
+    background: #ffffff !important;
+    border-color: #ebebeb !important;
 }
 
 /* Hairline Divider underneath title (fixing bright line) */

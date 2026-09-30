@@ -1300,13 +1300,13 @@
    ========================================================================== */
 html[data-theme="dark"] .vogue-page-main,
 html[data-theme="dark"] .vogue-subpage-header {
-    background: #0f0d0b !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
+    background: #ffffff !important;
+    border-color: #ebebeb !important;
 }
 
 html[data-theme="dark"] .sort-bar {
-    background: #14100d !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
+    background: #ffffff !important;
+    border-color: #ebebeb !important;
 }
 
 html[data-theme="dark"] .sort-catalog-tag {

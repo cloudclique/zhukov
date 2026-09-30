@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZHUKOV — Exclusive Promotion &amp; Editorial Packages</title>
+    <meta name="description"
+        content="Discover exclusive promotional rates and bespoke editorial packages by Stanislav Zhukov. High-fashion glamour, sensual portraiture, and creative cosplay photography in Germany and worldwide.">
+    
+    <!-- Design System & Typography -->
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="promotion.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    
+    <!-- Universal Modular Header & Footer Loader -->
+    <script src="/site-components.js"></script>
+</head>
+
+<body class="editorial-body">
+    <!-- Dynamic Site Header Slot -->
+    <div id="site-header-slot"></div>
+
+    <!-- Main Content Area: Pure Block-Based Builder Canvas -->
+    <main id="app-content" class="vogue-promotion-main">
+        <div id="builder-canvas" class="builder-canvas"></div>
+    </main>
+
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
+
+    <!-- ── ADMIN BUILDER MODALS ────────────────────────────────────────────── -->
+
+    <!-- 1. Insert Block Picker Modal -->
+    <div class="builder-modal-backdrop" id="block-picker-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="block-picker-title">
+        <div class="builder-modal-card">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="block-picker-title">INSERT ELEMENT</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="block-picker-grid">
+                <button type="button" class="block-type-card" onclick="insertBlock('title')">
+                    <span class="block-type-name"><span>✦</span> TITLE</span>
+                    <span class="block-type-desc">Editorial headline (H1, H2, or H3) with Instrument Serif font</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('subtitle')">
+                    <span class="block-type-name"><span>◇</span> SUBTITLE</span>
+                    <span class="block-type-desc">Category kicker or tracking uppercase tag in crimson, gold, or dark</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('text')">
+                    <span class="block-type-name"><span>¶</span> TEXT</span>
+                    <span class="block-type-desc">Editorial paragraph for storytelling, package descriptions, or instructions</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('image')">
+                    <span class="block-type-name"><span>🖼</span> IMAGE</span>
+                    <span class="block-type-desc">Showcase photo with selectable aspect ratios (4:5, 3:2, 1:1, 16:9, auto)</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('button')">
+                    <span class="block-type-name"><span>↗</span> BUTTON</span>
+                    <span class="block-type-desc">Call-to-action button (solid, outline, luxury gold) linking anywhere</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('spacer')">
+                    <span class="block-type-name"><span>↕</span> SPACER</span>
+                    <span class="block-type-desc">Adjustable vertical space with optional hairline or luxury gradient divider</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('badge')">
+                    <span class="block-type-name"><span>🏷</span> BADGE</span>
+                    <span class="block-type-desc">Vibrant pill tag for limited offers, spotlight labels, and seasonal highlights</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('quote')">
+                    <span class="block-type-name"><span>❝</span> QUOTE</span>
+                    <span class="block-type-desc">Editorial pull-quote with attribution line in curated serif styling</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('video')">
+                    <span class="block-type-name"><span>▶</span> VIDEO</span>
+                    <span class="block-type-desc">Cinematic YouTube or Vimeo showreel embed in 16:9 responsive frame</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Block Settings & Edit Modal -->
+    <div class="builder-modal-backdrop" id="block-settings-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="block-settings-title">
+        <div class="builder-modal-card">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="block-settings-title">EDIT ELEMENT</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <div id="block-settings-fields"></div>
+            <div class="builder-btn-row">
+                <button type="button" class="pub-btn style-outline" onclick="closeAllModals()">Cancel</button>
+                <button type="button" class="builder-submit-btn" onclick="saveBlockSettings()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Row & Column Container Settings Modal -->
+    <div class="builder-modal-backdrop" id="row-settings-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="row-settings-title">
+        <div class="builder-modal-card">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="row-settings-title">ROW &amp; COLUMN LAYOUT</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            
+            <div class="builder-form-group">
+                <label class="builder-label" for="row-layout-select">Column Structure</label>
+                <select id="row-layout-select" class="builder-select">
+                    <option value="1">1 Column (Full Width Standard)</option>
+                    <option value="2-equal">2 Columns (50% / 50% Balanced)</option>
+                    <option value="2-60-40">2 Columns (60% Main / 40% Side)</option>
+                    <option value="2-40-60">2 Columns (40% Side / 60% Main)</option>
+                    <option value="3-equal">3 Columns Equal (33% Triplet Grid)</option>
+                    <option value="4-equal">4 Columns Equal (25% Quad Grid)</option>
+                </select>
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" for="row-spacing-select">Row Vertical Spacing</label>
+                <select id="row-spacing-select" class="builder-select">
+                    <option value="compact">Compact (2rem / 32px padding)</option>
+                    <option value="medium">Standard Vogue (4.5rem / 72px padding)</option>
+                    <option value="spacious">Spacious Atelier (7rem / 112px padding)</option>
+                </select>
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" for="row-bg-select">Row Background Atmosphere</label>
+                <select id="row-bg-select" class="builder-select">
+                    <option value="transparent">Transparent / Page Background</option>
+                    <option value="card">Subtle Card Surface</option>
+                    <option value="dark">Deep Atelier Contrast</option>
+                    <option value="crimson-tint">Subtle Crimson Atmosphere</option>
+                    <option value="gold-tint">Subtle Gold Warmth</option>
+                </select>
+            </div>
+
+            <div class="builder-btn-row">
+                <button type="button" class="pub-btn style-outline" onclick="closeAllModals()">Cancel</button>
+                <button type="button" class="builder-submit-btn" onclick="saveRowSettings()">Apply Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Save Current Build as Preset Modal -->
+    <div class="builder-modal-backdrop" id="save-preset-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="save-preset-title">
+        <div class="builder-modal-card">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="save-preset-title">SAVE / UPDATE PRESET</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <p style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#777; margin:0 0 1.15rem 0; line-height: 1.5;">
+                Save your current canvas layout as a named preset. Normal users can access it directly at <code class="builder-url-code">.../promotion/(preset title)</code>.
+            </p>
+            
+            <!-- Active Loaded Preset Indicator (if any) -->
+            <div id="save-modal-active-info" class="save-modal-active-info" style="display:none;">
+                <span class="save-modal-info-label">Currently Loaded:</span>
+                <strong id="save-modal-active-title" class="save-modal-info-title">Signature Editorial</strong>
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" for="preset-title-input">Preset Title</label>
+                <input type="text" id="preset-title-input" class="builder-input" placeholder="e.g. Summer Special 2026" oninput="updatePresetUrlPreview()">
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label">Public Access URL (Shareable)</label>
+                <div class="builder-url-preview-box">
+                    <span class="builder-url-prefix" id="preset-url-prefix">https://zhukov.studio/promotion/</span><strong id="preset-url-slug" class="builder-url-slug">summer-special-2026</strong>
+                </div>
+            </div>
+
+            <!-- Optional: Select existing preset to overwrite/update -->
+            <div class="builder-form-group" id="group-select-existing-preset">
+                <label class="builder-label" for="select-preset-to-update">Or Target Existing Preset to Update</label>
+                <select id="select-preset-to-update" class="builder-select" onchange="onSelectPresetToUpdateChange()">
+                    <option value="">-- Choose Existing Preset to Update --</option>
+                </select>
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" for="preset-desc-input">Description / Notes (Optional)</label>
+                <input type="text" id="preset-desc-input" class="builder-input" placeholder="e.g. High-fashion glamour seasonal rate with 3 tiers">
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" id="preset-is-default-checkbox">
+                    <span>Set as default primary build for main /promotion/ page</span>
+                </label>
+            </div>
+
+            <!-- 2 Distinct Buttons: Update Preset vs Save as New Preset -->
+            <div class="save-preset-actions-row">
+                <button type="button" class="pub-btn style-outline" onclick="closeAllModals()">Cancel</button>
+                <button type="button" class="preset-action-submit-btn btn-update" id="btn-update-existing-preset" onclick="updateSelectedOrActivePreset()">
+                    <span>💾 Update Preset</span>
+                </button>
+                <button type="button" class="preset-action-submit-btn btn-create" id="btn-create-new-preset" onclick="createNewPresetFromCanvas()">
+                    <span>✨ Save as New Preset</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Presets & Templates Manager Modal -->
+    <div class="builder-modal-backdrop" id="templates-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="templates-title">
+        <div class="builder-modal-card" style="max-width: 680px;">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="templates-title">SAVED PRESETS &amp; TEMPLATES</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            
+            <!-- Quick Action: Save Current Canvas as Preset -->
+            <div class="preset-modal-top-action">
+                <div>
+                    <strong style="font-size:0.85rem; display:block; margin-bottom:0.2rem;">Save Current Canvas Layout</strong>
+                    <span style="font-size:0.72rem; color:#777;">Save what's on your screen right now as a new named preset with its own public URL.</span>
+                </div>
+                <button type="button" class="builder-submit-btn" onclick="openSavePresetModal()" style="white-space:nowrap; padding: 0.55rem 1.1rem; font-size: 0.68rem;">+ Save As Preset</button>
+            </div>
+
+            <!-- Custom User Presets List -->
+            <div class="preset-section-header">
+                <span class="preset-section-title">YOUR SAVED PRESETS</span>
+                <span class="preset-count-badge" id="custom-presets-count">0 Presets</span>
+            </div>
+            <div id="custom-presets-list" class="custom-presets-container">
+                <!-- Dynamically rendered custom preset cards -->
+            </div>
+
+            <!-- Built-in Starter Templates -->
+            <div class="preset-section-header" style="margin-top: 1.75rem;">
+                <span class="preset-section-title">STARTER TEMPLATES</span>
+            </div>
+            <div class="block-picker-grid" style="grid-template-columns: 1fr;">
+                <button type="button" class="block-type-card" onclick="applyPresetTemplate('default')">
+                    <span class="block-type-name"><span>⭐</span> FULL PROMOTION SHOWCASE</span>
+                    <span class="block-type-desc">Hero section, featured package split row, 3-tier pricing cards, and inspirational quote.</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="applyPresetTemplate('split')">
+                    <span class="block-type-name"><span>◫</span> EDITORIAL SPLIT SHOWCASE</span>
+                    <span class="block-type-desc">Two-column layout with high-impact editorial imagery on the right and narrative booking copy on the left.</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="applyPresetTemplate('blank')">
+                    <span class="block-type-name"><span>◻</span> BLANK CANVAS</span>
+                    <span class="block-type-desc">Completely empty canvas to build your own bespoke layout from scratch.</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Export / Import JSON Modal -->
+    <div class="builder-modal-backdrop" id="json-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="json-title">
+        <div class="builder-modal-card">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="json-title">PAGE JSON DATA</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <p style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#777; margin:0 0 1rem 0;">
+                Copy your layout data to back it up or transfer to another environment. Paste JSON below and click Import to restore.
+            </p>
+            <textarea id="json-data-textarea" class="builder-textarea" style="min-height: 220px; font-family: monospace; font-size: 0.72rem; line-height: 1.5;"></textarea>
+            <div class="builder-btn-row">
+                <button type="button" class="pub-btn style-outline" onclick="navigator.clipboard.writeText(document.getElementById('json-data-textarea').value); showToast('JSON copied to clipboard!');">Copy JSON</button>
+                <button type="button" class="builder-submit-btn" onclick="importJsonData()">Import &amp; Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotion Page Builder Engine -->
+    <script src="promotion.js"></script>
+</body>
+
+</html>

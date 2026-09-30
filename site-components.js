@@ -4,30 +4,32 @@
 // =========================================================================
 
 // =========================================================================
-// BANNER CONFIGURATION (Under Header)
-// Paste your banner image URL into BANNER_IMAGE_URL below.
-// Example: const BANNER_IMAGE_URL = 'https://example.com/banner.jpg';
+// BANNER CONFIGURATION (In-Page Element Under Header)
+// - BANNER_IMAGE_URL: Displayed on mid & full screen ratios (desktop / tablet).
+// - BANNER_MOBILE_IMAGE_URL: Displayed when in mobile ratio (phones / <= 768px).
+//   (If BANNER_MOBILE_IMAGE_URL is empty, BANNER_IMAGE_URL is used as fallback).
 // Leave as '' (empty) if no banner should be displayed.
 // =========================================================================
 const BANNER_IMAGE_URL = '';
+const BANNER_MOBILE_IMAGE_URL = '';
 
 // Optional: Link to open when the banner is clicked (leave '' if none)
-const BANNER_DESTINATION_URL = '';
+const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOXWVRIXaCN';
 
 (function () {
-    const HEADER_CACHE_KEY = 'zhukov_cached_header_v19';
+    const HEADER_CACHE_KEY = 'zhukov_cached_header_v24';
     const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v22';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
     const THEME_KEY = 'zhukov_theme';
 
-    // 0ms Immediate Theme Initialization to eliminate Flash of Unstyled Content (FOUC)
-    const initialTheme = localStorage.getItem(THEME_KEY);
-    if (initialTheme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        document.documentElement.classList.add('theme-dark');
-    } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.classList.remove('theme-dark');
+    // Immediate Light Theme Enforcer — Dark page style permanently removed from all pages
+    try {
+        localStorage.removeItem(THEME_KEY);
+    } catch (e) { }
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('theme-dark');
+    if (document.body) {
+        document.body.classList.remove('theme-dark');
     }
 
     // Page-specific top bar text mapping
@@ -45,7 +47,10 @@ const BANNER_DESTINATION_URL = '';
         '/contact/': 'CONTACT / BOOKING / IMPRESS',
         '/contact/index.html': 'CONTACT / BOOKING / IMPRESS',
         '/upload/': 'CONTENT MANAGEMENT SYSTEM',
-        '/upload/index.html': 'CONTENT MANAGEMENT SYSTEM'
+        '/upload/index.html': 'CONTENT MANAGEMENT SYSTEM',
+        '/promotion/': 'SPECIAL PROMOTION',
+        '/promotion/index.html': 'SPECIAL PROMOTION',
+        '/promotion.html': 'SPECIAL PROMOTION'
     };
 
     // Determine current nav identifier
@@ -57,6 +62,7 @@ const BANNER_DESTINATION_URL = '';
         if (path.includes('/about/')) return 'about';
         if (path.includes('/contact/')) return 'contact';
         if (path.includes('/upload/')) return 'upload';
+        if (path.includes('/promotion')) return 'promotion';
         return 'home';
     }
 
@@ -445,10 +451,25 @@ const BANNER_DESTINATION_URL = '';
         const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
         if (!headerSlot) return;
 
+        function relocateBannerToPageFlow() {
+            const isMoodboard = window.location.pathname.toLowerCase().includes('/moodboard');
+            const banner = headerSlot.querySelector('.site-banner-container');
+            if (banner) {
+                if (isMoodboard) {
+                    banner.remove();
+                    return;
+                }
+                if (headerSlot.parentNode) {
+                    headerSlot.parentNode.insertBefore(banner, headerSlot.nextSibling);
+                }
+            }
+        }
+
         // Instant render from cache if available
         const cached = sessionStorage.getItem(HEADER_CACHE_KEY);
         if (cached && headerSlot.children.length === 0) {
             headerSlot.innerHTML = cached;
+            relocateBannerToPageFlow();
             initHeaderBehavior();
         }
 
@@ -460,6 +481,7 @@ const BANNER_DESTINATION_URL = '';
                 if (html !== cached || headerSlot.children.length === 0) {
                     sessionStorage.setItem(HEADER_CACHE_KEY, html);
                     headerSlot.innerHTML = html;
+                    relocateBannerToPageFlow();
                     initHeaderBehavior();
                 }
             }
@@ -536,7 +558,7 @@ const BANNER_DESTINATION_URL = '';
                     timestamp: parsed.timestamp || Date.now()
                 };
             }
-        } catch (e) {}
+        } catch (e) { }
         return null;
     }
 
@@ -582,7 +604,7 @@ const BANNER_DESTINATION_URL = '';
                         document.cookie = `${name}=; Path=/; Domain=.${window.location.hostname}; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
                     }
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // 2. Preferences consent enforcement
@@ -590,7 +612,7 @@ const BANNER_DESTINATION_URL = '';
             // Remove non-essential UI preferences from localStorage when consent is revoked
             try {
                 localStorage.removeItem('zhukov_gallery_ratio_mode');
-            } catch (e) {}
+            } catch (e) { }
         }
 
         document.dispatchEvent(new CustomEvent('zhukovCookieConsentUpdated', {
@@ -790,22 +812,57 @@ const BANNER_DESTINATION_URL = '';
         return maxBannerHeight;
     }
 
-    // Universal Header Banner Handler: applies BANNER_IMAGE_URL if set, or HTML src
+    // Responsive Mobile Ratio Detector (<= 768px)
+    function isMobileBannerRatio() {
+        return (window.innerWidth > 0 && window.innerWidth <= 768) ||
+            (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    }
+
+    // Universal Header Banner Handler: applies BANNER_MOBILE_IMAGE_URL on mobile, BANNER_IMAGE_URL on mid/full
     function updateBannerSlots() {
+        // Exclude banner completely on moodboard page
+        if (window.location.pathname.toLowerCase().includes('/moodboard')) {
+            document.querySelectorAll('.site-banner-container').forEach(container => {
+                container.style.display = 'none';
+            });
+            document.documentElement.style.setProperty('--site-banner-height', '0px');
+            document.body.classList.remove('has-site-banner');
+            return;
+        }
+
         let hasActiveBanner = false;
+        const isMobile = isMobileBannerRatio();
+
+        const normalBanner = (typeof BANNER_IMAGE_URL === 'string' && BANNER_IMAGE_URL.trim() !== '')
+            ? BANNER_IMAGE_URL.trim()
+            : '';
+        const mobileBanner = (typeof BANNER_MOBILE_IMAGE_URL === 'string' && BANNER_MOBILE_IMAGE_URL.trim() !== '')
+            ? BANNER_MOBILE_IMAGE_URL.trim()
+            : ((typeof BANNER_IMAGE_MOBILE_URL === 'string' && BANNER_IMAGE_MOBILE_URL.trim() !== '')
+                ? BANNER_IMAGE_MOBILE_URL.trim()
+                : '');
 
         document.querySelectorAll('.site-banner-container').forEach(container => {
             const img = container.querySelector('.site-banner-img');
             const link = container.querySelector('.site-banner-link');
 
-            // Determine target image URL: constant at top of file takes priority, then img src
-            const targetUrl = (typeof BANNER_IMAGE_URL === 'string' && BANNER_IMAGE_URL.trim() !== '')
-                ? BANNER_IMAGE_URL.trim()
-                : (img ? (img.getAttribute('src') || '').trim() : '');
+            if (!img) return;
 
-            if (!img || !targetUrl) {
+            // Preserve initial HTML src if present as fallback
+            if (!img.dataset.initialSrc && img.getAttribute('src')) {
+                img.dataset.initialSrc = img.getAttribute('src').trim();
+            }
+            const htmlFallback = (img.dataset.initialSrc || img.getAttribute('src') || '').trim();
+
+            // Mobile ratio: use mobileBanner if set; otherwise fall back to normalBanner or htmlFallback.
+            // Mid & Full ratio: use normalBanner; otherwise htmlFallback.
+            const targetUrl = isMobile
+                ? (mobileBanner || normalBanner || htmlFallback)
+                : (normalBanner || htmlFallback);
+
+            if (!targetUrl) {
                 container.style.display = 'none';
-                if (img) img.removeAttribute('src');
+                img.removeAttribute('src');
             } else {
                 hasActiveBanner = true;
                 if (img.getAttribute('src') !== targetUrl) {
@@ -841,59 +898,57 @@ const BANNER_DESTINATION_URL = '';
         }
     }
 
-    window.addEventListener('resize', syncBannerHeight);
-    window.addEventListener('load', syncBannerHeight);
+    window.addEventListener('resize', () => updateBannerSlots());
+    window.addEventListener('orientationchange', () => updateBannerSlots());
+    window.addEventListener('load', () => updateBannerSlots());
 
-    // =========================================================================
-    // Universal Floating Dark / Light Mode Switch Controller
-    // =========================================================================
-    function updateThemeUI(isDark) {
-        const btn = document.getElementById('theme-toggle-btn');
-        if (!btn) return;
-        btn.classList.toggle('is-dark', isDark);
-        btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
-        btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
-        const tooltip = btn.querySelector('.theme-toggle-tooltip');
-        if (tooltip) {
-            tooltip.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    const bannerMobileMql = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
+    if (bannerMobileMql) {
+        if (bannerMobileMql.addEventListener) {
+            bannerMobileMql.addEventListener('change', () => updateBannerSlots());
+        } else if (bannerMobileMql.addListener) {
+            bannerMobileMql.addListener(() => updateBannerSlots());
         }
     }
 
-    function applyTheme(theme, save = true) {
-        const isDark = theme === 'dark';
-        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-        document.documentElement.classList.toggle('theme-dark', isDark);
+    // =========================================================================
+    // =========================================================================
+    // Light Mode Enforcer (Dark page style permanently removed from all pages)
+    // =========================================================================
+    function updateThemeUI() {
+        const btn = document.getElementById('theme-toggle-btn');
+        if (btn) {
+            btn.style.display = 'none';
+        }
+    }
+
+    function applyTheme() {
+        document.documentElement.setAttribute('data-theme', 'light');
+        document.documentElement.classList.remove('theme-dark');
         if (document.body) {
-            document.body.classList.toggle('theme-dark', isDark);
+            document.body.classList.remove('theme-dark');
         }
-        if (save) {
-            try {
-                localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-            } catch (e) { }
-        }
-        updateThemeUI(isDark);
-        document.dispatchEvent(new CustomEvent('zhukovThemeChanged', { detail: { theme: isDark ? 'dark' : 'light' } }));
+        try {
+            localStorage.removeItem(THEME_KEY);
+        } catch (e) { }
+        updateThemeUI();
+        document.dispatchEvent(new CustomEvent('zhukovThemeChanged', { detail: { theme: 'light' } }));
     }
 
     function toggleTheme() {
-        const current = localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
-        const next = current === 'dark' ? 'light' : 'dark';
-        applyTheme(next, true);
+        applyTheme();
     }
 
     window.toggleZhukovTheme = toggleTheme;
     window.setZhukovTheme = applyTheme;
 
     function initThemeToggle() {
-        const isDark = localStorage.getItem(THEME_KEY) === 'dark';
-        applyTheme(isDark ? 'dark' : 'light', false);
+        applyTheme();
 
-        // Theme toggle button is hidden across all pages as requested
-
-        // Listen for storage changes across tabs
+        // Listen for storage changes across tabs to keep light theme synchronized
         window.addEventListener('storage', (e) => {
             if (e.key === THEME_KEY) {
-                applyTheme(e.newValue === 'dark' ? 'dark' : 'light', false);
+                applyTheme();
             }
         });
     }

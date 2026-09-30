@@ -1989,20 +1989,20 @@ body.editorial-body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
-    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px));
+    padding-top: var(--site-header-unscrolled-height, 206px);
     overflow-x: clip;
     min-height: 100vh;
     transition: padding-top 0.25s ease;
 }
 
 body.editorial-body.header-is-scrolled {
-    padding-top: calc(var(--site-header-scrolled-height, 67px) + var(--site-banner-height, 0px));
+    padding-top: var(--site-header-scrolled-height, 67px);
 }
 
 /* Touch Scroll Mode: header transforms continuously with finger without jumping */
 body.editorial-body.touch-scroll-mode,
 body.editorial-body.touch-scroll-mode.header-is-scrolled {
-    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px)) !important;
+    padding-top: var(--site-header-unscrolled-height, 206px) !important;
     transition: none !important;
 }
 
@@ -2016,7 +2016,7 @@ body.editorial-body.touch-scroll-mode.header-is-scrolled {
 
     body.editorial-body,
     body.editorial-body.header-is-scrolled {
-        padding-top: calc(60px + var(--site-banner-height, 0px)) !important;
+        padding-top: 60px !important;
         transition: none !important;
     }
 }
@@ -4044,7 +4044,7 @@ html[data-theme="dark"] .cookie-toast {
 }
 
 /* =========================================================================
-   Universal Header Banner Slot (Appears under header when image URL is set)
+   Universal Header Banner (In-Page Element — Scrolls with Page Behind Header)
    Completely hidden with 0 height/spacing when src is empty or absent.
    ========================================================================= */
 
@@ -4055,11 +4055,20 @@ html[data-theme="dark"] .cookie-toast {
     line-height: 0;
     overflow: hidden;
     position: relative;
+    z-index: 10;
     background: #ffffff;
     box-sizing: border-box;
+    border-bottom: 1px solid #ebebeb;
 }
 
-/* Hide container completely when image has no src or empty src */
+html[data-theme="dark"] .site-banner-container {
+    background: #000000;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Hide container completely when image has no src or empty src, or on moodboard page */
+body.moodboard-body .site-banner-container,
+.inside-board .site-banner-container,
 .site-banner-container:not(:has(.site-banner-img[src]:not([src=""]))) {
     display: none !important;
 }
@@ -4408,15 +4417,15 @@ html[data-theme="dark"] .zhukov-theme-toggle .icon-sun,
     --dark-espresso-border: rgba(216, 196, 170, 0.12);
 }
 
-/* ── Base Dark Page Background & Sand Typography ───────────────────────── */
+/* ── Dark page style permanently removed: fallback reset to pure white editorial ── */
 html[data-theme="dark"],
 html[data-theme="dark"] body,
 html[data-theme="dark"] body.editorial-body,
 html[data-theme="dark"] body.moodboard-body:not(.inside-board),
 html[data-theme="dark"] body.photoshoots-body {
-    background-color: var(--dark-espresso-bg) !important;
+    background-color: #ffffff !important;
     background-image: none !important;
-    color: var(--sand-beige-primary) !important;
+    color: #111111 !important;
 }
 
 html[data-theme="dark"] main.vogue-main,
@@ -4426,8 +4435,8 @@ html[data-theme="dark"] .vogue-contact-main,
 html[data-theme="dark"] .vogue-page-main,
 html[data-theme="dark"] .vogue-gallery-main,
 html[data-theme="dark"] .vogue-upload-main {
-    background-color: var(--dark-espresso-bg) !important;
-    color: var(--sand-beige-primary) !important;
+    background-color: #ffffff !important;
+    color: #111111 !important;
 }
 
 /* ── Top Editorial Bar (Warm Sand Beige Bar as in Reference Image) ──────── */

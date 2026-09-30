@@ -20,15 +20,24 @@
                 return;
             }
 
+            // Route /promotion/<presetTitle>/ to /promotion/?preset=<presetTitle>
+            var promoMatch = pathname.match(/\/promotion\/([^/]+)\/?$/);
+            if (promoMatch && promoMatch[1] && promoMatch[1] !== 'index.html' && promoMatch[1] !== 'promotion') {
+                var preset = promoMatch[1];
+                var newSearch = '?preset=' + encodeURIComponent(preset) + (search ? '&' + search.replace(/^\?/, '') : '');
+                window.location.replace('/promotion/' + newSearch + hash);
+                return;
+            }
+
             // Route root path fallback
             window.location.replace('/' + (search ? search : '') + hash);
         })();
     </script>
 </head>
-<body style="background:#070a13; color:#f8fafc; font-family:'Outfit',sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+<body style="background:#ffffff; color:#111111; font-family:'Outfit',sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
     <div style="text-align:center;">
-        <h2 style="font-weight:400; font-size:1.4rem; letter-spacing:1px; margin-bottom:0.5rem;">Zhukov Studio</h2>
-        <p style="color:#94a3b8; font-size:0.95rem;">Opening Moodboard...</p>
+        <h2 style="font-weight:400; font-size:1.4rem; letter-spacing:1px; margin-bottom:0.5rem; color:#111111;">Zhukov Studio</h2>
+        <p style="color:#666666; font-size:0.95rem;">Opening Moodboard...</p>
     </div>
 </body>
 </html>

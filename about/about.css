@@ -2020,8 +2020,8 @@ html[data-theme="dark"] .gear-img-dark,
    ========================================================================== */
 html[data-theme="dark"] .vogue-about-main,
 html[data-theme="dark"] .about-editorial-hero {
-    background: #0f0d0b !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
+    background: #ffffff !important;
+    border-color: #ebebeb !important;
 }
 
 html[data-theme="dark"] .about-pillar-tag {

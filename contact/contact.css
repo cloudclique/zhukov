@@ -1494,7 +1494,7 @@ details[open] .impressum-summary-icon {
    CONTACT — DARK MODE HARMONIZATION
    ========================================================================== */
 html[data-theme="dark"] .vogue-contact-main {
-    background: #0f0d0b !important;
+    background: #ffffff !important;
 }
 
 html[data-theme="dark"] .contact-details-col {

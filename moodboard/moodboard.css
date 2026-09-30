@@ -307,7 +307,7 @@ html.moodboard-loading-direct .moodboard-loader {
     display: flex;
     flex-direction: column;
     padding: 0;
-    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px));
+    padding-top: var(--site-header-unscrolled-height, 206px);
     margin: 0;
     overflow-y: auto;
     overflow-x: hidden;
@@ -318,19 +318,19 @@ html.moodboard-loading-direct .moodboard-loader {
 }
 
 body.moodboard-body.header-is-scrolled .dashboard-view {
-    padding-top: calc(var(--site-header-scrolled-height, 67px) + var(--site-banner-height, 0px));
+    padding-top: var(--site-header-scrolled-height, 67px);
 }
 
 body.moodboard-body.touch-scroll-mode .dashboard-view,
 body.moodboard-body.touch-scroll-mode.header-is-scrolled .dashboard-view {
-    padding-top: calc(var(--site-header-unscrolled-height, 206px) + var(--site-banner-height, 0px)) !important;
+    padding-top: var(--site-header-unscrolled-height, 206px) !important;
     transition: none !important;
 }
 
 @media (max-width: 768px) {
     .dashboard-view,
     body.moodboard-body.header-is-scrolled .dashboard-view {
-        padding-top: calc(60px + var(--site-banner-height, 0px)) !important;
+        padding-top: 60px !important;
         transition: none !important;
     }
 }
@@ -2760,12 +2760,12 @@ select.form-input option:hover {
 html[data-theme="dark"] body.moodboard-body:not(.inside-board),
 html[data-theme="dark"] .dashboard-view,
 html[data-theme="dark"] .dashboard-main-content {
-    background-color: #0f0d0b !important;
-    color: #dcd3c5 !important;
+    background-color: #ffffff !important;
+    color: #111111 !important;
 }
 
 html[data-theme="dark"] body.moodboard-body:not(.inside-board) #site-header-slot {
-    background: #0f0d0b !important;
+    background: #ffffff !important;
 }
 
 html[data-theme="dark"] .dashboard-hero.vogue-dashboard-hero,

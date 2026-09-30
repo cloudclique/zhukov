@@ -212,15 +212,15 @@
    UPLOAD PORTAL — DARK MODE HARMONIZATION
    ========================================================================== */
 html[data-theme="dark"] .vogue-upload-main {
-    background: #0f0d0b !important;
+    background: #ffffff !important;
 }
 
 html[data-theme="dark"] .vogue-auth-warning,
 html[data-theme="dark"] .upload-container {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35) !important;
-    color: #dcd3c5 !important;
+    background: #ffffff !important;
+    border-color: #e5e5e5 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+    color: #111111 !important;
 }
 
 html[data-theme="dark"] .vogue-auth-warning p,
