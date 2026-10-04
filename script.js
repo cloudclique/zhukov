@@ -70,8 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Instant Cache Render for Hero Image (0ms delay)
     const cachedHero = getCachedData('home_hero_image');
-    if (cachedHero && heroImg) {
+    if (cachedHero && heroImg && heroImg.src !== cachedHero) {
         heroImg.src = cachedHero;
+    } else if (!cachedHero && heroImg && heroImg.src) {
+        setCachedData('home_hero_image', heroImg.src);
     }
 
     // Instant Cache Render for Profile Image (0ms delay)

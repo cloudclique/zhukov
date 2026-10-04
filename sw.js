@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v61';
+const CACHE_NAME_STATIC = 'zhukov-static-v62';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
@@ -87,6 +87,7 @@ self.addEventListener('fetch', (event) => {
     const isImage = request.destination === 'image' || 
                     url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|avif)$/i) ||
                     url.hostname.includes('ibb.co') ||
+                    url.hostname.includes('workers.dev') ||
                     url.hostname.includes('firebasestorage.googleapis.com');
 
     if (isImage) {

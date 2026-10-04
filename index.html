@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV.studio</title>
+    <!-- Critical Hero Image Optimization (Preconnect & High-Priority Preload) -->
+    <link rel="preconnect" href="https://zhukov-studio.dener4826.workers.dev" crossorigin>
+    <link rel="dns-prefetch" href="https://zhukov-studio.dener4826.workers.dev">
+    <link rel="preload" as="image" href="https://zhukov-studio.dener4826.workers.dev/Single_Shots_1791128661928_0_q2pna_1791128652807_8d441bb5.webp" fetchpriority="high" type="image/webp">
     <link rel="stylesheet" href="/styles.css?v=58">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,7 +42,30 @@
 
             <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right -->
             <div class="hero-diagonal-cut-wrapper" id="hero-img-container">
-                <img src="" alt="High Fashion Editorial Cover" loading="eager" id="hero-img">
+                <img src="https://zhukov-studio.dener4826.workers.dev/Single_Shots_1791128661928_0_q2pna_1791128652807_8d441bb5.webp"
+                    alt="High Fashion Editorial Cover"
+                    loading="eager"
+                    fetchpriority="high"
+                    decoding="async"
+                    width="1920"
+                    height="1224"
+                    id="hero-img">
+                <script>
+                    (function () {
+                        try {
+                            var cached = localStorage.getItem('zhukov_mem_home_hero_image');
+                            if (cached) {
+                                var parsed = JSON.parse(cached);
+                                if (parsed && parsed.data) {
+                                    var img = document.getElementById('hero-img');
+                                    if (img && parsed.data && img.src !== parsed.data) {
+                                        img.src = parsed.data;
+                                    }
+                                }
+                            }
+                        } catch (e) { }
+                    })();
+                </script>
                 <button class="slot-edit-btn hero-edit-btn" id="hero-edit-btn" style="display: none;"
                     title="Change hero cover image" aria-label="Change hero cover image">✏️</button>
             </div>
@@ -204,7 +231,7 @@
         </div>
     </div>
 
-    <script type="module" src="/script.js?v=40"></script>
+    <script type="module" src="/script.js?v=41"></script>
 </body>
 
 </html>
