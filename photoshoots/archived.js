@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const link = document.createElement('a');
                 link.className = 'lightbox-set-name-link';
                 link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
-                link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase() + ' \u2192';
+                link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase();
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
                 link.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (btnText) {
                     btnText.textContent = label;
                 } else {
-                    lightboxViewSetBtn.textContent = `${label} \u2192`;
+                    lightboxViewSetBtn.textContent = label;
                 }
 
                 lightboxViewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
