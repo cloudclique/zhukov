@@ -152,6 +152,120 @@
     stroke: #ffffff;
 }
 
+/* ── Admin Archived Photos Toggle ────────────────────────────── */
+.admin-archived-toggle-slot {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.admin-archived-toggle-bar {
+    display: inline-flex;
+    align-items: center;
+    background: #f4f4f4;
+    border: 1px solid #e0e0e0;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 0;
+}
+
+.admin-archived-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #666666;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.admin-archived-toggle-btn:hover {
+    color: #000000;
+}
+
+.admin-archived-toggle-btn .archived-toggle-icon {
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.2s ease, stroke 0.2s ease;
+}
+
+.admin-archived-toggle-btn:hover .archived-toggle-icon {
+    transform: scale(1.08);
+}
+
+.admin-archived-toggle-btn .toggle-pill-switch {
+    position: relative;
+    display: inline-block;
+    width: 28px;
+    height: 16px;
+    background: #d4d4d4;
+    border-radius: 9999px;
+    transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    vertical-align: middle;
+}
+
+.admin-archived-toggle-btn .toggle-pill-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+}
+
+/* Active / On State (Show Archived) */
+.admin-archived-toggle-btn.is-active {
+    background: #000000;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.admin-archived-toggle-btn.is-active .archived-toggle-icon {
+    stroke: #f59e0b;
+}
+
+.admin-archived-toggle-btn.is-active .toggle-pill-switch {
+    background: #f59e0b;
+}
+
+.admin-archived-toggle-btn.is-active .toggle-pill-knob {
+    transform: translateX(12px);
+    background: #ffffff;
+}
+
+/* Photo Archived Indicator Badge on Cards (Flow & Sets View) */
+.photo-archived-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(217, 119, 6, 0.92);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    z-index: 10;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
 .sort-group {
     display: flex;
     align-items: center;
@@ -1058,6 +1172,18 @@
     .sort-controls-right {
         width: auto !important;
         justify-content: flex-end !important;
+        gap: 0.65rem !important;
+    }
+
+    .admin-archived-toggle-bar {
+        border-radius: 9999px !important;
+        padding: 3px !important;
+    }
+
+    .admin-archived-toggle-btn {
+        border-radius: 9999px !important;
+        padding: 5px 10px !important;
+        font-size: 0.65rem !important;
     }
 
     /* Hide floating switcher when lightbox modal is open */
@@ -1354,6 +1480,43 @@ html[data-theme="dark"] .view-switch-btn .view-icon {
 
 html[data-theme="dark"] .view-switch-btn.active .view-icon {
     stroke: #fae8a4 !important;
+}
+
+/* Dark Mode Admin Archived Toggle */
+html[data-theme="dark"] .admin-archived-toggle-bar {
+    background: #171310 !important;
+    border-color: rgba(216, 196, 170, 0.25) !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn {
+    color: #ad9f8d !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn:hover {
+    color: #fae8a4 !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn .toggle-pill-switch {
+    background: #3a3229 !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn.is-active {
+    background: rgba(204, 163, 83, 0.25) !important;
+    color: #fae8a4 !important;
+    border: 1px solid #cca353 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn.is-active .archived-toggle-icon {
+    stroke: #cca353 !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn.is-active .toggle-pill-switch {
+    background: #cca353 !important;
+}
+
+html[data-theme="dark"] .admin-archived-toggle-btn.is-active .toggle-pill-knob {
+    background: #0f0d0b !important;
 }
 
 /* Dark Mode Flow View Masonry & Overlays */

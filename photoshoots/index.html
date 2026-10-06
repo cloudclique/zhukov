@@ -56,6 +56,24 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Admin Archived Toggle Slot (Visible only when logged in as admin) -->
+                <div class="admin-archived-toggle-slot" id="admin-archived-toggle-slot" style="display: none;">
+                    <div class="admin-archived-toggle-bar" role="group" aria-label="Archived Photos Visibility">
+                        <button type="button" class="admin-archived-toggle-btn" id="admin-archived-toggle-btn"
+                            role="switch" aria-checked="false" title="Show archived images (Currently hidden)">
+                            <svg class="archived-toggle-icon" viewBox="0 0 24 24" width="13" height="13" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+                            </svg>
+                            <span>Archived</span>
+                            <span class="toggle-pill-switch">
+                                <span class="toggle-pill-knob"></span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="sort-group">
                     <label for="sort-select" class="sort-label">ORDER BY</label>
                     <select id="sort-select" class="sort-select">

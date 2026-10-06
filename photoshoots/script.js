@@ -41,6 +41,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Data store
     let categoriesData = [];
     let isAdmin = false;
+    let showArchived = false; // "dont show is default"
+
+    // Admin Archived Toggle UI
+    const adminArchivedSlot = document.getElementById('admin-archived-toggle-slot');
+    const adminArchivedToggleBtn = document.getElementById('admin-archived-toggle-btn');
 
     // --- Firebase Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {
@@ -57,6 +62,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error("Auth check error:", error);
                 isAdmin = false;
             }
+
+            if (adminArchivedSlot) {
+                adminArchivedSlot.style.display = isAdmin ? 'inline-flex' : 'none';
+            }
+            if (!isAdmin) {
+                showArchived = false;
+                if (adminArchivedToggleBtn) {
+                    adminArchivedToggleBtn.classList.remove('is-active');
+                    adminArchivedToggleBtn.setAttribute('aria-checked', 'false');
+                    adminArchivedToggleBtn.title = 'Show archived images (Currently hidden)';
+                }
+            }
+
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(user, isAdmin);
             }
@@ -64,6 +82,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             localStorage.removeItem('zhukov_logged_in');
             isAdmin = false;
+            showArchived = false;
+            if (adminArchivedSlot) {
+                adminArchivedSlot.style.display = 'none';
+            }
+            if (adminArchivedToggleBtn) {
+                adminArchivedToggleBtn.classList.remove('is-active');
+                adminArchivedToggleBtn.setAttribute('aria-checked', 'false');
+                adminArchivedToggleBtn.title = 'Show archived images (Currently hidden)';
+            }
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(null, false);
             }
@@ -284,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loadPhotos = async () => {
         const currentReqId = ++loadPhotosReqId;
-        const cacheKey = `photoshoots_list_admin_${isAdmin}`;
+        const cacheKey = `photoshoots_list_admin_${isAdmin}_archived_${isAdmin ? showArchived : false}`;
 
         // 1. Instant SWR Render from Local Memory / Storage
         const cached = getCachedData(cacheKey);
@@ -306,11 +333,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             ]);
             const singleUrls = [];
             const singleItems = [];
+            const archivedSingleUrls = new Set();
             let latestSingleDate = '1970-01-01T00:00:00.000Z';
 
             singleSnap.forEach(doc => {
                 const data = doc.data();
-                if (!isAdmin && data.archived === true) return; // Hide archived single shots for non-admins
+                if (data.archived === true) {
+                    archivedSingleUrls.add(data.url);
+                    // Hide archived single shots when not admin or when admin toggle is off (default)
+                    if (!isAdmin || !showArchived) return;
+                }
                 singleItems.push(data);
                 if (data.date && data.date > latestSingleDate) {
                     latestSingleDate = data.date;
@@ -335,13 +367,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             singleItems.forEach(item => singleUrls.push(item.url));
 
             if (singleUrls.length > 0) {
+                const singleSetName = (orderDoc && orderDoc.exists() && (orderDoc.data().categoryName || orderDoc.data().name))
+                    ? (orderDoc.data().categoryName || orderDoc.data().name)
+                    : 'Single Shots';
                 loadedCategories.push({
                     categoryId: 'single-shots',
-                    categoryName: 'Single Shots',
+                    categoryName: singleSetName,
                     modelName: 'Mixed',
                     theme: 'Mixed',
                     date: latestSingleDate,
-                    urls: singleUrls
+                    urls: singleUrls,
+                    archivedUrls: Array.from(archivedSingleUrls)
                 });
             }
 
@@ -353,13 +389,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
                     const allImagesArchived = data.urls.every(url => archivedUrls.includes(url));
 
-                    // Sets that are fully archived or have every single image archived should ONLY be visible in the archived tab
-                    if (data.archived === true || allImagesArchived) return;
+                    // Sets that are fully archived should ONLY be visible in the archived tab
+                    if (data.archived === true) return;
+                    if (allImagesArchived && (!isAdmin || !showArchived)) return;
 
                     let visibleUrls = [...data.urls];
 
-                    // Filter out individually archived photos for non-admins
-                    if (!isAdmin) {
+                    // Filter out individually archived photos for non-admins or when showArchived is off
+                    if (!isAdmin || !showArchived) {
                         visibleUrls = visibleUrls.filter(url => !archivedUrls.includes(url));
                         if (visibleUrls.length === 0) {
                             return; // All images in this set are archived, hide set
@@ -372,7 +409,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         modelName: data.modelName || 'Unknown',
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
-                        urls: visibleUrls.reverse() // Show newest to oldest
+                        urls: visibleUrls.reverse(), // Show newest to oldest
+                        archivedUrls: archivedUrls
                     });
                 }
             });
@@ -946,6 +984,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wrapper.appendChild(delPhotoBtn);
             }
 
+            // Archived indicator badge on photo card for admin
+            const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+            if (isAdmin && showArchived && isPhotoArchived) {
+                const badge = document.createElement('div');
+                badge.className = 'photo-archived-badge';
+                badge.innerText = 'Archived';
+                wrapper.appendChild(badge);
+            }
+
             flowContainer.appendChild(wrapper);
             if (flowViewportObserver) {
                 flowViewportObserver.observe(wrapper);
@@ -1346,6 +1393,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wrapper.appendChild(delPhotoBtn);
                 }
 
+                // Archived indicator badge on photo card for admin
+                const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+                if (isAdmin && showArchived && isPhotoArchived) {
+                    const badge = document.createElement('div');
+                    badge.className = 'photo-archived-badge';
+                    badge.innerText = 'Archived';
+                    wrapper.appendChild(badge);
+                }
+
                 if (photoshootsViewportObserver) {
                     photoshootsViewportObserver.observe(wrapper);
                 }
@@ -1446,6 +1502,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewSetsBtn) {
         viewSetsBtn.addEventListener('click', () => {
             if (currentView !== 'sets') setViewMode('sets');
+        });
+    }
+
+    // Admin Archived Toggle Listener
+    if (adminArchivedToggleBtn) {
+        adminArchivedToggleBtn.addEventListener('click', () => {
+            if (!isAdmin) return;
+            showArchived = !showArchived;
+            adminArchivedToggleBtn.classList.toggle('is-active', showArchived);
+            adminArchivedToggleBtn.setAttribute('aria-checked', showArchived ? 'true' : 'false');
+            adminArchivedToggleBtn.title = showArchived ? 'Hide archived images (Currently showing)' : 'Show archived images (Currently hidden)';
+            loadPhotos();
         });
     }
 

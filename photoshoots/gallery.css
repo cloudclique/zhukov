@@ -615,6 +615,22 @@
     transform: scale(1.12);
 }
 
+.drag-photo-btn {
+    color: #94a3b8;
+    cursor: grab;
+    touch-action: none;
+}
+
+.drag-photo-btn:hover {
+    background: rgba(96, 165, 250, 0.9);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
+}
+
+.drag-photo-btn:active {
+    cursor: grabbing;
+}
+
 .move-photo-btn {
     color: #60a5fa;
 }
@@ -1004,14 +1020,28 @@
 
 /* Drag and Drop States */
 .masonry-item.dragging {
-    opacity: 0.4 !important;
+    opacity: 0.35 !important;
     transform: scale(0.95);
     z-index: 100;
 }
 
 .masonry-item.drag-over {
-    border: 2px dashed #60a5fa;
-    transform: scale(1.02);
+    border: 2px dashed #60a5fa !important;
+    transform: scale(1.03) !important;
+    box-shadow: 0 8px 24px rgba(96, 165, 250, 0.35) !important;
+}
+
+/* Touch Drag Ghost Floating Preview */
+.touch-drag-ghost {
+    will-change: left, top, transform;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: touchGhostPulse 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes touchGhostPulse {
+    0% { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1.06) rotate(2deg); opacity: 0.92; }
 }
 
 /* ============================================

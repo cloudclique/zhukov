@@ -281,13 +281,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const archivedUrlsSet = new Set();
 
             if (categoryId === 'single-shots') {
-                categoryName = "Single Shots";
                 metaInfo = "Mixed Models | Mixed Themes";
 
                 const [singleSnap, orderDoc] = await Promise.all([
                     getDocs(collection(db, 'single_shots')),
                     getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
                 ]);
+                categoryName = (orderDoc && orderDoc.exists() && (orderDoc.data().categoryName || orderDoc.data().name))
+                    ? (orderDoc.data().categoryName || orderDoc.data().name)
+                    : "Single Shots";
                 const singleItems = [];
                 singleSnap.forEach(docSnap => {
                     const d = docSnap.data();
@@ -1030,12 +1032,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             let currentUrls = urls;
             const formattedDesc = formatDescription(description);
 
-            if (isAdmin && categoryId !== 'single-shots') {
-                headerContainer.innerHTML = `
-                    <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
-                    <div class="gallery-meta">${metaInfo}</div>
-                    <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
-                `;
+            if (isAdmin) {
+                if (categoryId === 'single-shots') {
+                    headerContainer.innerHTML = `
+                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
+                        <div class="gallery-meta">${metaInfo}</div>
+                        ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
+                    `;
+                } else {
+                    headerContainer.innerHTML = `
+                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
+                        <div class="gallery-meta">${metaInfo}</div>
+                        <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
+                    `;
+                }
             } else {
                 headerContainer.innerHTML = `
                     <h2 class="gallery-title">${categoryName}</h2>
@@ -1045,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Editable Fields Logic
-            if (isAdmin && categoryId !== 'single-shots') {
+            if (isAdmin) {
                 const editables = headerContainer.querySelectorAll('.editable');
                 editables.forEach(el => {
                     el.style.cursor = 'pointer';
@@ -1110,6 +1120,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
 
                             try {
+                                if (categoryId === 'single-shots') {
+                                    if (fieldName === 'categoryName') {
+                                        const finalName = newVal || 'Single Shots';
+                                        invalidateCache('photoshoots');
+                                        invalidateCache('gallery');
+                                        await setDoc(doc(db, 'settings', 'single_shots_order'), { categoryName: finalName, name: finalName }, { merge: true });
+                                        loadGallery();
+                                    }
+                                    return;
+                                }
+
                                 const docRef = doc(db, 'photo_sets', categoryId);
                                 const updates = {};
                                 if (fieldName === 'date') {
@@ -1455,6 +1476,178 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             let draggedIndex = null;
+            let isTouchDragging = false;
+            let lastTouchDragEndTime = 0;
+            let touchDragGhost = null;
+
+            const createTouchGhost = (sourceWrapper, clientX, clientY) => {
+                if (touchDragGhost) touchDragGhost.remove();
+                touchDragGhost = document.createElement('div');
+                touchDragGhost.className = 'touch-drag-ghost';
+
+                const img = sourceWrapper.querySelector('img.masonry-img');
+                if (img) {
+                    const ghostImg = document.createElement('img');
+                    ghostImg.src = img.src || img.dataset.src;
+                    ghostImg.alt = '';
+                    ghostImg.style.width = '100%';
+                    ghostImg.style.height = '100%';
+                    ghostImg.style.objectFit = 'cover';
+                    ghostImg.style.display = 'block';
+                    touchDragGhost.appendChild(ghostImg);
+                }
+
+                touchDragGhost.style.position = 'fixed';
+                touchDragGhost.style.width = '110px';
+                touchDragGhost.style.height = '130px';
+                touchDragGhost.style.left = `${clientX - 55}px`;
+                touchDragGhost.style.top = `${clientY - 65}px`;
+                touchDragGhost.style.zIndex = '999999';
+                touchDragGhost.style.pointerEvents = 'none';
+                touchDragGhost.style.borderRadius = '10px';
+                touchDragGhost.style.overflow = 'hidden';
+                touchDragGhost.style.boxShadow = '0 16px 36px rgba(0, 0, 0, 0.55), 0 0 0 2px #60a5fa';
+                touchDragGhost.style.transform = 'scale(1.06) rotate(2deg)';
+                touchDragGhost.style.opacity = '0.92';
+                touchDragGhost.style.transition = 'transform 0.1s ease';
+
+                document.body.appendChild(touchDragGhost);
+            };
+
+            const moveTouchGhost = (clientX, clientY) => {
+                if (!touchDragGhost) return;
+                touchDragGhost.style.left = `${clientX - 55}px`;
+                touchDragGhost.style.top = `${clientY - 65}px`;
+            };
+
+            const removeTouchGhost = () => {
+                if (touchDragGhost) {
+                    touchDragGhost.remove();
+                    touchDragGhost = null;
+                }
+            };
+
+            const handleReorder = async (fromIndex, toIndex) => {
+                if (fromIndex === null || toIndex === null || fromIndex === toIndex) return;
+                if (fromIndex < 0 || fromIndex >= currentUrls.length) return;
+                if (toIndex < 0 || toIndex >= currentUrls.length) return;
+
+                // Reorder array locally
+                const item = currentUrls.splice(fromIndex, 1)[0];
+                currentUrls.splice(toIndex, 0, item);
+
+                // Save to Firestore immediately
+                try {
+                    if (categoryId === 'single-shots') {
+                        await setDoc(doc(db, 'settings', 'single_shots_order'), { order: currentUrls }, { merge: true });
+                    } else {
+                        const docRef = doc(db, 'photo_sets', categoryId);
+                        await setDoc(docRef, { urls: [...currentUrls].reverse() }, { merge: true });
+                    }
+                    invalidateCache(cacheKey);
+                    invalidateCache('photoshoots');
+                } catch (err) {
+                    console.error("Error saving new order:", err);
+                    alert("Failed to save order.");
+                }
+
+                // Re-render grid to reflect changes
+                renderGrid();
+            };
+
+            const startTouchDrag = (sourceWrapper, sourceIndex, initialTouch) => {
+                if (isTouchDragging) return;
+                isTouchDragging = true;
+                draggedIndex = sourceIndex;
+                sourceWrapper.classList.add('dragging');
+                createTouchGhost(sourceWrapper, initialTouch.clientX, initialTouch.clientY);
+
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(50); } catch (e) {}
+                }
+
+                let activeDropTarget = null;
+                let autoScrollRaf = null;
+                let lastClientY = initialTouch.clientY;
+
+                const autoScrollStep = () => {
+                    if (!isTouchDragging) return;
+                    const scrollThreshold = 90;
+                    const maxSpeed = 15;
+                    if (lastClientY < scrollThreshold) {
+                        const speed = Math.round((1 - lastClientY / scrollThreshold) * maxSpeed) + 3;
+                        window.scrollBy(0, -speed);
+                    } else if (lastClientY > window.innerHeight - scrollThreshold) {
+                        const speed = Math.round((1 - (window.innerHeight - lastClientY) / scrollThreshold) * maxSpeed) + 3;
+                        window.scrollBy(0, speed);
+                    }
+                    autoScrollRaf = requestAnimationFrame(autoScrollStep);
+                };
+                autoScrollRaf = requestAnimationFrame(autoScrollStep);
+
+                const onWindowTouchMove = (e) => {
+                    if (!e.touches || e.touches.length === 0) return;
+                    if (e.cancelable) e.preventDefault();
+
+                    const touch = e.touches[0];
+                    lastClientY = touch.clientY;
+                    moveTouchGhost(touch.clientX, touch.clientY);
+
+                    // Find photo card element under touch point
+                    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+                    const targetCard = elem ? elem.closest('.masonry-item') : null;
+
+                    if (targetCard && targetCard !== sourceWrapper) {
+                        if (activeDropTarget && activeDropTarget !== targetCard) {
+                            activeDropTarget.classList.remove('drag-over');
+                        }
+                        activeDropTarget = targetCard;
+                        activeDropTarget.classList.add('drag-over');
+                    } else {
+                        if (activeDropTarget) {
+                            activeDropTarget.classList.remove('drag-over');
+                            activeDropTarget = null;
+                        }
+                    }
+                };
+
+                const onWindowTouchEnd = async () => {
+                    cleanupTouchDrag();
+                    lastTouchDragEndTime = Date.now();
+
+                    if (activeDropTarget) {
+                        activeDropTarget.classList.remove('drag-over');
+                        const dropIndex = parseInt(activeDropTarget.dataset.index, 10);
+                        activeDropTarget = null;
+
+                        if (!isNaN(dropIndex) && dropIndex !== sourceIndex) {
+                            await handleReorder(sourceIndex, dropIndex);
+                        }
+                    }
+                    draggedIndex = null;
+                };
+
+                const cleanupTouchDrag = () => {
+                    isTouchDragging = false;
+                    if (autoScrollRaf) {
+                        cancelAnimationFrame(autoScrollRaf);
+                        autoScrollRaf = null;
+                    }
+                    window.removeEventListener('touchmove', onWindowTouchMove);
+                    window.removeEventListener('touchend', onWindowTouchEnd);
+                    window.removeEventListener('touchcancel', cleanupTouchDrag);
+                    sourceWrapper.classList.remove('dragging');
+                    if (activeDropTarget) {
+                        activeDropTarget.classList.remove('drag-over');
+                        activeDropTarget = null;
+                    }
+                    removeTouchGhost();
+                };
+
+                window.addEventListener('touchmove', onWindowTouchMove, { passive: false });
+                window.addEventListener('touchend', onWindowTouchEnd, { passive: false });
+                window.addEventListener('touchcancel', cleanupTouchDrag, { passive: false });
+            };
 
             let galleryViewportObserver = null;
 
@@ -1504,6 +1697,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentUrls.forEach((url, index) => {
                     const wrapper = document.createElement('div');
                     wrapper.className = `masonry-item img-container ${selectedPhotoUrls.has(url) ? 'is-selected' : ''}`;
+                    wrapper.dataset.index = index;
 
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
@@ -1540,10 +1734,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     let touchMoved = false;
                     let touchStartX = 0;
                     let touchStartY = 0;
+                    let touchHoldTimer = null;
 
                     const triggerLightbox = (e) => {
                         if (e.target.closest('.photo-admin-bar') || e.target.closest('.photo-admin-btn') || e.target.closest('.modal-overlay') || e.target.closest('.photo-select-badge')) return;
                         if (wrapper.classList.contains('dragging')) return;
+                        if (isTouchDragging || Date.now() - lastTouchDragEndTime < 450) return;
                         if (touchMoved) {
                             touchMoved = false;
                             return;
@@ -1563,13 +1759,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                             touchStartX = e.touches[0].clientX;
                             touchStartY = e.touches[0].clientY;
                         }
+                        if (isAdmin && !isSelectionMode && e.touches && e.touches.length === 1) {
+                            if (!e.target.closest('.photo-admin-bar') && !e.target.closest('.photo-select-badge')) {
+                                touchHoldTimer = setTimeout(() => {
+                                    touchMoved = true;
+                                    startTouchDrag(wrapper, index, e.touches[0]);
+                                }, 260);
+                            }
+                        }
                     }, { passive: true });
 
                     wrapper.addEventListener('touchmove', (e) => {
                         if (e.touches && e.touches[0]) {
                             if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
                                 touchMoved = true;
+                                if (touchHoldTimer) {
+                                    clearTimeout(touchHoldTimer);
+                                    touchHoldTimer = null;
+                                }
                             }
+                        }
+                    }, { passive: true });
+
+                    wrapper.addEventListener('touchend', () => {
+                        if (touchHoldTimer) {
+                            clearTimeout(touchHoldTimer);
+                            touchHoldTimer = null;
+                        }
+                    }, { passive: true });
+
+                    wrapper.addEventListener('touchcancel', () => {
+                        if (touchHoldTimer) {
+                            clearTimeout(touchHoldTimer);
+                            touchHoldTimer = null;
                         }
                     }, { passive: true });
 
@@ -1652,6 +1874,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         });
 
+                        // Drag Handle Button (Immediate drag on touch)
+                        const dragHandleBtn = document.createElement('button');
+                        dragHandleBtn.className = 'photo-admin-btn drag-photo-btn';
+                        dragHandleBtn.title = 'Hold or drag to reorder';
+                        dragHandleBtn.setAttribute('aria-label', 'Drag to reorder');
+                        dragHandleBtn.innerHTML = `
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="8" cy="6" r="1.5" fill="currentColor"/>
+                                <circle cx="16" cy="6" r="1.5" fill="currentColor"/>
+                                <circle cx="8" cy="12" r="1.5" fill="currentColor"/>
+                                <circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+                                <circle cx="8" cy="18" r="1.5" fill="currentColor"/>
+                                <circle cx="16" cy="18" r="1.5" fill="currentColor"/>
+                            </svg>
+                        `;
+                        dragHandleBtn.addEventListener('touchstart', (e) => {
+                            if (isSelectionMode) return;
+                            if (!e.touches || e.touches.length !== 1) return;
+                            e.stopPropagation();
+                            e.preventDefault();
+                            touchMoved = true;
+                            startTouchDrag(wrapper, index, e.touches[0]);
+                        }, { passive: false });
+
+                        adminBar.appendChild(dragHandleBtn);
                         adminBar.appendChild(movePhotoBtn);
                         adminBar.appendChild(archivePhotoBtn);
                         adminBar.appendChild(delPhotoBtn);
@@ -1704,27 +1951,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const dropIndex = index;
                             if (draggedIndex === null || draggedIndex === dropIndex) return;
 
-                            // Reorder array locally
-                            const item = currentUrls.splice(draggedIndex, 1)[0];
-                            currentUrls.splice(dropIndex, 0, item);
-
-                            // Save to Firestore immediately
-                            try {
-                                if (categoryId === 'single-shots') {
-                                    await setDoc(doc(db, 'settings', 'single_shots_order'), { order: currentUrls }, { merge: true });
-                                } else {
-                                    const docRef = doc(db, 'photo_sets', categoryId);
-                                    await setDoc(docRef, { urls: [...currentUrls].reverse() }, { merge: true });
-                                }
-                                invalidateCache(cacheKey);
-                                invalidateCache('photoshoots');
-                            } catch (err) {
-                                console.error("Error saving new order:", err);
-                                alert("Failed to save order.");
-                            }
-
-                            // Re-render grid to reflect changes
-                            renderGrid();
+                            await handleReorder(draggedIndex, dropIndex);
+                            draggedIndex = null;
                         });
                     }
 
