@@ -5,6 +5,10 @@ import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSit
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
+// --- CONFIGURATION ---
+// Change this number to control the maximum columns in Flow View (default: 5):
+const FLOW_VIEW_MAX_COLUMNS = 5;
+
 // Initialize Firebase Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
@@ -34,9 +38,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             isAdmin = true;
         }
     } catch (e) { }
-    let currentRatioMode = 'original';
+    let currentRatioMode = 'flow';
     try {
-        currentRatioMode = localStorage.getItem('zhukov_gallery_ratio_mode') || 'original';
+        const savedMode = localStorage.getItem('zhukov_gallery_ratio_mode');
+        if (savedMode === '1:1') {
+            currentRatioMode = '1:1';
+        } else if (savedMode === 'original' || savedMode === 'flow') {
+            currentRatioMode = 'flow';
+        }
     } catch (e) { }
     const urlParams = new URLSearchParams(window.location.search);
     const categoryId = urlParams.get('id');
@@ -1373,21 +1382,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headerContainer.appendChild(adminGroup);
             }
 
-            // Bottom Toolbar: Photo Count + Ratio Switcher (Original vs 1:1 Square) + Admin Archived Toggle + Admin Selection Mode
+            // Bottom Toolbar: Photo Count + Ratio Switcher (Flow View vs 1:1 Square) + Admin Archived Toggle + Admin Selection Mode
             const headerBottom = document.createElement('div');
             headerBottom.className = 'gallery-header-bottom';
             headerBottom.innerHTML = `
                 <div class="gallery-photo-count">${currentUrls.length} Photographs</div>
                 <div class="gallery-header-controls">
                     <div class="gallery-ratio-switcher" id="gallery-ratio-switcher" role="group" aria-label="Aspect Ratio View">
-                        <button type="button" class="ratio-switch-btn ${currentRatioMode === 'original' ? 'active' : ''}" data-ratio="original" title="View in original aspect ratio">
+                        <button type="button" class="ratio-switch-btn ${currentRatioMode === 'flow' ? 'active' : ''}" data-ratio="flow" title="View in Flow aspect ratio (Masonry)">
                             <svg class="ratio-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="3" width="8" height="11" rx="0.5"/>
                                 <rect x="13" y="3" width="8" height="7" rx="0.5"/>
                                 <rect x="13" y="12" width="8" height="9" rx="0.5"/>
                                 <rect x="3" y="16" width="8" height="5" rx="0.5"/>
                             </svg>
-                            <span>Original</span>
+                            <span>Flow View</span>
                         </button>
                         <button type="button" class="ratio-switch-btn ${currentRatioMode === '1:1' ? 'active' : ''}" data-ratio="1:1" title="View in 1:1 square ratio">
                             <svg class="ratio-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
@@ -1459,19 +1468,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const setRatioMode = (mode) => {
-                currentRatioMode = mode;
+                const normalizedMode = (mode === 'original' || mode === 'flow') ? 'flow' : '1:1';
+                currentRatioMode = normalizedMode;
                 try {
-                    localStorage.setItem('zhukov_gallery_ratio_mode', mode);
+                    localStorage.setItem('zhukov_gallery_ratio_mode', normalizedMode);
                 } catch (e) { }
 
                 const switcher = document.getElementById('gallery-ratio-switcher');
                 if (switcher) {
                     switcher.querySelectorAll('.ratio-switch-btn').forEach(btn => {
-                        btn.classList.toggle('active', btn.getAttribute('data-ratio') === mode);
+                        const btnRatio = btn.getAttribute('data-ratio');
+                        btn.classList.toggle('active', btnRatio === normalizedMode || (normalizedMode === 'flow' && btnRatio === 'original'));
                     });
                 }
 
-                if (mode === '1:1') {
+                if (normalizedMode === '1:1') {
                     gridContainer.classList.add('ratio-1-1');
                     gridContainer.style.position = '';
                     gridContainer.style.height = '';
@@ -1511,13 +1522,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const isMobile = window.innerWidth <= 500;
                 const isTablet = window.innerWidth <= 800;
-                const isLaptop = window.innerWidth <= 1200;
+                const isSmallScreen = window.innerWidth <= 1050;
+                const isMediumScreen = window.innerWidth <= 1250;
 
-                let numCols = 4;
+                let numCols = FLOW_VIEW_MAX_COLUMNS;
                 if (isTablet || isMobile) {
-                    numCols = 2;
-                } else if (isLaptop) {
-                    numCols = 3;
+                    numCols = Math.min(2, FLOW_VIEW_MAX_COLUMNS);
+                } else if (isSmallScreen) {
+                    numCols = Math.min(3, FLOW_VIEW_MAX_COLUMNS);
+                } else if (isMediumScreen && FLOW_VIEW_MAX_COLUMNS > 4) {
+                    numCols = 4;
+                } else if (window.innerWidth <= 1500 && FLOW_VIEW_MAX_COLUMNS > 5) {
+                    numCols = 5;
                 }
 
                 const gap = isMobile ? 8 : (isTablet ? 12 : 16);

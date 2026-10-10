@@ -8,6 +8,8 @@ import { deleteFromCloudflare } from "../cloudflare-storage.js";
 // --- CONFIGURATION ---
 // Change this number to control how many images per photoshoot set are shown in Flow Mode:
 const FLOW_VIEW_IMAGES_PER_SET = 9;
+// Change this number to control the maximum columns in Flow Mode (default: 5):
+const FLOW_VIEW_MAX_COLUMNS = 5;
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -159,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.history && window.history.state && window.history.state.zhukovLightbox) {
         try {
             window.history.replaceState(null, '', window.location.href);
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const openLightbox = (imgElement, setName = 'PHOTOSHOOT', categoryId = null) => {
@@ -173,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 history.pushState({ zhukovLightbox: true }, '', window.location.href);
                 isLightboxHistoryActive = true;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
@@ -192,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         try {
                             history.replaceState(null, '', window.location.href);
                             isLightboxHistoryActive = false;
-                        } catch (err) {}
+                        } catch (err) { }
                     }
                 });
                 lightboxSetName.appendChild(link);
@@ -273,7 +275,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     history.replaceState(null, '', window.location.href);
                     isLightboxHistoryActive = false;
-                } catch (err) {}
+                } catch (err) { }
             }
         });
     }
@@ -702,13 +704,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const isMobile = window.innerWidth <= 500;
         const isTablet = window.innerWidth <= 800;
-        const isLaptop = window.innerWidth <= 1200;
+        const isSmallScreen = window.innerWidth <= 1050;
+        const isMediumScreen = window.innerWidth <= 1250;
 
-        let numCols = 4;
+        let numCols = FLOW_VIEW_MAX_COLUMNS;
         if (isTablet || isMobile) {
-            numCols = 2;
-        } else if (isLaptop) {
-            numCols = 3;
+            numCols = Math.min(2, FLOW_VIEW_MAX_COLUMNS);
+        } else if (isSmallScreen) {
+            numCols = Math.min(3, FLOW_VIEW_MAX_COLUMNS);
+        } else if (isMediumScreen && FLOW_VIEW_MAX_COLUMNS > 4) {
+            numCols = 4;
+        } else if (window.innerWidth <= 1500 && FLOW_VIEW_MAX_COLUMNS > 5) {
+            numCols = 5;
         }
 
         const gap = isMobile ? 8 : (isTablet ? 12 : 16);

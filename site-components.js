@@ -673,7 +673,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                             </label>
                         </div>
                         <p class="cookie-cat-desc">
-                            Stores layout and visual preferences, such as Gallery aspect ratio mode (1:1 square vs original) and light/dark theme selection.
+                            Stores layout and visual preferences, such as Gallery aspect ratio mode (1:1 square vs flow view) and light/dark theme selection.
                         </p>
                     </div>
 
