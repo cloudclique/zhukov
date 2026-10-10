@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeInput = document.getElementById('theme-input');
     const descInput = document.getElementById('desc-input');
     const adultInput = document.getElementById('adult-input');
+    const archiveInput = document.getElementById('archive-input');
 
     const categoryList = document.getElementById('category-list');
     const modelList = document.getElementById('model-list');
@@ -279,6 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const theme = themeInput.value.trim();
         const description = descInput ? descInput.value.trim() : '';
         const isAdult = adultInput ? Boolean(adultInput.checked) : false;
+        const isArchived = archiveInput ? Boolean(archiveInput.checked) : false;
+        // A set is new if it isn't in the known categories map
+        const isNewSet = category !== 'Single Shots' && !categoryIdMap.has(category);
         const date = new Date().toISOString();
 
         uploadBtn.disabled = true;
@@ -324,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await addDoc(singleShotsRef, {
                         url: uploadedUrls[j], modelName, theme, description, date,
                         isAdult: isAdult,
+                        archived: isArchived,
                         uploadedAt: date,
                         uploadedBy: auth.currentUser.uid
                     });
@@ -364,6 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isAdult) {
                     baseData.isAdult = true;
                 }
+                if (isArchived && isNewSet) {
+                    baseData.archived = true;
+                }
                 if (description) {
                     baseData.description = description;
                 }
@@ -380,6 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     if (isAdult) {
                         chunkUpdate.adultUrls = arrayUnion(...chunk);
+                    }
+                    if (isArchived && !isNewSet) {
+                        chunkUpdate.archivedUrls = arrayUnion(...chunk);
                     }
                     await setDoc(photoSetRef, chunkUpdate, { merge: true });
                 }
@@ -409,6 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 themeInput.value = '';
                 if (descInput) descInput.value = '';
                 if (adultInput) adultInput.checked = false;
+                if (archiveInput) archiveInput.checked = false;
             }, 3000);
 
         } catch (error) {
