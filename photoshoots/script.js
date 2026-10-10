@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
 // --- CONFIGURATION ---
@@ -719,9 +720,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         items.forEach(wrapper => {
             const img = wrapper.querySelector('img.masonry-img');
             // Accurate natural aspect ratio (fallback 0.75 for portrait placeholders)
-            const ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
+            let ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
                 ? (img.naturalWidth / img.naturalHeight)
-                : 0.75;
+                : 0;
+            if (!ratio && img) ratio = getRatio(img.dataset.fullUrl);
+            if (!ratio) ratio = 0.75;
 
             // Intelligent 2-column feature span:
             // Only span 2 columns if adjacent columns are level (<= 20px difference) so NO GAP is ever created!
@@ -885,6 +888,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             img.alt = cat.categoryName || 'Editorial Photo';
 
             const handleImageReady = () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    setRatio(url, img.naturalWidth / img.naturalHeight);
+                }
                 wrapper.classList.add('img-loaded');
                 scheduleMasonryLayout();
             };
@@ -994,12 +1000,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             flowContainer.appendChild(wrapper);
-            if (flowViewportObserver) {
-                flowViewportObserver.observe(wrapper);
-            }
         });
 
-        scheduleMasonryLayout();
+        // Resolve ratios of the first screens BEFORE laying out, so the grid is
+        // computed once with final geometry and images just fade into place.
+        const observer = flowViewportObserver;
+        const wrappers = Array.from(flowContainer.querySelectorAll('.masonry-item'));
+        preloadRatios(flowItems.slice(0, 16).map(i => i.url)).then(() => {
+            if (observer !== flowViewportObserver) return; // superseded by a newer render
+            layoutMasonry();
+            wrappers.forEach(w => observer.observe(w));
+        });
     };
 
     // ==========================================================================

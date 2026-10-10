@@ -2,6 +2,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signO
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, arrayUnion, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
 
 // Initialize Firebase Auth
@@ -74,7 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(user, isAdmin);
             }
-            if (categoryId) loadGallery();
+            if (categoryId) loadGallery({ skipIfUnchanged: true });
         } else {
             localStorage.removeItem('zhukov_logged_in');
             isAdmin = false;
@@ -83,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(null, false);
             }
-            if (categoryId) loadGallery();
+            if (categoryId) loadGallery({ skipIfUnchanged: true });
         }
     });
 
@@ -237,7 +238,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let loadGalleryReqId = 0;
     let cachedActiveData = null;
 
-    const loadGallery = async () => {
+    let lastRenderSignature = null;
+
+    const loadGallery = async (opts = {}) => {
         if (!categoryId) {
             loadingState.innerText = "Error: No photoshoot selected.";
             return;
@@ -411,6 +414,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 urls,
                 archivedUrls: Array.from(archivedUrlsSet)
             };
+
+            // Avoid tearing down and rebuilding an identical grid (causes visible flicker)
+            const renderSignature = JSON.stringify([isAdmin, showArchived, isSetArchived, freshPayload]);
+            if (opts && opts.skipIfUnchanged && renderSignature === lastRenderSignature && gridContainer.querySelector('.masonry-item:not(.skeleton)')) {
+                setCachedData(cacheKey, freshPayload);
+                return;
+            }
+            lastRenderSignature = renderSignature;
 
             setCachedData(cacheKey, freshPayload);
 
@@ -1518,9 +1529,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 items.forEach(wrapper => {
                     const img = wrapper.querySelector('img.masonry-img');
                     // Accurate natural aspect ratio (fallback 0.75 for portrait placeholders)
-                    const ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
+                    let ratio = (img && img.naturalWidth && img.naturalHeight && img.src && !img.src.startsWith('data:image/svg+xml'))
                         ? (img.naturalWidth / img.naturalHeight)
-                        : 0.75;
+                        : 0;
+                    if (!ratio && img) ratio = getRatio(img.dataset.fullUrl);
+                    if (!ratio) ratio = 0.75;
 
                     // Intelligent 2-column feature span:
                     // Only span 2 columns if adjacent columns are level (<= 20px difference) so NO GAP is ever created!
@@ -1842,6 +1855,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     img.decoding = 'async';
 
                     const handleImageReady = () => {
+                        if (img.naturalWidth && img.naturalHeight) {
+                            setRatio(url, img.naturalWidth / img.naturalHeight);
+                        }
                         wrapper.classList.add('img-loaded');
                         if (currentRatioMode !== '1:1') {
                             layoutMasonry();
@@ -2091,13 +2107,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     gridContainer.appendChild(wrapper);
-                    if (galleryViewportObserver) {
-                        galleryViewportObserver.observe(wrapper);
-                    }
                 });
 
-                if (currentRatioMode !== '1:1') {
-                    layoutMasonry();
+                // Resolve ratios of the first screens BEFORE layout so the grid is computed
+                // once with final geometry and images simply fade into place.
+                const observer = galleryViewportObserver;
+                const wrappers = Array.from(gridContainer.querySelectorAll('.masonry-item'));
+                const startReveal = () => {
+                    if (observer !== galleryViewportObserver) return; // superseded by a newer render
+                    if (currentRatioMode !== '1:1') {
+                        layoutMasonry();
+                    }
+                    wrappers.forEach(w => observer.observe(w));
+                };
+                if (currentRatioMode === '1:1') {
+                    startReveal();
+                } else {
+                    preloadRatios(currentUrls.slice(0, 16)).then(startReveal);
                 }
             };
 
