@@ -2311,7 +2311,8 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 .vogue-nav-link.hidden,
 #upload-nav-link.hidden,
-#archived-nav-link.hidden {
+#archived-nav-link.hidden,
+#promotion-nav-link.hidden {
     display: none !important;
 }
 
@@ -3334,7 +3335,8 @@ body.editorial-body .gallery-item:hover img {
 
     .vogue-nav-link.hidden,
     #upload-nav-link.hidden,
-    #archived-nav-link.hidden {
+    #archived-nav-link.hidden,
+    #promotion-nav-link.hidden {
         display: none !important;
     }
 

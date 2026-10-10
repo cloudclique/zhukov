@@ -77,6 +77,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         const logoutBtn = document.getElementById('logout-btn');
         const uploadLink = document.getElementById('upload-nav-link');
         const archivedLink = document.getElementById('archived-nav-link');
+        const promotionLink = document.getElementById('promotion-nav-link');
 
         // Set Top Bar text for current page
         if (topBarCenter) {
@@ -118,6 +119,11 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         if (archivedLink) {
             if (isAdmin) archivedLink.classList.remove('hidden');
             else archivedLink.classList.add('hidden');
+        }
+
+        if (promotionLink) {
+            if (isAdmin) promotionLink.classList.remove('hidden');
+            else promotionLink.classList.add('hidden');
         }
 
         // Mobile Menu Toggle
@@ -420,6 +426,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         const logoutBtn = document.getElementById('logout-btn');
         const uploadLink = document.getElementById('upload-nav-link');
         const archivedLink = document.getElementById('archived-nav-link');
+        const promotionLink = document.getElementById('promotion-nav-link');
 
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
@@ -436,6 +443,10 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                 if (isAdmin) archivedLink.classList.remove('hidden');
                 else archivedLink.classList.add('hidden');
             }
+            if (promotionLink) {
+                if (isAdmin) promotionLink.classList.remove('hidden');
+                else promotionLink.classList.add('hidden');
+            }
         } else {
             localStorage.removeItem('zhukov_logged_in');
             localStorage.removeItem('zhukov_is_admin');
@@ -443,6 +454,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             if (logoutBtn) logoutBtn.classList.add('hidden');
             if (uploadLink) uploadLink.classList.add('hidden');
             if (archivedLink) archivedLink.classList.add('hidden');
+            if (promotionLink) promotionLink.classList.add('hidden');
         }
     };
 
