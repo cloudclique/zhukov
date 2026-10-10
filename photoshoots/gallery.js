@@ -39,6 +39,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) { }
     const urlParams = new URLSearchParams(window.location.search);
     const categoryId = urlParams.get('id');
+    const fromArchived = urlParams.get('from') === 'archived' || (typeof document !== 'undefined' && document.referrer && document.referrer.includes('archived'));
+    let showArchived = false;
+    let hasUserToggledArchived = false;
+
+    // Update return breadcrumb link if navigated from archived tab
+    if (fromArchived) {
+        const backLink = document.querySelector('.vogue-back-link');
+        if (backLink) {
+            backLink.href = '/photoshoots/archived.html';
+            backLink.innerHTML = '&larr; RETURN TO ARCHIVED';
+        }
+    }
 
     // --- Firebase Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {
@@ -55,6 +67,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error("Auth check error:", error);
                 isAdmin = false;
             }
+            if (!isAdmin) {
+                showArchived = false;
+                hasUserToggledArchived = false;
+            }
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(user, isAdmin);
             }
@@ -62,6 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             localStorage.removeItem('zhukov_logged_in');
             isAdmin = false;
+            showArchived = false;
+            hasUserToggledArchived = false;
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(null, false);
             }
@@ -226,7 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const currentReqId = ++loadGalleryReqId;
-        const cacheKey = `gallery_${categoryId}_admin_${isAdmin}`;
+        const cacheKey = `gallery_${categoryId}_admin_${isAdmin}_archived_${isAdmin ? showArchived : false}`;
 
         // Helper to escape HTML
         const escapeHtml = (str) => {
@@ -278,10 +296,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             let metaInfo = "";
             let description = "";
             let urls = [];
+            let allLoadedUrls = [];
             const archivedUrlsSet = new Set();
+            let isSetArchived = fromArchived;
 
             if (categoryId === 'single-shots') {
                 metaInfo = "Mixed Models | Mixed Themes";
+
+                if (!hasUserToggledArchived && fromArchived) {
+                    showArchived = true;
+                }
 
                 const [singleSnap, orderDoc] = await Promise.all([
                     getDocs(collection(db, 'single_shots')),
@@ -313,7 +337,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     return new Date(b.date || 0) - new Date(a.date || 0);
                 });
-                urls = singleItems.map(item => item.url);
+                allLoadedUrls = singleItems.map(item => item.url);
+                if (!isAdmin) {
+                    urls = allLoadedUrls.filter(u => !archivedUrlsSet.has(u));
+                } else {
+                    urls = showArchived ? [...allLoadedUrls] : allLoadedUrls.filter(u => !archivedUrlsSet.has(u));
+                }
             } else {
                 const setRef = doc(db, 'photo_sets', categoryId);
                 const setSnap = await getDoc(setRef);
@@ -323,6 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
                     const allImagesArchived = data.urls && Array.isArray(data.urls) && data.urls.length > 0 && data.urls.every(u => archivedUrls.includes(u));
+                    isSetArchived = (data.archived === true) || allImagesArchived || fromArchived;
 
                     // Block non-admins from viewing archived sets or sets where all images are archived
                     if ((data.archived === true || allImagesArchived) && !isAdmin) {
@@ -332,6 +362,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         gridContainer.innerHTML = '';
                         invalidateCache(cacheKey);
                         return;
+                    }
+
+                    if (!hasUserToggledArchived) {
+                        showArchived = isSetArchived ? true : false;
                     }
 
                     categoryName = data.categoryName || categoryId;
@@ -352,15 +386,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     if (data.urls && Array.isArray(data.urls)) {
-                        let rawUrls = [...data.urls];
+                        archivedUrls.forEach(u => archivedUrlsSet.add(u));
+                        allLoadedUrls = [...data.urls].reverse(); // Show newest to oldest
 
                         if (!isAdmin) {
-                            rawUrls = rawUrls.filter(u => !archivedUrls.includes(u));
+                            urls = allLoadedUrls.filter(u => !archivedUrlsSet.has(u));
                         } else {
-                            archivedUrls.forEach(u => archivedUrlsSet.add(u));
+                            urls = showArchived ? [...allLoadedUrls] : allLoadedUrls.filter(u => !archivedUrlsSet.has(u));
                         }
-
-                        urls = rawUrls.reverse(); // Show newest to oldest
                     }
                 } else {
                     loadingState.innerText = "Error: Photoshoot not found.";
@@ -664,6 +697,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     urls.forEach(u => {
                         const idx = currentUrls.indexOf(u);
                         if (idx !== -1) currentUrls.splice(idx, 1);
+                        const allIdx = allLoadedUrls.indexOf(u);
+                        if (allIdx !== -1) allLoadedUrls.splice(allIdx, 1);
                         selectedPhotoUrls.delete(u);
                     });
 
@@ -734,35 +769,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                         urls.forEach(u => archivedUrlsSet.add(u));
                     }
 
-                    gridContainer.querySelectorAll('.masonry-item').forEach(item => {
-                        const img = item.querySelector('img.masonry-img');
-                        if (img && urls.includes(img.dataset.fullUrl)) {
-                            const archiveBtn = item.querySelector('.archive-photo-btn');
-                            let badge = item.querySelector('.photo-archived-badge');
-                            if (allArchived) {
-                                if (badge) badge.remove();
-                                if (archiveBtn) {
-                                    archiveBtn.classList.remove('is-archived');
-                                    archiveBtn.title = 'Archive photo (hide from public)';
-                                    archiveBtn.setAttribute('aria-label', archiveBtn.title);
-                                    archiveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>`;
-                                }
-                            } else {
-                                if (!badge) {
-                                    badge = document.createElement('div');
-                                    badge.className = 'photo-archived-badge';
-                                    badge.innerText = 'Archived';
-                                    item.appendChild(badge);
-                                }
-                                if (archiveBtn) {
-                                    archiveBtn.classList.add('is-archived');
-                                    archiveBtn.title = 'Unarchive photo (make public)';
-                                    archiveBtn.setAttribute('aria-label', archiveBtn.title);
-                                    archiveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4M12 16v-4m-3 3 3-3 3 3"/></svg>`;
+                    if (!showArchived) {
+                        currentUrls = allLoadedUrls.filter(u => !archivedUrlsSet.has(u));
+                        updatePhotoCount();
+                        renderGrid();
+                    } else {
+                        gridContainer.querySelectorAll('.masonry-item').forEach(item => {
+                            const img = item.querySelector('img.masonry-img');
+                            if (img && urls.includes(img.dataset.fullUrl)) {
+                                const archiveBtn = item.querySelector('.archive-photo-btn');
+                                let badge = item.querySelector('.photo-archived-badge');
+                                if (allArchived) {
+                                    if (badge) badge.remove();
+                                    if (archiveBtn) {
+                                        archiveBtn.classList.remove('is-archived');
+                                        archiveBtn.title = 'Archive photo (hide from public)';
+                                        archiveBtn.setAttribute('aria-label', archiveBtn.title);
+                                        archiveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>`;
+                                    }
+                                } else {
+                                    if (!badge) {
+                                        badge = document.createElement('div');
+                                        badge.className = 'photo-archived-badge';
+                                        badge.innerText = 'Archived';
+                                        item.appendChild(badge);
+                                    }
+                                    if (archiveBtn) {
+                                        archiveBtn.classList.add('is-archived');
+                                        archiveBtn.title = 'Unarchive photo (make public)';
+                                        archiveBtn.setAttribute('aria-label', archiveBtn.title);
+                                        archiveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4M12 16v-4m-3 3 3-3 3 3"/></svg>`;
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
 
                     updateSelectionUI();
                 } catch (error) {
@@ -938,6 +979,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         urls.forEach(u => {
                             const idx = currentUrls.indexOf(u);
                             if (idx !== -1) currentUrls.splice(idx, 1);
+                            const allIdx = allLoadedUrls.indexOf(u);
+                            if (allIdx !== -1) allLoadedUrls.splice(allIdx, 1);
                             selectedPhotoUrls.delete(u);
                         });
 
@@ -1024,6 +1067,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch (error) {
                     console.error("Error archiving photo set:", error);
                     alert("Error archiving photo set: " + (error.message || error));
+                }
+            };
+
+            const unarchiveCategory = async () => {
+                if (!isAdmin) return;
+                const confirmed = await showConfirmModal({
+                    title: "Restore Photoshoot Set",
+                    message: "Restore this photoshoot set to the public gallery?",
+                    confirmText: "Restore Set",
+                    confirmVariant: "blue"
+                });
+                if (!confirmed) return;
+
+                try {
+                    invalidateCache('photoshoots');
+                    invalidateCache('gallery');
+                    invalidateCache('archived');
+                    await setDoc(doc(db, 'photo_sets', categoryId), {
+                        archived: false,
+                        archivedUrls: []
+                    }, { merge: true });
+                    window.location.href = fromArchived ? '/photoshoots/archived.html' : '/photoshoots/';
+                } catch (error) {
+                    console.error("Error unarchiving photo set:", error);
+                    alert("Error unarchiving photo set: " + (error.message || error));
                 }
             };
 
@@ -1235,25 +1303,45 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // Admin Action Buttons (Archive + Delete)
+            // Admin Action Buttons (Archive / Unarchive + Delete)
             if (isAdmin && categoryId !== 'single-shots') {
                 const adminGroup = document.createElement('div');
                 adminGroup.className = 'admin-btn-group';
                 adminGroup.style.marginTop = '1.25rem';
 
-                const archCatBtn = document.createElement('button');
-                archCatBtn.className = 'archive-category-btn';
-                archCatBtn.innerHTML = `
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>
-                    </svg>
-                    <span>Archive Set</span>
-                `;
-                archCatBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    archiveCategory();
-                });
+                if (isSetArchived) {
+                    const unarchCatBtn = document.createElement('button');
+                    unarchCatBtn.className = 'unarchive-category-btn';
+                    unarchCatBtn.innerHTML = `
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 10h10a5 5 0 0 1 5 5v2M3 10l6-6M3 10l6 6"/>
+                        </svg>
+                        <span>Unarchive Set</span>
+                    `;
+                    unarchCatBtn.title = 'Restore photoshoot set to public gallery';
+                    unarchCatBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        unarchiveCategory();
+                    });
+                    adminGroup.appendChild(unarchCatBtn);
+                } else {
+                    const archCatBtn = document.createElement('button');
+                    archCatBtn.className = 'archive-category-btn';
+                    archCatBtn.innerHTML = `
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>
+                        </svg>
+                        <span>Archive Set</span>
+                    `;
+                    archCatBtn.title = 'Archive photoshoot set';
+                    archCatBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        archiveCategory();
+                    });
+                    adminGroup.appendChild(archCatBtn);
+                }
 
                 const delCatBtn = document.createElement('button');
                 delCatBtn.className = 'delete-category-btn';
@@ -1270,12 +1358,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     deleteCategory();
                 });
 
-                adminGroup.appendChild(archCatBtn);
                 adminGroup.appendChild(delCatBtn);
                 headerContainer.appendChild(adminGroup);
             }
 
-            // Bottom Toolbar: Photo Count + Ratio Switcher (Original vs 1:1 Square) + Admin Selection Mode
+            // Bottom Toolbar: Photo Count + Ratio Switcher (Original vs 1:1 Square) + Admin Archived Toggle + Admin Selection Mode
             const headerBottom = document.createElement('div');
             headerBottom.className = 'gallery-header-bottom';
             headerBottom.innerHTML = `
@@ -1302,6 +1389,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </button>
                     </div>
                     ${isAdmin ? `
+                    <div class="admin-archived-toggle-slot" id="admin-archived-toggle-slot">
+                        <div class="admin-archived-toggle-bar" role="group" aria-label="Archived Photos Visibility">
+                            <button type="button" class="admin-archived-toggle-btn ${showArchived ? 'is-active' : ''}" id="admin-archived-toggle-btn"
+                                role="switch" aria-checked="${showArchived ? 'true' : 'false'}"
+                                title="${showArchived ? 'Hide archived images (Currently showing)' : 'Show archived images (Currently hidden)'}">
+                                <svg class="archived-toggle-icon" viewBox="0 0 24 24" width="13" height="13" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" />
+                                </svg>
+                                <span>Archived</span>
+                                <span class="toggle-pill-switch">
+                                    <span class="toggle-pill-knob"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
                     <button type="button" class="gallery-selection-mode-btn ${isSelectionMode ? 'active' : ''}" id="gallery-selection-mode-btn" title="Toggle selection mode for batch actions">
                         <svg class="select-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -1320,6 +1423,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     selectBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         toggleSelectionMode();
+                    });
+                }
+
+                const adminArchivedToggleBtn = headerBottom.querySelector('#admin-archived-toggle-btn');
+                if (adminArchivedToggleBtn) {
+                    adminArchivedToggleBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (!isAdmin) return;
+                        hasUserToggledArchived = true;
+                        showArchived = !showArchived;
+                        adminArchivedToggleBtn.classList.toggle('is-active', showArchived);
+                        adminArchivedToggleBtn.setAttribute('aria-checked', showArchived ? 'true' : 'false');
+                        adminArchivedToggleBtn.title = showArchived ? 'Hide archived images (Currently showing)' : 'Show archived images (Currently hidden)';
+
+                        currentUrls = (isAdmin && !showArchived)
+                            ? allLoadedUrls.filter(u => !archivedUrlsSet.has(u))
+                            : [...allLoadedUrls];
+
+                        updatePhotoCount();
+                        renderGrid();
                     });
                 }
             }
@@ -1535,6 +1658,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Reorder array locally
                 const item = currentUrls.splice(fromIndex, 1)[0];
                 currentUrls.splice(toIndex, 0, item);
+
+                const allIdx = allLoadedUrls.indexOf(item);
+                if (allIdx !== -1) {
+                    allLoadedUrls.splice(allIdx, 1);
+                    const neighborIdx = toIndex > 0 ? allLoadedUrls.indexOf(currentUrls[toIndex - 1]) : -1;
+                    if (neighborIdx !== -1) {
+                        allLoadedUrls.splice(neighborIdx + 1, 0, item);
+                    } else {
+                        allLoadedUrls.unshift(item);
+                    }
+                }
 
                 // Save to Firestore immediately
                 try {
@@ -1905,7 +2039,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         wrapper.appendChild(adminBar);
 
                         // Archived indicator badge on photo card for admin
-                        if (isPhotoArchived) {
+                        if (isAdmin && showArchived && isPhotoArchived) {
                             const badge = document.createElement('div');
                             badge.className = 'photo-archived-badge';
                             badge.innerText = 'Archived';

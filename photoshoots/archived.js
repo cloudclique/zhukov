@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (categoryId) {
                 const link = document.createElement('a');
                 link.className = 'lightbox-set-name-link';
-                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
+                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}&from=archived`;
                 link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase();
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
                 link.addEventListener('click', (e) => {
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     lightboxViewSetBtn.textContent = label;
                 }
 
-                lightboxViewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
+                lightboxViewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}&from=archived`;
                 lightboxViewSetBtn.title = `View full ${setDisplayName} editorial`;
                 lightboxActions.style.display = 'flex';
             } else {
@@ -843,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const link = document.createElement('a');
                 link.className = 'flow-set-link';
-                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}&from=archived`;
                 link.innerHTML = `View Set &rarr;`;
                 link.title = `View full ${escapeHtml(cat.categoryName || 'Single Shots')} editorial`;
                 link.addEventListener('click', (e) => {
@@ -925,7 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = document.createElement('h2');
             title.className = 'category-title';
             const titleLink = document.createElement('a');
-            titleLink.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            titleLink.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}&from=archived`;
             titleLink.innerText = cat.categoryName;
             title.appendChild(titleLink);
 
@@ -944,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const viewSetBtn = document.createElement('a');
             viewSetBtn.className = 'view-set-header-btn';
-            viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}&from=archived`;
             viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
             actionsDiv.appendChild(viewSetBtn);
 
@@ -1230,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasMore) {
                 const seeAllCard = document.createElement('a');
                 seeAllCard.className = 'see-all-card';
-                seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}&from=archived`;
                 const remaining = cat.urls.length - imagesToShow.length;
                 seeAllCard.innerHTML = `
                     <div class="see-all-card-inner">
