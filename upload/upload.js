@@ -43,6 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const descLockedHint = document.getElementById('desc-locked-hint');
 
     let selectedFiles = [];
+    let previewObjectUrls = [];
+
+    const clearThumbnails = () => {
+        previewObjectUrls.forEach(url => {
+            try { URL.revokeObjectURL(url); } catch (_) {}
+        });
+        previewObjectUrls = [];
+        if (previewContainer) previewContainer.innerHTML = '';
+    };
+
     // Map from display name -> stable doc ID
     const categoryIdMap = new Map();
     // Map from lowercase lookup key -> set object
@@ -864,49 +874,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Image Processing (Resize & WebP) ---
-    const processImage = (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
+    // --- Image Processing (Resize & WebP via Native createImageBitmap / ObjectURL) ---
+    let sharedCanvas = null;
 
-                    // Max dimension 1920 (1080p equivalent)
-                    const MAX_DIMENSION = 1920;
+    const processImage = async (file) => {
+        const MAX_DIMENSION = 1920;
 
-                    if (width > height) {
-                        if (width > MAX_DIMENSION) {
-                            height = Math.round(height *= MAX_DIMENSION / width);
-                            width = MAX_DIMENSION;
-                        }
-                    } else {
-                        if (height > MAX_DIMENSION) {
-                            width = Math.round(width *= MAX_DIMENSION / height);
-                            height = MAX_DIMENSION;
-                        }
+        const renderToBlob = async (source, srcWidth, srcHeight) => {
+            let width = srcWidth;
+            let height = srcHeight;
+
+            if (width > height) {
+                if (width > MAX_DIMENSION) {
+                    height = Math.round(height * (MAX_DIMENSION / width));
+                    width = MAX_DIMENSION;
+                }
+            } else {
+                if (height > MAX_DIMENSION) {
+                    width = Math.round(width * (MAX_DIMENSION / height));
+                    height = MAX_DIMENSION;
+                }
+            }
+
+            if (!sharedCanvas) {
+                sharedCanvas = document.createElement('canvas');
+            }
+            sharedCanvas.width = width;
+            sharedCanvas.height = height;
+
+            const ctx = sharedCanvas.getContext('2d', { willReadFrequently: false });
+            // Fill white background to prevent any transparent alpha void
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(source, 0, 0, width, height);
+
+            const blob = await new Promise((resolve, reject) => {
+                sharedCanvas.toBlob((b) => {
+                    if (b) resolve(b);
+                    else reject(new Error('Canvas toBlob failed'));
+                }, 'image/webp', 0.85);
+            });
+
+            // Purge canvas backing buffer immediately to reclaim GPU VRAM
+            sharedCanvas.width = 0;
+            sharedCanvas.height = 0;
+
+            return blob;
+        };
+
+        // Strategy 1: Native createImageBitmap (off-main-thread decode, EXIF orientation aware, zero base64 memory overhead)
+        if (typeof window.createImageBitmap === 'function') {
+            try {
+                const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                try {
+                    const blob = await renderToBlob(bmp, bmp.width, bmp.height);
+                    if (blob && (blob.size > 12000 || file.size < 50000)) {
+                        return blob;
                     }
+                    console.warn(`createImageBitmap produced unexpectedly small blob (${blob ? blob.size : 0} bytes). Retrying via Image element...`);
+                } finally {
+                    bmp.close();
+                }
+            } catch (bmpErr) {
+                console.warn('createImageBitmap failed, falling back to HTMLImageElement:', bmpErr);
+            }
+        }
 
-                    canvas.width = width;
-                    canvas.height = height;
+        // Strategy 2: HTMLImageElement with ObjectURL and explicit decode()
+        const objectUrl = URL.createObjectURL(file);
+        try {
+            const img = new Image();
+            img.src = objectUrl;
+            if (typeof img.decode === 'function') {
+                await img.decode();
+            } else {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            }
 
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Convert to WebP Blob at 85% quality
-                    canvas.toBlob((blob) => {
-                        resolve(blob);
-                    }, 'image/webp', 0.85);
-                };
-                img.onerror = reject;
-                img.src = e.target.result;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
+            const blob = await renderToBlob(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
+            return blob;
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+        }
     };
 
     // --- Upload UI Interactions ---
@@ -921,22 +973,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         selectedFiles = [...selectedFiles, ...validFiles];
 
-        // Render thumbnails
-        previewContainer.innerHTML = '';
+        // Render thumbnails safely with Object URLs (instant, zero RAM base64 bloat)
+        clearThumbnails();
         dropZone.querySelector('p').style.display = 'none';
 
-        selectedFiles.forEach((file, index) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.width = '80px';
-                img.style.height = '80px';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '4px';
-                previewContainer.appendChild(img);
-            };
-            reader.readAsDataURL(file);
+        selectedFiles.forEach((file) => {
+            const objUrl = URL.createObjectURL(file);
+            previewObjectUrls.push(objUrl);
+            const img = document.createElement('img');
+            img.src = objUrl;
+            img.style.width = '80px';
+            img.style.height = '80px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '4px';
+            previewContainer.appendChild(img);
         });
 
         uploadBtn.disabled = false;
@@ -1013,6 +1063,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. Process Image to WebP
                 const webpBlob = await processImage(selectedFiles[i]);
 
+                if (!webpBlob || webpBlob.size === 0) {
+                    throw new Error(`Failed to process image ${i + 1} (empty output)`);
+                }
+
+                // Safety validation: A 1920px photographic image compressed to WebP at 85% quality
+                // is never under 12KB. A ~4.5KB file indicates an empty/transparent canvas buffer.
+                if (webpBlob.size < 12000 && selectedFiles[i].size > 50000) {
+                    throw new Error(`Image ${i + 1} (${selectedFiles[i].name}) failed rendering to canvas (output size ${webpBlob.size} bytes). Upload aborted to prevent blank images.`);
+                }
+
                 // 2. Upload to Cloudflare R2 via Worker
                 const safePrefix = category.replace(/[^a-zA-Z0-9_-]/g, '_');
                 const uniqueFileName = `${safePrefix}_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}.webp`;
@@ -1031,6 +1091,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 uploadedUrls.push(uploadResult.data.url);
+
+                // Small yield to let browser run GC and event loop
+                await new Promise(r => setTimeout(r, 40));
             }
 
             statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving references to Firebase...</span>`;
@@ -1152,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Reset form
             setTimeout(() => {
                 selectedFiles = [];
-                previewContainer.innerHTML = '';
+                clearThumbnails();
                 dropZone.querySelector('p').style.display = 'block';
                 uploadBtn.disabled = true;
                 uploadBtn.innerText = 'Upload Photo';
