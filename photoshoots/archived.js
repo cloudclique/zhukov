@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Data State
     let categoriesData = [];
+    let photoModelMap = new Map();
     let loadReqId = 0;
 
     // --- State Handler ---
@@ -137,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
     }
 
-    const openLightbox = (imgElement, setName = 'ARCHIVE', categoryId = null) => {
+    const openLightbox = (imgElement, setName = 'ARCHIVE', categoryId = null, modelName = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
@@ -151,14 +152,21 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
         
-        lightboxImg.src = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
+        const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
+        lightboxImg.src = targetSrc;
+
+        const rawModel = (modelName || imgElement.dataset.model || photoModelMap.get(targetSrc) || '').trim();
+        const validModel = (rawModel && rawModel.toLowerCase() !== 'unknown' && rawModel.toLowerCase() !== 'mixed' && rawModel !== '/') ? rawModel : '';
+
         if (lightboxSetName) {
             lightboxSetName.innerHTML = '';
+            const setDisplay = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase();
+
             if (categoryId) {
                 const link = document.createElement('a');
                 link.className = 'lightbox-set-name-link';
                 link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}&from=archived`;
-                link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'ARCHIVE')).toUpperCase();
+                link.textContent = setDisplay;
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
                 link.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -171,7 +179,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 lightboxSetName.appendChild(link);
             } else {
-                lightboxSetName.textContent = (setName || 'ARCHIVE').toUpperCase();
+                const span = document.createElement('span');
+                span.textContent = setDisplay;
+                lightboxSetName.appendChild(span);
+            }
+
+            if (validModel) {
+                const sep = document.createElement('span');
+                sep.className = 'lightbox-meta-sep';
+                sep.textContent = ' • ';
+                sep.style.opacity = '0.5';
+                sep.style.margin = '0 0.35rem';
+
+                const modelSpan = document.createElement('span');
+                modelSpan.className = 'lightbox-photo-model';
+                modelSpan.textContent = validModel.toUpperCase();
+
+                lightboxSetName.appendChild(sep);
+                lightboxSetName.appendChild(modelSpan);
             }
         }
 
@@ -303,7 +328,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const loaded = [];
-            const setsSnap = await getDocs(collection(db, 'photo_sets'));
+            const [setsSnap, singleSnap] = await Promise.all([
+                getDocs(collection(db, 'photo_sets')),
+                getDocs(collection(db, 'single_shots')).catch(() => null)
+            ]);
+
+            if (singleSnap) {
+                singleSnap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.url && data.modelName) {
+                        photoModelMap.set(data.url, data.modelName.trim());
+                    }
+                });
+            }
 
             setsSnap.forEach(docSnap => {
                 const data = docSnap.data();
@@ -313,6 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Include if explicitly marked archived OR if every single image is archived
                     if (data.archived === true || allImagesArchived) {
+                        const validSetModel = (data.modelName && data.modelName.toLowerCase() !== 'unknown' && data.modelName.toLowerCase() !== 'mixed' && data.modelName !== '/') ? data.modelName.trim() : '';
+                        if (validSetModel) {
+                            data.urls.forEach(u => {
+                                if (!photoModelMap.has(u)) {
+                                    photoModelMap.set(u, validSetModel);
+                                }
+                            });
+                        }
+
                         loaded.push({
                             categoryId: docSnap.id,
                             categoryName: data.categoryName || 'Untitled Set',
@@ -781,6 +827,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            const specificModel = (cat.categoryId === 'single-shots')
+                ? (photoModelMap.get(url) || '')
+                : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
+            if (specificModel) {
+                img.dataset.model = specificModel;
+            }
+
             // Tap & Click handler for Lightbox
             let touchMoved = false;
             let touchStartX = 0;
@@ -792,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     touchMoved = false;
                     return;
                 }
-                openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId);
+                openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId, specificModel);
             };
 
             wrapper.addEventListener('click', triggerLightbox);
@@ -1194,9 +1247,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 img.addEventListener('error', markLoaded);
 
+                const specificModel = (cat.categoryId === 'single-shots')
+                    ? (photoModelMap.get(url) || '')
+                    : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
+                if (specificModel) {
+                    img.dataset.model = specificModel;
+                }
+
                 img.addEventListener('click', () => {
                     if (hasDragged) return;
-                    openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId);
+                    openLightbox(img, cat.categoryName || 'ARCHIVE', cat.categoryId, specificModel);
                 });
                 
                 attachTiltEffect(wrapper);

@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Data store
     let categoriesData = [];
+    let photoModelMap = new Map();
     let isAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
     let showArchived = false; // "dont show is default"
     let hasInitialLoadStarted = false;
@@ -168,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { }
     }
 
-    const openLightbox = (imgElement, setName = 'PHOTOSHOOT', categoryId = null) => {
+    const openLightbox = (imgElement, setName = 'PHOTOSHOOT', categoryId = null, modelName = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
         activeOriginImg = imgElement;
@@ -184,13 +185,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
         lightboxImg.src = targetSrc;
+
+        const rawModel = (modelName || imgElement.dataset.model || photoModelMap.get(targetSrc) || '').trim();
+        const validModel = (rawModel && rawModel.toLowerCase() !== 'unknown' && rawModel.toLowerCase() !== 'mixed' && rawModel !== '/') ? rawModel : '';
+
         if (lightboxSetName) {
             lightboxSetName.innerHTML = '';
+            const setDisplay = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'PHOTOSHOOT')).toUpperCase();
+
             if (categoryId) {
                 const link = document.createElement('a');
                 link.className = 'lightbox-set-name-link';
                 link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(categoryId)}`;
-                link.textContent = (setName || (categoryId === 'single-shots' ? 'SINGLE SHOTS' : 'PHOTOSHOOT')).toUpperCase();
+                link.textContent = setDisplay;
                 link.title = `View full ${setName || 'photoshoot'} editorial`;
                 link.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -203,7 +210,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 lightboxSetName.appendChild(link);
             } else {
-                lightboxSetName.textContent = (setName || 'PHOTOSHOOT').toUpperCase();
+                const span = document.createElement('span');
+                span.textContent = setDisplay;
+                lightboxSetName.appendChild(span);
+            }
+
+            if (validModel) {
+                const sep = document.createElement('span');
+                sep.className = 'lightbox-meta-sep';
+                sep.textContent = ' • ';
+                sep.style.opacity = '0.5';
+                sep.style.margin = '0 0.35rem';
+
+                const modelSpan = document.createElement('span');
+                modelSpan.className = 'lightbox-photo-model';
+                modelSpan.textContent = validModel.toUpperCase();
+
+                lightboxSetName.appendChild(sep);
+                lightboxSetName.appendChild(modelSpan);
             }
         }
 
@@ -382,6 +406,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             singleSnap.forEach(doc => {
                 const data = doc.data();
+                if (data.url && data.modelName) {
+                    photoModelMap.set(data.url, data.modelName.trim());
+                }
                 if (data.archived === true) {
                     archivedSingleUrls.add(data.url);
                     // Hide archived single shots when not admin or when admin toggle is off (default)
@@ -445,6 +472,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (visibleUrls.length === 0) {
                             return; // All images in this set are archived, hide set
                         }
+                    }
+
+                    const validSetModel = (data.modelName && data.modelName.toLowerCase() !== 'unknown' && data.modelName.toLowerCase() !== 'mixed' && data.modelName !== '/') ? data.modelName.trim() : '';
+                    if (validSetModel && data.urls) {
+                        data.urls.forEach(u => {
+                            if (!photoModelMap.has(u)) {
+                                photoModelMap.set(u, validSetModel);
+                            }
+                        });
                     }
 
                     loadedCategories.push({
@@ -886,6 +922,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        const specificModel = (cat.categoryId === 'single-shots')
+            ? (photoModelMap.get(url) || '')
+            : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
+        if (specificModel) {
+            img.dataset.model = specificModel;
+        }
+
         // Tap & Click handler for Lightbox
         let touchMoved = false;
         let touchStartX = 0;
@@ -898,7 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 touchMoved = false;
                 return;
             }
-            openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId);
+            openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId, specificModel);
         };
 
         wrapper.addEventListener('click', triggerLightbox);
@@ -1430,6 +1473,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             img.addEventListener('error', markLoaded);
 
+            const specificModel = (cat.categoryId === 'single-shots')
+                ? (photoModelMap.get(url) || '')
+                : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
+            if (specificModel) {
+                img.dataset.model = specificModel;
+            }
+
             // Tap & Click handler for lightbox
             let touchMoved = false;
             let touchStartX = 0;
@@ -1442,7 +1492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     touchMoved = false;
                     return;
                 }
-                openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId);
+                openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId, specificModel);
             };
 
             wrapper.addEventListener('click', triggerLightbox);
