@@ -37,12 +37,14 @@
                 <div id="preview-container"></div>
             </div>
 
-            <div class="input-group">
+            <div class="input-group dropdown-container" id="category-group">
                 <label for="category-input" class="input-label">Photo Set Name</label>
-                <input type="text" id="category-input" list="category-list" placeholder="e.g. Autumn Editorial or Paris Collection" class="input-field">
-                <datalist id="category-list">
-                    <option value="Single Shots"></option>
-                </datalist>
+                <div class="input-with-toggle">
+                    <input type="text" id="category-input" placeholder="e.g. Autumn Editorial or Paris Collection" class="input-field" autocomplete="off">
+                    <button type="button" id="category-dropdown-toggle" class="dropdown-toggle-btn" aria-label="Toggle photo sets dropdown" tabindex="-1">&#x25BE;</button>
+                </div>
+                <div id="category-dropdown" class="custom-category-dropdown hidden"></div>
+                <p id="existing-set-badge" class="existing-set-badge hidden"></p>
             </div>
 
             <div class="input-group">
@@ -60,6 +62,7 @@
             <div class="input-group">
                 <label for="desc-input" class="input-label">Description & Credits (Optional)</label>
                 <textarea id="desc-input" placeholder="e.g. Studio session with @model. Stylist: @stylist..." class="input-field" rows="2" style="resize: vertical; font-family: inherit;"></textarea>
+                <p id="desc-locked-hint" class="desc-locked-hint hidden">Locked: Description & credits cannot be modified for existing photo sets.</p>
             </div>
 
             <div class="input-group checkbox-group">

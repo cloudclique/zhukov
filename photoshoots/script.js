@@ -43,61 +43,64 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Data store
     let categoriesData = [];
-    let isAdmin = false;
+    let isAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
     let showArchived = false; // "dont show is default"
+    let hasInitialLoadStarted = false;
 
     // Admin Archived Toggle UI
     const adminArchivedSlot = document.getElementById('admin-archived-toggle-slot');
     const adminArchivedToggleBtn = document.getElementById('admin-archived-toggle-btn');
+    if (adminArchivedSlot && isAdmin) {
+        adminArchivedSlot.style.display = 'inline-flex';
+    }
 
     // --- Firebase Authentication Logic ---
     onAuthStateChanged(auth, async (user) => {
+        let newIsAdmin = false;
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    isAdmin = true;
-                } else {
-                    isAdmin = false;
-                }
+                newIsAdmin = userDoc.exists() && userDoc.data().role === 'admin';
             } catch (error) {
                 console.error("Auth check error:", error);
-                isAdmin = false;
+                newIsAdmin = false;
             }
-
-            if (adminArchivedSlot) {
-                adminArchivedSlot.style.display = isAdmin ? 'inline-flex' : 'none';
-            }
-            if (!isAdmin) {
-                showArchived = false;
-                if (adminArchivedToggleBtn) {
-                    adminArchivedToggleBtn.classList.remove('is-active');
-                    adminArchivedToggleBtn.setAttribute('aria-checked', 'false');
-                    adminArchivedToggleBtn.title = 'Show archived images (Currently hidden)';
-                }
-            }
-
-            if (window.updateHeaderAuthState) {
-                window.updateHeaderAuthState(user, isAdmin);
-            }
-            await loadPhotos();
         } else {
             localStorage.removeItem('zhukov_logged_in');
-            isAdmin = false;
+            newIsAdmin = false;
+        }
+
+        if (newIsAdmin) {
+            localStorage.setItem('zhukov_is_admin', 'true');
+        } else {
+            localStorage.removeItem('zhukov_is_admin');
+        }
+
+        const adminChanged = (isAdmin !== newIsAdmin);
+        isAdmin = newIsAdmin;
+
+        if (adminArchivedSlot) {
+            adminArchivedSlot.style.display = isAdmin ? 'inline-flex' : 'none';
+        }
+        if (!isAdmin) {
             showArchived = false;
-            if (adminArchivedSlot) {
-                adminArchivedSlot.style.display = 'none';
-            }
             if (adminArchivedToggleBtn) {
                 adminArchivedToggleBtn.classList.remove('is-active');
                 adminArchivedToggleBtn.setAttribute('aria-checked', 'false');
                 adminArchivedToggleBtn.title = 'Show archived images (Currently hidden)';
             }
-            if (window.updateHeaderAuthState) {
-                window.updateHeaderAuthState(null, false);
-            }
+        }
+
+        if (window.updateHeaderAuthState) {
+            window.updateHeaderAuthState(user, isAdmin);
+        }
+
+        // Only reload if admin permission actually changed or initial load has not yet started
+        if (adminChanged) {
             await loadPhotos();
+        } else if (!hasInitialLoadStarted) {
+            await runInitialLoad();
         }
     });
 
@@ -309,8 +312,45 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- Deterministic Category Sorting Helper ---
+    const sortCategoryArray = (arr) => {
+        if (!Array.isArray(arr) || arr.length === 0) return arr;
+        const sortBy = sortSelect ? sortSelect.value : 'date';
+        const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'desc';
+
+        arr.sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = new Date(a.date || 0).getTime();
+                const dateB = new Date(b.date || 0).getTime();
+                if (dateA !== dateB) {
+                    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                }
+            } else {
+                let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+                let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
+
+                if (valA !== valB) {
+                    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                }
+            }
+            // Deterministic secondary sort by categoryId
+            return String(a.categoryId || '').localeCompare(String(b.categoryId || ''));
+        });
+        return arr;
+    };
+
     // --- Fetch Data ---
     let loadPhotosReqId = 0;
+    let initialLoadPromise = null;
+
+    const runInitialLoad = () => {
+        if (!initialLoadPromise) {
+            hasInitialLoadStarted = true;
+            initialLoadPromise = loadPhotos();
+        }
+        return initialLoadPromise;
+    };
 
     const loadPhotos = async () => {
         const currentReqId = ++loadPhotosReqId;
@@ -319,7 +359,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 1. Instant SWR Render from Local Memory / Storage
         const cached = getCachedData(cacheKey);
         if (cached && Array.isArray(cached) && cached.length > 0) {
-            categoriesData = cached;
+            categoriesData = sortCategoryArray([...cached]);
             renderCurrentView();
         } else {
             // Show skeleton loading state only on cold / un-cached load
@@ -380,7 +420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     theme: 'Mixed',
                     date: latestSingleDate,
                     urls: singleUrls,
-                    archivedUrls: Array.from(archivedSingleUrls)
+                    archivedUrls: Array.from(archivedSingleUrls).sort()
                 });
             }
 
@@ -413,7 +453,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
                         urls: visibleUrls.reverse(), // Show newest to oldest
-                        archivedUrls: archivedUrls
+                        archivedUrls: [...archivedUrls].sort()
                     });
                 }
             });
@@ -421,8 +461,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Prevent race condition overwrite
             if (currentReqId !== loadPhotosReqId) return;
 
-            // Only re-render if data has changed or if first load was un-cached
-            if (!isDataEqual(categoriesData, loadedCategories) || !cached) {
+            // Deterministically sort loadedCategories identically to categoriesData
+            sortCategoryArray(loadedCategories);
+
+            // Check if DOM already has real rendered photos matching this data
+            const hasRenderedContent = (currentView === 'flow')
+                ? (flowContainer && flowContainer.querySelector('.masonry-item:not(.skeleton) img.masonry-img'))
+                : (categoriesContainer && categoriesContainer.querySelector('.category-row:not(.skeleton-row) img.row-img'));
+
+            if (hasRenderedContent && isDataEqual(categoriesData, loadedCategories)) {
+                // Refresh cache TTL without tearing down and rebuilding identical DOM
+                setCachedData(cacheKey, loadedCategories);
+                return;
+            }
+
+            // Only re-render if data has changed or if first load was un-cached and not yet rendered
+            if (!isDataEqual(categoriesData, loadedCategories) || !cached || !hasRenderedContent) {
                 categoriesData = loadedCategories;
                 setCachedData(cacheKey, loadedCategories);
                 renderCurrentView();
@@ -618,6 +672,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Cold Load Skeleton Helper ---
     const showSkeletonLoading = () => {
+        // Guard: If there is already rendered content in the container, NEVER wipe it out to show skeletons
+        const hasExistingContent = (currentView === 'flow')
+            ? (flowContainer && flowContainer.querySelector('.masonry-item:not(.skeleton) img.masonry-img'))
+            : (categoriesContainer && categoriesContainer.querySelector('.category-row:not(.skeleton-row) img.row-img'));
+        if (hasExistingContent) return;
+
         noResults.style.display = 'none';
         if (currentView === 'flow') {
             if (flowContainer) {
@@ -640,7 +700,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             categoriesContainer.innerHTML = '';
             for (let i = 0; i < 3; i++) {
                 categoriesContainer.innerHTML += `
-                    <div class="category-row">
+                    <div class="category-row skeleton-row">
                         <div class="category-header">
                             <div class="category-info" style="width: 100%;">
                                 <div class="skeleton skeleton-text skeleton-title" style="max-width: 260px;"></div>
@@ -662,23 +722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Sort Categories Data Helper ---
     const sortCategories = () => {
-        const sortBy = sortSelect ? sortSelect.value : 'date';
-        const sortOrder = sortOrderBtn ? sortOrderBtn.getAttribute('data-order') : 'desc';
-
-        categoriesData.sort((a, b) => {
-            if (sortBy === 'date') {
-                const dateA = new Date(a.date || 0).getTime();
-                const dateB = new Date(b.date || 0).getTime();
-                return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-            } else {
-                let valA = (a[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
-                let valB = (b[sortBy === 'category' ? 'categoryName' : (sortBy === 'model' ? 'modelName' : sortBy)] || '').toLowerCase();
-
-                if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-                if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-                return 0;
-            }
-        });
+        sortCategoryArray(categoriesData);
     };
 
     // ==========================================================================
@@ -820,49 +864,211 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let flowViewportObserver = null;
 
+    const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+    const buildFlowCard = (url, cat) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'masonry-item img-container';
+        wrapper.dataset.url = url;
+        wrapper.dataset.categoryId = cat.categoryId;
+
+        const img = document.createElement('img');
+        img.className = 'masonry-img';
+        img.dataset.fullUrl = url;
+        img.dataset.src = url;
+        const flowRatio = getRatio(url) || 0.75;
+        const flowSvgW = Math.round(1000 * flowRatio);
+        img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${flowSvgW} 1000'%3E%3C/svg%3E`;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.alt = cat.categoryName || 'Editorial Photo';
+
+        const handleImageReady = () => {
+            if (img.naturalWidth && img.naturalHeight) {
+                setRatio(url, img.naturalWidth / img.naturalHeight);
+            }
+            wrapper.classList.add('img-loaded');
+            scheduleMasonryLayout();
+        };
+
+        if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:image/svg+xml')) {
+            handleImageReady();
+        } else {
+            img.addEventListener('load', () => {
+                if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                    handleImageReady();
+                }
+            });
+        }
+
+        img.addEventListener('error', () => {
+            if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                wrapper.classList.add('img-loaded');
+            }
+        });
+
+        // Tap & Click handler for Lightbox
+        let touchMoved = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const triggerLightbox = (e) => {
+            if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && e.target.closest('.flow-set-link')) return;
+            if (e.target.closest('.delete-photo-btn')) return;
+            if (touchMoved) {
+                touchMoved = false;
+                return;
+            }
+            openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId);
+        };
+
+        wrapper.addEventListener('click', triggerLightbox);
+
+        wrapper.addEventListener('touchstart', (e) => {
+            touchMoved = false;
+            if (e.touches && e.touches[0]) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches[0]) {
+                if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
+                    touchMoved = true;
+                }
+            }
+        }, { passive: true });
+
+        // Append image first as card base
+        wrapper.appendChild(img);
+
+        // Subtle editorial hover overlay (appended ON TOP of image)
+        if (cat.categoryId) {
+            const overlay = document.createElement('div');
+            overlay.className = 'flow-item-overlay';
+
+            const info = document.createElement('div');
+            info.className = 'flow-item-info';
+
+            const title = document.createElement('span');
+            title.className = 'flow-item-title';
+            title.textContent = cat.categoryName || (cat.categoryId === 'single-shots' ? 'Single Shots' : 'Photoshoot');
+
+            const link = document.createElement('a');
+            link.className = 'flow-set-link';
+            link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            link.innerHTML = `View Set &rarr;`;
+            link.title = `View full ${escapeHtml(cat.categoryName || 'Single Shots')} editorial`;
+            link.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            info.appendChild(title);
+            info.appendChild(link);
+            overlay.appendChild(info);
+            wrapper.appendChild(overlay);
+        }
+
+        // Attach 3D Magnetic Tilt
+        attachTiltEffect(wrapper);
+
+        // Delete Photo Button (Admin Only)
+        if (isAdmin) {
+            const delPhotoBtn = document.createElement('button');
+            delPhotoBtn.className = 'delete-photo-btn';
+            delPhotoBtn.innerHTML = '&times;';
+            delPhotoBtn.setAttribute('title', 'Delete Photo');
+            delPhotoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deletePhoto(cat.categoryId, url);
+            });
+            wrapper.appendChild(delPhotoBtn);
+        }
+
+        // Archived indicator badge on photo card for admin
+        const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+        if (isAdmin && showArchived && isPhotoArchived) {
+            const badge = document.createElement('div');
+            badge.className = 'photo-archived-badge';
+            badge.innerText = 'Archived';
+            wrapper.appendChild(badge);
+        }
+
+        return wrapper;
+    };
+
+    const updateFlowCardAdminState = (wrapper, cat, url) => {
+        let delPhotoBtn = wrapper.querySelector('.delete-photo-btn');
+        if (isAdmin) {
+            if (!delPhotoBtn) {
+                delPhotoBtn = document.createElement('button');
+                delPhotoBtn.className = 'delete-photo-btn';
+                delPhotoBtn.innerHTML = '&times;';
+                delPhotoBtn.setAttribute('title', 'Delete Photo');
+                delPhotoBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deletePhoto(cat.categoryId, url);
+                });
+                wrapper.appendChild(delPhotoBtn);
+            }
+        } else if (delPhotoBtn) {
+            delPhotoBtn.remove();
+        }
+
+        let badge = wrapper.querySelector('.photo-archived-badge');
+        const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+        if (isAdmin && showArchived && isPhotoArchived) {
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'photo-archived-badge';
+                badge.innerText = 'Archived';
+                wrapper.appendChild(badge);
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+    };
+
     const renderFlowView = () => {
-        if (photoshootsViewportObserver) {
-            photoshootsViewportObserver.disconnect();
-        }
-        if (flowViewportObserver) {
-            flowViewportObserver.disconnect();
-        }
         categoriesContainer.style.display = 'none';
         if (flowContainer) {
             flowContainer.style.display = 'block';
-            flowContainer.innerHTML = '';
         }
         noResults.style.display = 'none';
 
         if (categoriesData.length === 0) {
+            if (flowContainer) flowContainer.innerHTML = '';
             noResults.style.display = 'block';
             return;
         }
 
         sortCategories();
 
-        flowViewportObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const wrapper = entry.target;
-                    const img = wrapper.querySelector('img.masonry-img');
-                    if (img && img.dataset.src) {
-                        const targetSrc = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        img.src = targetSrc;
-                        if (img.complete && img.naturalWidth > 0) {
-                            wrapper.classList.add('img-loaded');
-                            scheduleMasonryLayout();
+        if (!flowViewportObserver) {
+            flowViewportObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const wrapper = entry.target;
+                        const img = wrapper.querySelector('img.masonry-img');
+                        if (img && img.dataset.src) {
+                            const targetSrc = img.dataset.src;
+                            img.removeAttribute('data-src');
+                            img.src = targetSrc;
+                            if (img.complete && img.naturalWidth > 0) {
+                                wrapper.classList.add('img-loaded');
+                                scheduleMasonryLayout();
+                            }
                         }
+                        observer.unobserve(wrapper);
                     }
-                    observer.unobserve(wrapper);
-                }
+                });
+            }, {
+                root: null,
+                rootMargin: '600px 200px',
+                threshold: 0
             });
-        }, {
-            root: null,
-            rootMargin: '600px 200px',
-            threshold: 0
-        });
+        }
 
         // Collect up to FLOW_VIEW_IMAGES_PER_SET images per photoshoot set
         const flowItems = [];
@@ -875,57 +1081,384 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (flowItems.length === 0) {
+            if (flowContainer) flowContainer.innerHTML = '';
             noResults.style.display = 'block';
             return;
         }
 
-        const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        // 1. Remove skeleton items
+        const skeletons = flowContainer.querySelectorAll('.masonry-item.skeleton');
+        skeletons.forEach(s => s.remove());
 
+        // 2. Map existing items by url
+        const existingCards = new Map();
+        flowContainer.querySelectorAll('.masonry-item[data-url]').forEach(card => {
+            existingCards.set(card.dataset.url, card);
+        });
+
+        // 3. Reconcile
+        const newWrappersToObserve = [];
         flowItems.forEach(({ url, cat }) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'masonry-item img-container';
+            if (existingCards.has(url)) {
+                const card = existingCards.get(url);
+                existingCards.delete(url);
+                updateFlowCardAdminState(card, cat, url);
+                flowContainer.appendChild(card);
+            } else {
+                const newCard = buildFlowCard(url, cat);
+                flowContainer.appendChild(newCard);
+                newWrappersToObserve.push(newCard);
+            }
+        });
 
-            const img = document.createElement('img');
-            img.className = 'masonry-img';
-            img.dataset.fullUrl = url;
-            img.dataset.src = url;
-            img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
-            img.loading = 'lazy';
-            img.decoding = 'async';
-            img.alt = cat.categoryName || 'Editorial Photo';
+        // 4. Remove leftover cards
+        existingCards.forEach(card => {
+            if (flowViewportObserver) flowViewportObserver.unobserve(card);
+            card.remove();
+        });
 
-            const handleImageReady = () => {
-                if (img.naturalWidth && img.naturalHeight) {
-                    setRatio(url, img.naturalWidth / img.naturalHeight);
-                }
-                wrapper.classList.add('img-loaded');
+        // 5. Preload ratios and observe new items
+        if (newWrappersToObserve.length > 0) {
+            preloadRatios(flowItems.slice(0, 16).map(i => i.url)).then(() => {
                 scheduleMasonryLayout();
+                newWrappersToObserve.forEach(w => {
+                    if (flowViewportObserver) flowViewportObserver.observe(w);
+                });
+            });
+        } else {
+            scheduleMasonryLayout();
+        }
+    };
+
+    // ==========================================================================
+    // SETS VIEW — ORIGINAL HORIZONTAL SERIES (Kept 100% Intact & Untouched)
+    // ==========================================================================
+    let photoshootsViewportObserver = null;
+
+    const buildCategoryRow = (cat) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'category-row';
+        rowDiv.dataset.categoryId = cat.categoryId;
+
+        // Header
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'category-header';
+
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'category-info';
+
+        const title = document.createElement('h2');
+        title.className = 'category-title';
+        const titleLink = document.createElement('a');
+        titleLink.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+        titleLink.innerText = cat.categoryName;
+        title.appendChild(titleLink);
+
+        const meta = document.createElement('div');
+        meta.className = 'category-meta';
+        const displayDate = cat.date !== '1970-01-01T00:00:00.000Z' ? new Date(cat.date).toLocaleDateString() : '';
+        meta.innerText = `${cat.modelName} | ${cat.theme} ${displayDate ? '| ' + displayDate : ''}`;
+
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(meta);
+        headerDiv.appendChild(infoDiv);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'category-actions';
+
+        const viewSetBtn = document.createElement('a');
+        viewSetBtn.className = 'view-set-header-btn';
+        viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+        viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
+        actionsDiv.appendChild(viewSetBtn);
+
+        // Admin Action Buttons (Archive + Delete)
+        if (isAdmin && cat.categoryId !== 'single-shots') {
+            const archCatBtn = document.createElement('button');
+            archCatBtn.className = 'archive-category-btn';
+            archCatBtn.innerText = 'Archive Set';
+            archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
+
+            const delCatBtn = document.createElement('button');
+            delCatBtn.className = 'delete-category-btn';
+            delCatBtn.innerText = 'Delete Set';
+            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
+
+            actionsDiv.appendChild(archCatBtn);
+            actionsDiv.appendChild(delCatBtn);
+        }
+
+        headerDiv.appendChild(actionsDiv);
+        rowDiv.appendChild(headerDiv);
+
+        // Images Container
+        const scrollRow = document.createElement('div');
+        scrollRow.className = 'scrollable-row';
+
+        // --- PC Drag-to-Scroll & Smooth Wheel ---
+        let isMouseDown = false;
+        let startX = 0;
+        let scrollLeftStart = 0;
+        let hasDragged = false;
+
+        scrollRow.setAttribute('draggable', 'false');
+        scrollRow.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        scrollRow.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+            isMouseDown = true;
+            hasDragged = false;
+            startX = e.pageX - scrollRow.offsetLeft;
+            scrollLeftStart = scrollRow.scrollLeft;
+            pauseAutoScroll();
+        });
+
+        const onRowMouseMove = (e) => {
+            if (!isMouseDown) return;
+            const x = e.pageX - scrollRow.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            if (Math.abs(walk) > 6) {
+                hasDragged = true;
+                scrollRow.classList.add('is-dragging');
+                e.preventDefault();
+            }
+            if (hasDragged) {
+                scrollRow.scrollLeft = scrollLeftStart - walk;
+                pauseAutoScroll();
+            }
+        };
+
+        const onRowMouseUp = () => {
+            if (isMouseDown) {
+                isMouseDown = false;
+                scrollRow.classList.remove('is-dragging');
+                if (hasDragged) {
+                    setTimeout(() => {
+                        hasDragged = false;
+                    }, 80);
+                }
+                scheduleAutoScroll();
+            }
+        };
+
+        window.addEventListener('mousemove', onRowMouseMove);
+        window.addEventListener('mouseup', onRowMouseUp);
+
+        // Allow vertical wheel to scroll the page naturally without scrolling the row.
+        scrollRow.addEventListener('wheel', (e) => {
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                pauseAutoScroll();
+                scheduleAutoScroll();
+            }
+        }, { passive: true });
+
+        // --- Auto-Move / Silky Continuous Drift after 1.3s of Inactivity ---
+        let autoScrollRaf = null;
+        let idleTimer = null;
+        let turnaroundTimer = null;
+        let lastTimestamp = null;
+        const scrollSpeedPxPerSec = 50; // 50px/second smooth continuous drift
+        let autoDir = 1; // 1 = right, -1 = left
+        let isVisible = false;
+        let isInteracting = false;
+        let isProgrammaticScroll = false;
+        let currentScrollLeft = scrollRow.scrollLeft;
+
+        const startAutoScroll = () => {
+            if (autoScrollRaf || !isVisible || isInteracting || isMouseDown) return;
+            if (turnaroundTimer) {
+                clearTimeout(turnaroundTimer);
+                turnaroundTimer = null;
+            }
+            lastTimestamp = null;
+            currentScrollLeft = scrollRow.scrollLeft;
+
+            const step = (timestamp) => {
+                if (!isVisible || isInteracting || isMouseDown) {
+                    autoScrollRaf = null;
+                    lastTimestamp = null;
+                    return;
+                }
+
+                if (!lastTimestamp) lastTimestamp = timestamp;
+                const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+                lastTimestamp = timestamp;
+
+                const maxScroll = scrollRow.scrollWidth - scrollRow.clientWidth;
+                if (maxScroll > 15) {
+                    currentScrollLeft += scrollSpeedPxPerSec * deltaSec * autoDir;
+
+                    if (currentScrollLeft >= maxScroll - 2 && autoDir === 1) {
+                        currentScrollLeft = maxScroll;
+                        isProgrammaticScroll = true;
+                        scrollRow.scrollLeft = currentScrollLeft;
+                        autoDir = -1;
+                        autoScrollRaf = null;
+                        lastTimestamp = null;
+                        turnaroundTimer = setTimeout(() => {
+                            turnaroundTimer = null;
+                            startAutoScroll();
+                        }, 2000);
+                        return;
+                    }
+
+                    if (currentScrollLeft <= 2 && autoDir === -1) {
+                        currentScrollLeft = 0;
+                        isProgrammaticScroll = true;
+                        scrollRow.scrollLeft = currentScrollLeft;
+                        autoDir = 1;
+                        autoScrollRaf = null;
+                        lastTimestamp = null;
+                        turnaroundTimer = setTimeout(() => {
+                            turnaroundTimer = null;
+                            startAutoScroll();
+                        }, 2000);
+                        return;
+                    }
+
+                    isProgrammaticScroll = true;
+                    scrollRow.scrollLeft = currentScrollLeft;
+                }
+
+                autoScrollRaf = requestAnimationFrame(step);
             };
 
-            if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:image/svg+xml')) {
-                handleImageReady();
+            autoScrollRaf = requestAnimationFrame(step);
+        };
+
+        const pauseAutoScroll = () => {
+            isInteracting = true;
+            if (idleTimer) clearTimeout(idleTimer);
+            if (turnaroundTimer) {
+                clearTimeout(turnaroundTimer);
+                turnaroundTimer = null;
+            }
+            if (autoScrollRaf) {
+                cancelAnimationFrame(autoScrollRaf);
+                autoScrollRaf = null;
+                lastTimestamp = null;
+            }
+            currentScrollLeft = scrollRow.scrollLeft;
+        };
+
+        const scheduleAutoScroll = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            if (turnaroundTimer) {
+                clearTimeout(turnaroundTimer);
+                turnaroundTimer = null;
+            }
+            idleTimer = setTimeout(() => {
+                isInteracting = false;
+                startAutoScroll();
+            }, 1300);
+        };
+
+        scrollRow.addEventListener('mouseenter', pauseAutoScroll);
+        scrollRow.addEventListener('mouseleave', () => {
+            if (!isMouseDown) scheduleAutoScroll();
+        });
+        scrollRow.addEventListener('touchstart', pauseAutoScroll, { passive: true });
+        scrollRow.addEventListener('touchmove', pauseAutoScroll, { passive: true });
+        scrollRow.addEventListener('touchend', scheduleAutoScroll, { passive: true });
+        scrollRow.addEventListener('touchcancel', scheduleAutoScroll, { passive: true });
+        scrollRow.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) {
+                isProgrammaticScroll = false;
+                return;
+            }
+            currentScrollLeft = scrollRow.scrollLeft;
+            pauseAutoScroll();
+            scheduleAutoScroll();
+        }, { passive: true });
+
+        const rowObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                isVisible = entry.isIntersecting;
+                if (isVisible) {
+                    scheduleAutoScroll();
+                } else {
+                    pauseAutoScroll();
+                }
+            });
+        }, { threshold: 0.15 });
+
+        rowObserver.observe(scrollRow);
+
+        const limit = 15; // Load enough to fill wide screens
+        const imagesToShow = cat.urls.slice(0, limit);
+        const hasMore = cat.urls.length > 5;
+
+        const createImgElem = (url) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'img-container';
+            wrapper.dataset.url = url;
+            wrapper.setAttribute('draggable', 'false');
+            wrapper.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            // Retrieve known aspect ratio or default to standard editorial portrait (2:3 = 0.667)
+            // At standard height 270px, ratio 2/3 produces an initial width of 180px,
+            // matching the skeleton loading card exactly and preventing square jumping!
+            const ratio = getRatio(url) || (2 / 3);
+            const initialWidth = Math.round(270 * ratio);
+            wrapper.style.width = `${initialWidth}px`;
+            wrapper.style.aspectRatio = `${ratio}`;
+
+            const img = document.createElement('img');
+            img.className = 'row-img';
+            img.dataset.src = url;
+            img.dataset.fullUrl = url;
+
+            // SVG placeholder with proportional viewBox matching the ratio
+            const svgW = Math.round(1000 * ratio);
+            img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+            img.style.aspectRatio = `${ratio}`;
+            img.draggable = false;
+            img.setAttribute('draggable', 'false');
+            img.addEventListener('dragstart', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            const markLoaded = () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    const actualRatio = img.naturalWidth / img.naturalHeight;
+                    setRatio(url, actualRatio);
+                    wrapper.style.width = `${Math.round(270 * actualRatio)}px`;
+                    wrapper.style.aspectRatio = `${actualRatio}`;
+                    img.style.aspectRatio = `${actualRatio}`;
+                }
+                img.classList.add('is-loaded');
+                wrapper.classList.add('img-loaded');
+            };
+
+            img._markLoaded = markLoaded;
+
+            if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:')) {
+                markLoaded();
             } else {
                 img.addEventListener('load', () => {
-                    if (img.src && !img.src.startsWith('data:image/svg+xml')) {
-                        handleImageReady();
+                    if (img.src && !img.src.startsWith('data:')) {
+                        markLoaded();
                     }
                 });
             }
 
-            img.addEventListener('error', () => {
-                if (img.src && !img.src.startsWith('data:image/svg+xml')) {
-                    wrapper.classList.add('img-loaded');
-                }
-            });
+            img.addEventListener('error', markLoaded);
 
-            // Tap & Click handler for Lightbox
+            // Tap & Click handler for lightbox
             let touchMoved = false;
             let touchStartX = 0;
             let touchStartY = 0;
 
             const triggerLightbox = (e) => {
-                if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && e.target.closest('.flow-set-link')) return;
-                if (e.target.closest('.delete-photo-btn')) return;
+                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+                if (hasDragged) return;
                 if (touchMoved) {
                     touchMoved = false;
                     return;
@@ -951,45 +1484,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }, { passive: true });
 
-            // Append image first as card base
-            wrapper.appendChild(img);
-
-            // Subtle editorial hover overlay (appended ON TOP of image)
-            if (cat.categoryId) {
-                const overlay = document.createElement('div');
-                overlay.className = 'flow-item-overlay';
-
-                const info = document.createElement('div');
-                info.className = 'flow-item-info';
-
-                const title = document.createElement('span');
-                title.className = 'flow-item-title';
-                title.textContent = cat.categoryName || (cat.categoryId === 'single-shots' ? 'Single Shots' : 'Photoshoot');
-
-                const link = document.createElement('a');
-                link.className = 'flow-set-link';
-                link.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-                link.innerHTML = `View Set &rarr;`;
-                link.title = `View full ${escapeHtml(cat.categoryName || 'Single Shots')} editorial`;
-                link.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
-
-                info.appendChild(title);
-                info.appendChild(link);
-                overlay.appendChild(info);
-                wrapper.appendChild(overlay);
-            }
-
             // Attach 3D Magnetic Tilt
             attachTiltEffect(wrapper);
 
-            // Delete Photo Button (Admin Only)
+            wrapper.appendChild(img);
+
+            // Delete Photo Button
             if (isAdmin) {
                 const delPhotoBtn = document.createElement('button');
                 delPhotoBtn.className = 'delete-photo-btn';
                 delPhotoBtn.innerHTML = '&times;';
-                delPhotoBtn.setAttribute('title', 'Delete Photo');
                 delPhotoBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     deletePhoto(cat.categoryId, url);
@@ -1006,402 +1510,103 @@ document.addEventListener('DOMContentLoaded', async () => {
                 wrapper.appendChild(badge);
             }
 
-            flowContainer.appendChild(wrapper);
-        });
-
-        // Resolve ratios of the first screens BEFORE laying out, so the grid is
-        // computed once with final geometry and images just fade into place.
-        const observer = flowViewportObserver;
-        const wrappers = Array.from(flowContainer.querySelectorAll('.masonry-item'));
-        preloadRatios(flowItems.slice(0, 16).map(i => i.url)).then(() => {
-            if (observer !== flowViewportObserver) return; // superseded by a newer render
-            layoutMasonry();
-            wrappers.forEach(w => observer.observe(w));
-        });
-    };
-
-    // ==========================================================================
-    // SETS VIEW — ORIGINAL HORIZONTAL SERIES (Kept 100% Intact & Untouched)
-    // ==========================================================================
-    let photoshootsViewportObserver = null;
-
-    const renderSetsView = () => {
-        if (flowViewportObserver) {
-            flowViewportObserver.disconnect();
-        }
-        if (flowContainer) flowContainer.style.display = 'none';
-        categoriesContainer.style.display = 'block';
-
-        categoriesContainer.innerHTML = '';
-        noResults.style.display = 'none';
-
-        if (photoshootsViewportObserver) {
-            photoshootsViewportObserver.disconnect();
-        }
-
-        photoshootsViewportObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const wrapper = entry.target;
-                    const img = wrapper.querySelector('img.row-img');
-                    if (img && img.dataset.src) {
-                        const targetSrc = img.dataset.src;
-                        img.removeAttribute('data-src');
-                        img.src = targetSrc;
-                        if (img.complete && img.naturalWidth > 0) {
-                            img.classList.add('is-loaded');
-                            wrapper.classList.add('img-loaded');
-                        }
-                    }
-                    observer.unobserve(wrapper);
-                }
-            });
-        }, {
-            root: null,
-            rootMargin: '600px 300px',
-            threshold: 0
-        });
-
-        if (categoriesData.length === 0) {
-            noResults.style.display = 'block';
-            return;
-        }
-
-        sortCategories();
-
-        // Render each category row exactly as originally written
-        categoriesData.forEach(cat => {
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'category-row';
-
-            // Header
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'category-header';
-
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'category-info';
-
-            const title = document.createElement('h2');
-            title.className = 'category-title';
-            const titleLink = document.createElement('a');
-            titleLink.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-            titleLink.innerText = cat.categoryName;
-            title.appendChild(titleLink);
-
-            const meta = document.createElement('div');
-            meta.className = 'category-meta';
-            const displayDate = cat.date !== '1970-01-01T00:00:00.000Z' ? new Date(cat.date).toLocaleDateString() : '';
-            meta.innerText = `${cat.modelName} | ${cat.theme} ${displayDate ? '| ' + displayDate : ''}`;
-
-            infoDiv.appendChild(title);
-            infoDiv.appendChild(meta);
-            headerDiv.appendChild(infoDiv);
-
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'category-actions';
-
-            const viewSetBtn = document.createElement('a');
-            viewSetBtn.className = 'view-set-header-btn';
-            viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-            viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
-            actionsDiv.appendChild(viewSetBtn);
-
-            // Admin Action Buttons (Archive + Delete)
-            if (isAdmin && cat.categoryId !== 'single-shots') {
-                const archCatBtn = document.createElement('button');
-                archCatBtn.className = 'archive-category-btn';
-                archCatBtn.innerText = 'Archive Set';
-                archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
-
-                const delCatBtn = document.createElement('button');
-                delCatBtn.className = 'delete-category-btn';
-                delCatBtn.innerText = 'Delete Set';
-                delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
-
-                actionsDiv.appendChild(archCatBtn);
-                actionsDiv.appendChild(delCatBtn);
+            if (photoshootsViewportObserver) {
+                photoshootsViewportObserver.observe(wrapper);
             }
 
-            headerDiv.appendChild(actionsDiv);
-            rowDiv.appendChild(headerDiv);
+            return wrapper;
+        };
 
-            // Images Container
-            const scrollRow = document.createElement('div');
-            scrollRow.className = 'scrollable-row';
+        imagesToShow.forEach((url) => {
+            scrollRow.appendChild(createImgElem(url));
+        });
 
-            // --- PC Drag-to-Scroll & Smooth Wheel ---
-            let isMouseDown = false;
-            let startX = 0;
-            let scrollLeftStart = 0;
-            let hasDragged = false;
+        // Luxury End-Card Tile (Never blocks images, fluidly accessible via scroll/swipe)
+        if (hasMore) {
+            const seeAllCard = document.createElement('a');
+            seeAllCard.className = 'see-all-card';
+            seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+            const remaining = cat.urls.length - imagesToShow.length;
+            seeAllCard.innerHTML = `
+                <div class="see-all-card-inner">
+                    <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
+                    <span class="see-all-label">Full Editorial</span>
+                    <span class="see-all-count">${cat.urls.length} Photos</span>
+                    <span class="see-all-arrow">&rarr;</span>
+                </div>
+            `;
+            scrollRow.appendChild(seeAllCard);
+        }
 
-            scrollRow.setAttribute('draggable', 'false');
-            scrollRow.addEventListener('dragstart', (e) => {
-                e.preventDefault();
-                return false;
-            });
+        const scrollWrapper = document.createElement('div');
+        scrollWrapper.className = 'scrollable-row-wrapper';
+        scrollWrapper.appendChild(scrollRow);
 
-            scrollRow.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-                isMouseDown = true;
-                hasDragged = false;
-                startX = e.pageX - scrollRow.offsetLeft;
-                scrollLeftStart = scrollRow.scrollLeft;
-                pauseAutoScroll();
-            });
+        // Floating Desktop Chevron Arrows
+        const prevArrow = document.createElement('button');
+        prevArrow.className = 'row-nav-arrow nav-prev';
+        prevArrow.setAttribute('aria-label', 'Previous photos');
+        prevArrow.innerHTML = '&lsaquo;';
+        prevArrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            scrollRow.scrollBy({ left: -450, behavior: 'smooth' });
+            pauseAutoScroll();
+            scheduleAutoScroll();
+        });
 
-            const onRowMouseMove = (e) => {
-                if (!isMouseDown) return;
-                const x = e.pageX - scrollRow.offsetLeft;
-                const walk = (x - startX) * 1.5;
-                if (Math.abs(walk) > 6) {
-                    hasDragged = true;
-                    scrollRow.classList.add('is-dragging');
-                    e.preventDefault();
+        const nextArrow = document.createElement('button');
+        nextArrow.className = 'row-nav-arrow nav-next';
+        nextArrow.setAttribute('aria-label', 'Next photos');
+        nextArrow.innerHTML = '&rsaquo;';
+        nextArrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            scrollRow.scrollBy({ left: 450, behavior: 'smooth' });
+            pauseAutoScroll();
+            scheduleAutoScroll();
+        });
+
+        scrollWrapper.appendChild(prevArrow);
+        scrollWrapper.appendChild(nextArrow);
+
+        rowDiv.appendChild(scrollWrapper);
+        return rowDiv;
+    };
+
+    const updateCategoryRowAdminState = (rowDiv, cat) => {
+        const actionsDiv = rowDiv.querySelector('.category-actions');
+        if (actionsDiv) {
+            let archCatBtn = actionsDiv.querySelector('.archive-category-btn');
+            let delCatBtn = actionsDiv.querySelector('.delete-category-btn');
+            if (isAdmin && cat.categoryId !== 'single-shots') {
+                if (!archCatBtn) {
+                    archCatBtn = document.createElement('button');
+                    archCatBtn.className = 'archive-category-btn';
+                    archCatBtn.innerText = 'Archive Set';
+                    archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
+                    actionsDiv.appendChild(archCatBtn);
                 }
-                if (hasDragged) {
-                    scrollRow.scrollLeft = scrollLeftStart - walk;
-                    pauseAutoScroll();
+                if (!delCatBtn) {
+                    delCatBtn = document.createElement('button');
+                    delCatBtn.className = 'delete-category-btn';
+                    delCatBtn.innerText = 'Delete Set';
+                    delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
+                    actionsDiv.appendChild(delCatBtn);
                 }
-            };
+            } else {
+                if (archCatBtn) archCatBtn.remove();
+                if (delCatBtn) delCatBtn.remove();
+            }
+        }
 
-            const onRowMouseUp = () => {
-                if (isMouseDown) {
-                    isMouseDown = false;
-                    scrollRow.classList.remove('is-dragging');
-                    if (hasDragged) {
-                        setTimeout(() => {
-                            hasDragged = false;
-                        }, 80);
-                    }
-                    scheduleAutoScroll();
-                }
-            };
+        const imgWrappers = rowDiv.querySelectorAll('.scrollable-row .img-container');
+        imgWrappers.forEach(wrapper => {
+            const url = wrapper.dataset.url;
+            if (!url) return;
 
-            window.addEventListener('mousemove', onRowMouseMove);
-            window.addEventListener('mouseup', onRowMouseUp);
-
-            // Allow vertical wheel to scroll the page naturally without scrolling the row.
-            scrollRow.addEventListener('wheel', (e) => {
-                if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-                    pauseAutoScroll();
-                    scheduleAutoScroll();
-                }
-            }, { passive: true });
-
-            // --- Auto-Move / Silky Continuous Drift after 1.3s of Inactivity ---
-            let autoScrollRaf = null;
-            let idleTimer = null;
-            let turnaroundTimer = null;
-            let lastTimestamp = null;
-            const scrollSpeedPxPerSec = 50; // 50px/second smooth continuous drift
-            let autoDir = 1; // 1 = right, -1 = left
-            let isVisible = false;
-            let isInteracting = false;
-            let isProgrammaticScroll = false;
-            let currentScrollLeft = scrollRow.scrollLeft;
-
-            const startAutoScroll = () => {
-                if (autoScrollRaf || !isVisible || isInteracting || isMouseDown) return;
-                if (turnaroundTimer) {
-                    clearTimeout(turnaroundTimer);
-                    turnaroundTimer = null;
-                }
-                lastTimestamp = null;
-                currentScrollLeft = scrollRow.scrollLeft;
-
-                const step = (timestamp) => {
-                    if (!isVisible || isInteracting || isMouseDown) {
-                        autoScrollRaf = null;
-                        lastTimestamp = null;
-                        return;
-                    }
-
-                    if (!lastTimestamp) lastTimestamp = timestamp;
-                    const deltaSec = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
-                    lastTimestamp = timestamp;
-
-                    const maxScroll = scrollRow.scrollWidth - scrollRow.clientWidth;
-                    if (maxScroll > 15) {
-                        currentScrollLeft += scrollSpeedPxPerSec * deltaSec * autoDir;
-
-                        // Reached right edge: clamp, pause for 2s, then scroll back
-                        if (currentScrollLeft >= maxScroll - 2 && autoDir === 1) {
-                            currentScrollLeft = maxScroll;
-                            isProgrammaticScroll = true;
-                            scrollRow.scrollLeft = currentScrollLeft;
-                            autoDir = -1;
-                            autoScrollRaf = null;
-                            lastTimestamp = null;
-                            turnaroundTimer = setTimeout(() => {
-                                turnaroundTimer = null;
-                                startAutoScroll();
-                            }, 2000);
-                            return;
-                        }
-
-                        // Reached left edge: clamp, pause for 2s, then scroll forward
-                        if (currentScrollLeft <= 2 && autoDir === -1) {
-                            currentScrollLeft = 0;
-                            isProgrammaticScroll = true;
-                            scrollRow.scrollLeft = currentScrollLeft;
-                            autoDir = 1;
-                            autoScrollRaf = null;
-                            lastTimestamp = null;
-                            turnaroundTimer = setTimeout(() => {
-                                turnaroundTimer = null;
-                                startAutoScroll();
-                            }, 2000);
-                            return;
-                        }
-
-                        isProgrammaticScroll = true;
-                        scrollRow.scrollLeft = currentScrollLeft;
-                    }
-
-                    autoScrollRaf = requestAnimationFrame(step);
-                };
-
-                autoScrollRaf = requestAnimationFrame(step);
-            };
-
-            const pauseAutoScroll = () => {
-                isInteracting = true;
-                if (idleTimer) clearTimeout(idleTimer);
-                if (turnaroundTimer) {
-                    clearTimeout(turnaroundTimer);
-                    turnaroundTimer = null;
-                }
-                if (autoScrollRaf) {
-                    cancelAnimationFrame(autoScrollRaf);
-                    autoScrollRaf = null;
-                    lastTimestamp = null;
-                }
-                currentScrollLeft = scrollRow.scrollLeft;
-            };
-
-            const scheduleAutoScroll = () => {
-                if (idleTimer) clearTimeout(idleTimer);
-                if (turnaroundTimer) {
-                    clearTimeout(turnaroundTimer);
-                    turnaroundTimer = null;
-                }
-                idleTimer = setTimeout(() => {
-                    isInteracting = false;
-                    startAutoScroll();
-                }, 1300); // 1.3 seconds idle
-            };
-
-            scrollRow.addEventListener('mouseenter', pauseAutoScroll);
-            scrollRow.addEventListener('mouseleave', () => {
-                if (!isMouseDown) scheduleAutoScroll();
-            });
-            scrollRow.addEventListener('touchstart', pauseAutoScroll, { passive: true });
-            scrollRow.addEventListener('touchmove', pauseAutoScroll, { passive: true });
-            scrollRow.addEventListener('touchend', scheduleAutoScroll, { passive: true });
-            scrollRow.addEventListener('touchcancel', scheduleAutoScroll, { passive: true });
-            scrollRow.addEventListener('scroll', () => {
-                if (isProgrammaticScroll) {
-                    isProgrammaticScroll = false;
-                    return;
-                }
-                currentScrollLeft = scrollRow.scrollLeft;
-                pauseAutoScroll();
-                scheduleAutoScroll();
-            }, { passive: true });
-
-            const rowObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    isVisible = entry.isIntersecting;
-                    if (isVisible) {
-                        scheduleAutoScroll();
-                    } else {
-                        pauseAutoScroll();
-                    }
-                });
-            }, { threshold: 0.15 });
-
-            rowObserver.observe(scrollRow);
-
-            const limit = 15; // Load enough to fill wide screens
-            const imagesToShow = cat.urls.slice(0, limit);
-            const hasMore = cat.urls.length > 5;
-
-            const createImgElem = (url) => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'img-container';
-                wrapper.setAttribute('draggable', 'false');
-                wrapper.addEventListener('dragstart', (e) => {
-                    e.preventDefault();
-                    return false;
-                });
-
-                const img = document.createElement('img');
-                img.className = 'row-img';
-                img.dataset.src = url;
-                img.dataset.fullUrl = url;
-                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
-                img.draggable = false;
-                img.setAttribute('draggable', 'false');
-                img.addEventListener('dragstart', (e) => {
-                    e.preventDefault();
-                    return false;
-                });
-
-                const markLoaded = () => {
-                    img.classList.add('is-loaded');
-                    wrapper.classList.add('img-loaded');
-                };
-
-                img.addEventListener('load', () => {
-                    if (img.src && !img.src.startsWith('data:')) {
-                        markLoaded();
-                    }
-                });
-
-                img.addEventListener('error', markLoaded);
-
-                // Tap & Click handler for lightbox
-                let touchMoved = false;
-                let touchStartX = 0;
-                let touchStartY = 0;
-
-                const triggerLightbox = (e) => {
-                    if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-                    if (hasDragged) return;
-                    if (touchMoved) {
-                        touchMoved = false;
-                        return;
-                    }
-                    openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId);
-                };
-
-                wrapper.addEventListener('click', triggerLightbox);
-
-                wrapper.addEventListener('touchstart', (e) => {
-                    touchMoved = false;
-                    if (e.touches && e.touches[0]) {
-                        touchStartX = e.touches[0].clientX;
-                        touchStartY = e.touches[0].clientY;
-                    }
-                }, { passive: true });
-
-                wrapper.addEventListener('touchmove', (e) => {
-                    if (e.touches && e.touches[0]) {
-                        if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
-                            touchMoved = true;
-                        }
-                    }
-                }, { passive: true });
-
-                // Attach 3D Magnetic Tilt
-                attachTiltEffect(wrapper);
-
-                wrapper.appendChild(img);
-
-                // Delete Photo Button
-                if (isAdmin) {
-                    const delPhotoBtn = document.createElement('button');
+            let delPhotoBtn = wrapper.querySelector('.delete-photo-btn');
+            if (isAdmin) {
+                if (!delPhotoBtn) {
+                    delPhotoBtn = document.createElement('button');
                     delPhotoBtn.className = 'delete-photo-btn';
                     delPhotoBtn.innerHTML = '&times;';
                     delPhotoBtn.addEventListener('click', (e) => {
@@ -1410,77 +1615,103 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                     wrapper.appendChild(delPhotoBtn);
                 }
+            } else if (delPhotoBtn) {
+                delPhotoBtn.remove();
+            }
 
-                // Archived indicator badge on photo card for admin
-                const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
-                if (isAdmin && showArchived && isPhotoArchived) {
-                    const badge = document.createElement('div');
+            let badge = wrapper.querySelector('.photo-archived-badge');
+            const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+            if (isAdmin && showArchived && isPhotoArchived) {
+                if (!badge) {
+                    badge = document.createElement('div');
                     badge.className = 'photo-archived-badge';
                     badge.innerText = 'Archived';
                     wrapper.appendChild(badge);
                 }
-
-                if (photoshootsViewportObserver) {
-                    photoshootsViewportObserver.observe(wrapper);
-                }
-
-                return wrapper;
-            };
-
-            imagesToShow.forEach((url) => {
-                scrollRow.appendChild(createImgElem(url));
-            });
-
-            // Luxury End-Card Tile (Never blocks images, fluidly accessible via scroll/swipe)
-            if (hasMore) {
-                const seeAllCard = document.createElement('a');
-                seeAllCard.className = 'see-all-card';
-                seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-                const remaining = cat.urls.length - imagesToShow.length;
-                seeAllCard.innerHTML = `
-                    <div class="see-all-card-inner">
-                        <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
-                        <span class="see-all-label">Full Editorial</span>
-                        <span class="see-all-count">${cat.urls.length} Photos</span>
-                        <span class="see-all-arrow">&rarr;</span>
-                    </div>
-                `;
-                scrollRow.appendChild(seeAllCard);
+            } else if (badge) {
+                badge.remove();
             }
-
-            const scrollWrapper = document.createElement('div');
-            scrollWrapper.className = 'scrollable-row-wrapper';
-            scrollWrapper.appendChild(scrollRow);
-
-            // Floating Desktop Chevron Arrows
-            const prevArrow = document.createElement('button');
-            prevArrow.className = 'row-nav-arrow nav-prev';
-            prevArrow.setAttribute('aria-label', 'Previous photos');
-            prevArrow.innerHTML = '&lsaquo;';
-            prevArrow.addEventListener('click', (e) => {
-                e.stopPropagation();
-                scrollRow.scrollBy({ left: -450, behavior: 'smooth' });
-                pauseAutoScroll();
-                scheduleAutoScroll();
-            });
-
-            const nextArrow = document.createElement('button');
-            nextArrow.className = 'row-nav-arrow nav-next';
-            nextArrow.setAttribute('aria-label', 'Next photos');
-            nextArrow.innerHTML = '&rsaquo;';
-            nextArrow.addEventListener('click', (e) => {
-                e.stopPropagation();
-                scrollRow.scrollBy({ left: 450, behavior: 'smooth' });
-                pauseAutoScroll();
-                scheduleAutoScroll();
-            });
-
-            scrollWrapper.appendChild(prevArrow);
-            scrollWrapper.appendChild(nextArrow);
-
-            rowDiv.appendChild(scrollWrapper);
-            categoriesContainer.appendChild(rowDiv);
         });
+    };
+
+    const renderSetsView = () => {
+        if (flowContainer) flowContainer.style.display = 'none';
+        categoriesContainer.style.display = 'block';
+        noResults.style.display = 'none';
+
+        if (categoriesData.length === 0) {
+            categoriesContainer.innerHTML = '';
+            noResults.style.display = 'block';
+            return;
+        }
+
+        sortCategories();
+
+        if (!photoshootsViewportObserver) {
+            photoshootsViewportObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const wrapper = entry.target;
+                        const img = wrapper.querySelector('img.row-img');
+                        if (img && img.dataset.src) {
+                            const targetSrc = img.dataset.src;
+                            img.removeAttribute('data-src');
+                            img.src = targetSrc;
+                            if (img.complete && img.naturalWidth > 0) {
+                                if (typeof img._markLoaded === 'function') {
+                                    img._markLoaded();
+                                } else {
+                                    img.classList.add('is-loaded');
+                                    wrapper.classList.add('img-loaded');
+                                }
+                            }
+                        }
+                        observer.unobserve(wrapper);
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: '600px 300px',
+                threshold: 0
+            });
+        }
+
+        // Preload ratios for visible items so dimensions are exact immediately
+        const visibleUrls = [];
+        categoriesData.slice(0, 5).forEach(cat => {
+            if (Array.isArray(cat.urls)) {
+                visibleUrls.push(...cat.urls.slice(0, 6));
+            }
+        });
+        if (visibleUrls.length > 0) {
+            preloadRatios(visibleUrls);
+        }
+
+        // 1. Remove skeleton rows if any exist
+        const skeletonRows = categoriesContainer.querySelectorAll('.skeleton-row, .category-row:has(.skeleton)');
+        skeletonRows.forEach(sr => sr.remove());
+
+        // 2. Map existing rows by categoryId
+        const existingRows = new Map();
+        categoriesContainer.querySelectorAll('.category-row[data-category-id]').forEach(r => {
+            existingRows.set(r.dataset.categoryId, r);
+        });
+
+        // 3. Reconcile rows: reuse existing rows to preserve image DOM nodes and scroll state!
+        categoriesData.forEach(cat => {
+            if (existingRows.has(cat.categoryId)) {
+                const existingRow = existingRows.get(cat.categoryId);
+                existingRows.delete(cat.categoryId);
+                updateCategoryRowAdminState(existingRow, cat);
+                categoriesContainer.appendChild(existingRow);
+            } else {
+                const newRow = buildCategoryRow(cat);
+                categoriesContainer.appendChild(newRow);
+            }
+        });
+
+        // 4. Remove leftover rows
+        existingRows.forEach(row => row.remove());
     };
 
     // --- Master Render Function ---
@@ -1669,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateSortButtonText();
 
     // Initial Load
-    await loadPhotos();
+    await runInitialLoad();
     requestSwitcherUpdate();
 });
 

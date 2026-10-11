@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { invalidateCache } from "../site-cache.js";
 import { CLOUDFLARE_WORKER_URL } from "../cloudflare-storage.js";
@@ -21,60 +21,474 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadBtn = document.getElementById('upload-btn');
     const statusMsg = document.getElementById('status-msg');
 
+    const categoryGroup = document.getElementById('category-group');
     const categoryInput = document.getElementById('category-input');
+    const categoryDropdown = document.getElementById('category-dropdown');
+    const categoryDropdownToggle = document.getElementById('category-dropdown-toggle');
     const modelInput = document.getElementById('model-input');
     const themeInput = document.getElementById('theme-input');
     const descInput = document.getElementById('desc-input');
     const adultInput = document.getElementById('adult-input');
     const archiveInput = document.getElementById('archive-input');
+    const existingSetBadge = document.getElementById('existing-set-badge');
+    const descLockedHint = document.getElementById('desc-locked-hint');
 
-    const categoryList = document.getElementById('category-list');
     const modelList = document.getElementById('model-list');
     const themeList = document.getElementById('theme-list');
 
     let selectedFiles = [];
-    // Map from display name -> stable doc ID (populated by loadMetadata)
+    // Map from display name -> stable doc ID
     const categoryIdMap = new Map();
+    // Map from lowercase lookup key -> set object
+    const existingSetsMap = new Map();
+    let allPhotoSets = [];
 
-    // --- Fetch Metadata (Tags) ---
+    let activeExistingSet = null;
+    let autoCarriedModel = null;
+    let autoCarriedTheme = null;
+    let activeDropdownIndex = -1;
+
+    // --- Custom Full-Width Dropdown Rendering & Interaction ---
+
+    const renderDropdown = (filterText = '') => {
+        if (!categoryDropdown) return;
+        categoryDropdown.innerHTML = '';
+        activeDropdownIndex = -1;
+
+        const q = (filterText || '').trim().toLowerCase();
+
+        // Single Shots item definition
+        const singleShotsItem = {
+            id: 'single-shots',
+            displayName: 'Single Shots',
+            categoryName: 'Single Shots',
+            isSingleShots: true,
+            isArchived: false,
+            modelName: '',
+            theme: '',
+            metaLabel: 'Mixed Editorial Collection',
+            themeDisplay: 'Mixed',
+            modelDisplay: 'Mixed'
+        };
+
+        const matchesQuery = (item) => {
+            if (!q) return true;
+            return (
+                (item.displayName && item.displayName.toLowerCase().includes(q)) ||
+                (item.modelName && item.modelName.toLowerCase().includes(q)) ||
+                (item.theme && item.theme.toLowerCase().includes(q))
+            );
+        };
+
+        const publicSets = allPhotoSets.filter(s => !s.isArchived && matchesQuery(s));
+        const archivedSets = allPhotoSets.filter(s => s.isArchived && matchesQuery(s));
+        const showSingleShots = matchesQuery(singleShotsItem);
+
+        let totalRendered = 0;
+
+        // ── 1. PUBLIC SECTION (ON TOP) ──
+        if (showSingleShots || publicSets.length > 0) {
+            const pubHeader = document.createElement('div');
+            pubHeader.className = 'dropdown-section-title';
+            pubHeader.innerHTML = '<span>PUBLIC PHOTO SETS</span>';
+            categoryDropdown.appendChild(pubHeader);
+
+            if (showSingleShots) {
+                const itemEl = createDropdownItemEl(singleShotsItem);
+                categoryDropdown.appendChild(itemEl);
+                totalRendered++;
+            }
+
+            publicSets.forEach(set => {
+                const itemEl = createDropdownItemEl(set);
+                categoryDropdown.appendChild(itemEl);
+                totalRendered++;
+            });
+        }
+
+        // ── 2. ARCHIVED SECTION (ON THE BOTTOM WITH MINI TITLE) ──
+        if (archivedSets.length > 0) {
+            const archHeader = document.createElement('div');
+            archHeader.className = 'dropdown-section-title archived-section-title';
+            archHeader.innerHTML = '<span>── ARCHIVED PHOTO SETS ──</span>';
+            categoryDropdown.appendChild(archHeader);
+
+            archivedSets.forEach(set => {
+                const itemEl = createDropdownItemEl(set);
+                categoryDropdown.appendChild(itemEl);
+                totalRendered++;
+            });
+        }
+
+        if (totalRendered === 0) {
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'dropdown-empty-msg';
+            emptyEl.textContent = `No existing photo set matches "${filterText}". Type a new name to create one.`;
+            categoryDropdown.appendChild(emptyEl);
+        }
+    };
+
+    const createDropdownItemEl = (item) => {
+        const el = document.createElement('div');
+        el.className = 'dropdown-item';
+        el.setAttribute('tabindex', '0');
+
+        let metaHtml = '';
+        if (item.isSingleShots) {
+            metaHtml = `<span class="dropdown-meta-tag"><span class="meta-label">Type:</span> <span class="meta-value">Single Editorial Images</span></span>`;
+        } else {
+            const themeClass = item.themeDisplay === 'None' ? 'meta-none' : '';
+            const modelClass = item.modelDisplay === 'Unknown' ? 'meta-none' : '';
+            metaHtml = `
+                <span class="dropdown-meta-tag"><span class="meta-label">Theme:</span> <span class="meta-value ${themeClass}">${item.themeDisplay}</span></span>
+                <span class="meta-sep">•</span>
+                <span class="dropdown-meta-tag"><span class="meta-label">Model:</span> <span class="meta-value ${modelClass}">${item.modelDisplay}</span></span>
+            `;
+        }
+
+        const badgeHtml = item.isArchived ? `<span class="dropdown-archived-badge">Archived</span>` : '';
+
+        el.innerHTML = `
+            <div class="dropdown-item-header">
+                <span class="dropdown-item-title">${item.displayName}</span>
+                ${badgeHtml}
+            </div>
+            <div class="dropdown-item-meta">
+                ${metaHtml}
+            </div>
+        `;
+
+        el.addEventListener('click', () => {
+            selectCategory(item);
+        });
+
+        return el;
+    };
+
+    const selectCategory = (item) => {
+        categoryInput.value = item.displayName;
+        closeDropdown();
+
+        if (item.isSingleShots) {
+            activeExistingSet = null;
+            if (autoCarriedModel !== null && modelInput.value === autoCarriedModel) {
+                modelInput.value = '';
+            }
+            autoCarriedModel = null;
+            if (autoCarriedTheme !== null && themeInput.value === autoCarriedTheme) {
+                themeInput.value = '';
+            }
+            autoCarriedTheme = null;
+            if (descInput) {
+                descInput.disabled = false;
+                descInput.placeholder = "e.g. Studio session with @model. Stylist: @stylist...";
+            }
+            if (existingSetBadge) existingSetBadge.classList.add('hidden');
+            if (descLockedHint) descLockedHint.classList.add('hidden');
+            if (archiveInput) archiveInput.checked = false;
+            return;
+        }
+
+        activeExistingSet = item;
+
+        // 1. Carry over Model Name if collection has one and it isn't "Unknown"
+        const rawModel = (item.modelName || '').trim();
+        if (rawModel && rawModel.toLowerCase() !== 'unknown') {
+            modelInput.value = rawModel;
+            autoCarriedModel = rawModel;
+        } else {
+            if (autoCarriedModel !== null && modelInput.value === autoCarriedModel) {
+                modelInput.value = '';
+            }
+            autoCarriedModel = null;
+        }
+
+        // 2. Carry over Theme if collection has one and it isn't "none"
+        const rawTheme = (item.theme || '').trim();
+        if (rawTheme && rawTheme.toLowerCase() !== 'none') {
+            themeInput.value = rawTheme;
+            autoCarriedTheme = rawTheme;
+        } else {
+            if (autoCarriedTheme !== null && themeInput.value === autoCarriedTheme) {
+                themeInput.value = '';
+            }
+            autoCarriedTheme = null;
+        }
+
+        // 3. Disable Description & Credits for existing collection
+        if (descInput) {
+            descInput.value = '';
+            descInput.disabled = true;
+            descInput.placeholder = "Description & credits are locked for existing photo sets.";
+        }
+
+        if (existingSetBadge) {
+            const typeLabel = item.isArchived ? 'Archived' : 'Public';
+            existingSetBadge.textContent = `✓ Existing ${typeLabel} Photo Set: ${item.displayName} (${item.metaLabel})`;
+            existingSetBadge.classList.remove('hidden');
+        }
+        if (descLockedHint) {
+            descLockedHint.classList.remove('hidden');
+        }
+
+        if (item.isArchived && archiveInput) {
+            archiveInput.checked = true;
+        } else if (!item.isArchived && archiveInput) {
+            archiveInput.checked = false;
+        }
+    };
+
+    const openDropdown = () => {
+        if (!categoryDropdown) return;
+        renderDropdown(categoryInput ? categoryInput.value.trim() : '');
+        categoryDropdown.classList.remove('hidden');
+        if (categoryDropdownToggle) categoryDropdownToggle.classList.add('is-open');
+    };
+
+    const closeDropdown = () => {
+        if (!categoryDropdown) return;
+        categoryDropdown.classList.add('hidden');
+        if (categoryDropdownToggle) categoryDropdownToggle.classList.remove('is-open');
+        activeDropdownIndex = -1;
+    };
+
+    if (categoryInput) {
+        categoryInput.addEventListener('focus', () => {
+            openDropdown();
+        });
+
+        categoryInput.addEventListener('click', () => {
+            openDropdown();
+        });
+
+        categoryInput.addEventListener('input', () => {
+            openDropdown();
+            const val = categoryInput.value.trim();
+            const matched = existingSetsMap.get(val.toLowerCase());
+            if (matched) {
+                selectCategory(matched);
+                // Keep dropdown open for further typing/viewing
+                openDropdown();
+            } else if (!val || val.toLowerCase() === 'single shots') {
+                activeExistingSet = null;
+                if (autoCarriedModel !== null && modelInput.value === autoCarriedModel) {
+                    modelInput.value = '';
+                }
+                autoCarriedModel = null;
+                if (autoCarriedTheme !== null && themeInput.value === autoCarriedTheme) {
+                    themeInput.value = '';
+                }
+                autoCarriedTheme = null;
+                if (descInput) {
+                    descInput.disabled = false;
+                    descInput.placeholder = "e.g. Studio session with @model. Stylist: @stylist...";
+                }
+                if (existingSetBadge) existingSetBadge.classList.add('hidden');
+                if (descLockedHint) descLockedHint.classList.add('hidden');
+            } else {
+                // New photoshoot name
+                activeExistingSet = null;
+                if (autoCarriedModel !== null && modelInput.value === autoCarriedModel) {
+                    modelInput.value = '';
+                }
+                autoCarriedModel = null;
+                if (autoCarriedTheme !== null && themeInput.value === autoCarriedTheme) {
+                    themeInput.value = '';
+                }
+                autoCarriedTheme = null;
+                if (descInput) {
+                    descInput.disabled = false;
+                    descInput.placeholder = "e.g. Studio session with @model. Stylist: @stylist...";
+                }
+                if (existingSetBadge) existingSetBadge.classList.add('hidden');
+                if (descLockedHint) descLockedHint.classList.add('hidden');
+            }
+        });
+
+        categoryInput.addEventListener('keydown', (e) => {
+            if (!categoryDropdown || categoryDropdown.classList.contains('hidden')) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    openDropdown();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            const items = categoryDropdown.querySelectorAll('.dropdown-item');
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeDropdownIndex = (activeDropdownIndex + 1) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeDropdownIndex));
+                items[activeDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeDropdownIndex = (activeDropdownIndex - 1 + items.length) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeDropdownIndex));
+                items[activeDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                if (activeDropdownIndex >= 0 && items[activeDropdownIndex]) {
+                    e.preventDefault();
+                    items[activeDropdownIndex].click();
+                } else {
+                    closeDropdown();
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+    }
+
+    if (categoryDropdownToggle) {
+        categoryDropdownToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (categoryDropdown.classList.contains('hidden')) {
+                openDropdown();
+                categoryInput.focus();
+            } else {
+                closeDropdown();
+            }
+        });
+    }
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (categoryGroup && !categoryGroup.contains(e.target)) {
+            closeDropdown();
+        }
+    });
+
+    // --- Fetch Metadata (Photo Sets & Tags) ---
     const loadMetadata = async () => {
         try {
-            const tagsRef = doc(db, 'metadata', 'tags');
-            const tagsSnap = await getDoc(tagsRef);
+            existingSetsMap.clear();
+            categoryIdMap.clear();
+            allPhotoSets = [];
 
-            if (tagsSnap.exists()) {
+            const [setsSnap, tagsSnap] = await Promise.all([
+                getDocs(collection(db, 'photo_sets')).catch(err => {
+                    console.warn("Could not fetch photo_sets:", err);
+                    return { empty: true, forEach: () => {} };
+                }),
+                getDoc(doc(db, 'metadata', 'tags')).catch(err => {
+                    console.warn("Could not fetch metadata/tags:", err);
+                    return { exists: () => false };
+                })
+            ]);
+
+            modelList.innerHTML = '';
+            themeList.innerHTML = '';
+
+            const knownSetIds = new Set();
+            const rawPublic = [];
+            const rawArchived = [];
+
+            if (!setsSnap.empty) {
+                setsSnap.forEach(setDoc => {
+                    const data = setDoc.data() || {};
+                    const id = setDoc.id;
+                    knownSetIds.add(id);
+
+                    const rawName = data.categoryName || id;
+                    const displayName = (rawName && rawName.trim() !== '-') ? rawName.trim() : id;
+                    const modelName = (data.modelName || '').trim();
+                    const theme = (data.theme || '').trim();
+                    const description = data.description || '';
+
+                    const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                    const allUrlsArchived = Array.isArray(data.urls) && data.urls.length > 0 && data.urls.every(u => archivedUrls.includes(u));
+                    const isArchived = Boolean(data.archived === true || allUrlsArchived);
+
+                    const themeDisplay = (theme && theme.toLowerCase() !== 'none') ? theme : 'None';
+                    const modelDisplay = (modelName && modelName.toLowerCase() !== 'unknown') ? modelName : 'Unknown';
+                    const metaLabel = `Theme: ${themeDisplay} | Model: ${modelDisplay}`;
+
+                    const setObj = {
+                        id,
+                        categoryName: displayName,
+                        displayName,
+                        modelName,
+                        theme,
+                        description,
+                        isArchived,
+                        themeDisplay,
+                        modelDisplay,
+                        metaLabel
+                    };
+
+                    categoryIdMap.set(displayName, id);
+                    existingSetsMap.set(displayName.toLowerCase(), setObj);
+                    existingSetsMap.set(id.toLowerCase(), setObj);
+
+                    if (isArchived) {
+                        rawArchived.push(setObj);
+                    } else {
+                        rawPublic.push(setObj);
+                    }
+                });
+            }
+
+            // Also check metadata tags for any additional categories not yet in photo_sets
+            if (tagsSnap && tagsSnap.exists()) {
                 const data = tagsSnap.data();
 
-                if (data.categories) {
+                if (Array.isArray(data.categories)) {
                     data.categories.forEach(cat => {
-                        // Support both legacy string entries and new {id, name} objects
                         const name = (typeof cat === 'object' && cat !== null) ? cat.name : cat;
                         const id   = (typeof cat === 'object' && cat !== null) ? cat.id   : cat;
-                        if (name && name !== 'Single Shots') {
-                            categoryIdMap.set(name, id);
-                            const opt = document.createElement('option');
-                            opt.value = name;
-                            categoryList.appendChild(opt);
+                        if (name && name !== 'Single Shots' && name !== '-' && !knownSetIds.has(id)) {
+                            const displayName = name.trim();
+                            if (!existingSetsMap.has(displayName.toLowerCase())) {
+                                const setObj = {
+                                    id: id || displayName,
+                                    categoryName: displayName,
+                                    displayName,
+                                    modelName: '',
+                                    theme: '',
+                                    description: '',
+                                    isArchived: false,
+                                    themeDisplay: 'None',
+                                    modelDisplay: 'Unknown',
+                                    metaLabel: 'Theme: None | Model: Unknown'
+                                };
+                                categoryIdMap.set(displayName, id || displayName);
+                                existingSetsMap.set(displayName.toLowerCase(), setObj);
+                                rawPublic.push(setObj);
+                            }
                         }
                     });
                 }
 
-                if (data.models) {
+                if (Array.isArray(data.models)) {
                     data.models.forEach(model => {
-                        const opt = document.createElement('option');
-                        opt.value = model;
-                        modelList.appendChild(opt);
+                        if (model && model !== '/' && model.toLowerCase() !== 'unknown') {
+                            const opt = document.createElement('option');
+                            opt.value = model;
+                            modelList.appendChild(opt);
+                        }
                     });
                 }
 
-                if (data.themes) {
+                if (Array.isArray(data.themes)) {
                     data.themes.forEach(theme => {
-                        const opt = document.createElement('option');
-                        opt.value = theme;
-                        themeList.appendChild(opt);
+                        if (theme && theme.toLowerCase() !== 'none') {
+                            const opt = document.createElement('option');
+                            opt.value = theme;
+                            themeList.appendChild(opt);
+                        }
                     });
                 }
             }
+
+            // Sort alphabetically within each section
+            rawPublic.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            rawArchived.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+            allPhotoSets = [...rawPublic, ...rawArchived];
+
+            // Render dropdown initial state
+            renderDropdown(categoryInput ? categoryInput.value.trim() : '');
         } catch (error) {
             console.error("Error loading metadata:", error);
         }
@@ -97,14 +511,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     (typeof c === 'string' && c === category)
                 );
                 if (!alreadyPresent) {
-                    // Use setDoc merge with arrayUnion for new entries
                     updates.categories = arrayUnion(newEntry);
                 }
             }
-            if (model) {
+            if (model && model.toLowerCase() !== 'unknown') {
                 updates.models = arrayUnion(model);
             }
-            if (theme) {
+            if (theme && theme.toLowerCase() !== 'none') {
                 updates.themes = arrayUnion(theme);
             }
 
@@ -271,18 +684,37 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadBtn.addEventListener('click', async () => {
         if (selectedFiles.length === 0) return;
 
-        const category = categoryInput.value.trim() || 'Single Shots';
-        // Resolve stable doc ID: use existing one from map, or generate a new short unique ID
-        const stableDocId = (category !== 'Single Shots')
-            ? (categoryIdMap.get(category) || Date.now().toString(36) + Math.random().toString(36).substring(2, 6))
-            : null;
+        const categoryVal = categoryInput.value.trim() || 'Single Shots';
+        let category = categoryVal;
+        let stableDocId = null;
+        let isNewSet = true;
+        let targetSet = activeExistingSet;
+
+        if (categoryVal === 'Single Shots') {
+            isNewSet = false;
+            stableDocId = null;
+            category = 'Single Shots';
+        } else {
+            if (!targetSet) {
+                const cleanName = categoryVal.replace(/\s*\([^)]*\)$/, '').trim().toLowerCase();
+                targetSet = existingSetsMap.get(categoryVal.toLowerCase()) || existingSetsMap.get(cleanName);
+            }
+
+            if (targetSet) {
+                isNewSet = false;
+                category = targetSet.displayName || targetSet.categoryName;
+                stableDocId = targetSet.id;
+            } else {
+                isNewSet = true;
+                stableDocId = categoryIdMap.get(categoryVal) || (Date.now().toString(36) + Math.random().toString(36).substring(2, 6));
+            }
+        }
+
         const modelName = modelInput.value.trim();
         const theme = themeInput.value.trim();
         const description = descInput ? descInput.value.trim() : '';
         const isAdult = adultInput ? Boolean(adultInput.checked) : false;
         const isArchived = archiveInput ? Boolean(archiveInput.checked) : false;
-        // A set is new if it isn't in the known categories map
-        const isNewSet = category !== 'Single Shots' && !categoryIdMap.has(category);
         const date = new Date().toISOString();
 
         uploadBtn.disabled = true;
@@ -360,21 +792,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. Save base photoshoot metadata
                 const baseData = {
                     categoryName: category,
-                    modelName,
-                    theme,
-                    date,
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid
                 };
+
+                // Model resolution: carry over / preserve
+                let finalModel = '';
+                if (modelName && modelName.toLowerCase() !== 'unknown') {
+                    finalModel = modelName;
+                } else if (targetSet && targetSet.modelName && targetSet.modelName.toLowerCase() !== 'unknown') {
+                    finalModel = targetSet.modelName;
+                }
+                if (finalModel) {
+                    baseData.modelName = finalModel;
+                }
+
+                // Theme resolution: carry over / preserve
+                let finalTheme = '';
+                if (theme && theme.toLowerCase() !== 'none') {
+                    finalTheme = theme;
+                } else if (targetSet && targetSet.theme && targetSet.theme.toLowerCase() !== 'none') {
+                    finalTheme = targetSet.theme;
+                }
+                if (finalTheme) {
+                    baseData.theme = finalTheme;
+                }
+
                 if (isAdult) {
                     baseData.isAdult = true;
                 }
-                if (isArchived && isNewSet) {
-                    baseData.archived = true;
+
+                if (isNewSet) {
+                    baseData.date = date;
+                    if (isArchived) {
+                        baseData.archived = true;
+                    }
+                    if (description) {
+                        baseData.description = description;
+                    }
                 }
-                if (description) {
-                    baseData.description = description;
-                }
+                // IMPORTANT: For existing sets (isNewSet === false), baseData.description is NEVER set!
+                // This ensures Description & Credits are never updated or overwritten for existing collections!
+
                 await setDoc(photoSetRef, baseData, { merge: true });
 
                 // 2. Append URLs in safe chunks of 20 to prevent Firestore batch or field transform limits
@@ -418,9 +877,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryInput.value = '';
                 modelInput.value = '';
                 themeInput.value = '';
-                if (descInput) descInput.value = '';
+                activeExistingSet = null;
+                autoCarriedModel = null;
+                autoCarriedTheme = null;
+                closeDropdown();
+                if (descInput) {
+                    descInput.value = '';
+                    descInput.disabled = false;
+                    descInput.placeholder = "e.g. Studio session with @model. Stylist: @stylist...";
+                }
+                if (existingSetBadge) existingSetBadge.classList.add('hidden');
+                if (descLockedHint) descLockedHint.classList.add('hidden');
                 if (adultInput) adultInput.checked = false;
                 if (archiveInput) archiveInput.checked = false;
+                loadMetadata();
             }, 3000);
 
         } catch (error) {
