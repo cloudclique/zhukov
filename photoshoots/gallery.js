@@ -4,6 +4,7 @@ import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
+import { deletePhotoshootSet } from "./delete-set-helper.js";
 
 // --- CONFIGURATION ---
 // Change this number to control the maximum columns in Flow View (default: 5):
@@ -1036,31 +1037,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!confirmed) return;
 
                 try {
-                    invalidateCache('photoshoots');
-                    invalidateCache('gallery');
-                    invalidateCache('archived');
-
-                    // Gather all image URLs from the photoshoot set before deleting the document
-                    const setRef = doc(db, 'photo_sets', categoryId);
-                    const setSnap = await getDoc(setRef);
-                    let urlsToDelete = [];
-                    if (setSnap.exists()) {
-                        const data = setSnap.data();
-                        const setUrls = Array.isArray(data.urls) ? data.urls : [];
-                        const adultUrls = Array.isArray(data.adultUrls) ? data.adultUrls : [];
-                        const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
-                        urlsToDelete = Array.from(new Set([...setUrls, ...adultUrls, ...archivedUrls, ...(currentUrls || [])]));
-                    } else if (currentUrls && currentUrls.length > 0) {
-                        urlsToDelete = [...currentUrls];
-                    }
-
-                    await deleteDoc(setRef);
-
-                    // Delete all photos belonging to this photoshoot set from Cloudflare R2 bucket
-                    if (urlsToDelete.length > 0) {
-                        await deleteFromCloudflare(urlsToDelete);
-                    }
-
+                    await deletePhotoshootSet(categoryId, { extraUrls: currentUrls });
                     window.location.href = '/photoshoots/'; // Redirect back
                 } catch (error) {
                     console.error("Error deleting photo set:", error);

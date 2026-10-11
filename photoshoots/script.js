@@ -4,6 +4,7 @@ import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
+import { deletePhotoshootSet } from "./delete-set-helper.js";
 
 // --- CONFIGURATION ---
 // Change this number to control how many images per photoshoot set are shown in Flow Mode:
@@ -609,7 +610,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const deleteCategory = async (categoryId) => {
+    const deleteCategory = async (categoryId, extraUrls = []) => {
         const confirmed = await showConfirmModal({
             title: "Delete Entire Photoshoot",
             message: "Are you sure you want to permanently delete this ENTIRE set? This cannot be undone.",
@@ -619,29 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirmed) return;
 
         try {
-            invalidateCache('photoshoots');
-            invalidateCache('gallery');
-            invalidateCache('archived');
-
-            // Gather all image URLs from the photoshoot set before deleting the document
-            const setRef = doc(db, 'photo_sets', categoryId);
-            const setSnap = await getDoc(setRef);
-            let urlsToDelete = [];
-            if (setSnap.exists()) {
-                const data = setSnap.data();
-                const setUrls = Array.isArray(data.urls) ? data.urls : [];
-                const adultUrls = Array.isArray(data.adultUrls) ? data.adultUrls : [];
-                const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
-                urlsToDelete = Array.from(new Set([...setUrls, ...adultUrls, ...archivedUrls]));
-            }
-
-            await deleteDoc(setRef);
-
-            // Delete all photos belonging to this photoshoot set from Cloudflare R2 bucket
-            if (urlsToDelete.length > 0) {
-                await deleteFromCloudflare(urlsToDelete);
-            }
-
+            await deletePhotoshootSet(categoryId, { extraUrls });
             await loadPhotos();
         } catch (error) {
             console.error("Error deleting photo set:", error);
@@ -1182,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const delCatBtn = document.createElement('button');
             delCatBtn.className = 'delete-category-btn';
             delCatBtn.innerText = 'Delete Set';
-            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
+            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls));
 
             actionsDiv.appendChild(archCatBtn);
             actionsDiv.appendChild(delCatBtn);
@@ -1589,7 +1568,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     delCatBtn = document.createElement('button');
                     delCatBtn.className = 'delete-category-btn';
                     delCatBtn.innerText = 'Delete Set';
-                    delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId));
+                    delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls));
                     actionsDiv.appendChild(delCatBtn);
                 }
             } else {
