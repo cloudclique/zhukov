@@ -25,16 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryInput = document.getElementById('category-input');
     const categoryDropdown = document.getElementById('category-dropdown');
     const categoryDropdownToggle = document.getElementById('category-dropdown-toggle');
+
+    const modelGroup = document.getElementById('model-group');
     const modelInput = document.getElementById('model-input');
+    const modelDropdown = document.getElementById('model-dropdown');
+    const modelDropdownToggle = document.getElementById('model-dropdown-toggle');
+
+    const themeGroup = document.getElementById('theme-group');
     const themeInput = document.getElementById('theme-input');
+    const themeDropdown = document.getElementById('theme-dropdown');
+    const themeDropdownToggle = document.getElementById('theme-dropdown-toggle');
+
     const descInput = document.getElementById('desc-input');
     const adultInput = document.getElementById('adult-input');
     const archiveInput = document.getElementById('archive-input');
     const existingSetBadge = document.getElementById('existing-set-badge');
     const descLockedHint = document.getElementById('desc-locked-hint');
-
-    const modelList = document.getElementById('model-list');
-    const themeList = document.getElementById('theme-list');
 
     let selectedFiles = [];
     // Map from display name -> stable doc ID
@@ -42,11 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Map from lowercase lookup key -> set object
     const existingSetsMap = new Map();
     let allPhotoSets = [];
+    let allModels = [];
+    let allThemes = [];
 
     let activeExistingSet = null;
     let autoCarriedModel = null;
     let autoCarriedTheme = null;
     let activeDropdownIndex = -1;
+    let activeModelDropdownIndex = -1;
+    let activeThemeDropdownIndex = -1;
 
     // --- Custom Full-Width Dropdown Rendering & Interaction ---
 
@@ -238,19 +248,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const openDropdown = () => {
+    const openCategoryDropdown = () => {
         if (!categoryDropdown) return;
+        closeModelDropdown();
+        closeThemeDropdown();
         renderDropdown(categoryInput ? categoryInput.value.trim() : '');
         categoryDropdown.classList.remove('hidden');
         if (categoryDropdownToggle) categoryDropdownToggle.classList.add('is-open');
+        if (categoryGroup) categoryGroup.classList.add('is-open');
     };
 
-    const closeDropdown = () => {
+    const closeCategoryDropdown = () => {
         if (!categoryDropdown) return;
         categoryDropdown.classList.add('hidden');
         if (categoryDropdownToggle) categoryDropdownToggle.classList.remove('is-open');
+        if (categoryGroup) categoryGroup.classList.remove('is-open');
         activeDropdownIndex = -1;
     };
+
+    const openDropdown = openCategoryDropdown;
+    const closeDropdown = closeCategoryDropdown;
 
     if (categoryInput) {
         categoryInput.addEventListener('focus', () => {
@@ -352,10 +369,254 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Model Name Custom Dropdown ──
+    const renderModelDropdown = (filterText = '') => {
+        if (!modelDropdown) return;
+        modelDropdown.innerHTML = '';
+        activeModelDropdownIndex = -1;
+
+        const q = (filterText || '').trim().toLowerCase();
+        const filtered = allModels.filter(m => !q || m.toLowerCase().includes(q));
+
+        if (filtered.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'dropdown-section-title';
+            header.innerHTML = `<span>EXISTING MODELS (${filtered.length})</span>`;
+            modelDropdown.appendChild(header);
+
+            filtered.forEach(modelName => {
+                const el = document.createElement('div');
+                el.className = 'dropdown-item';
+                el.setAttribute('tabindex', '0');
+                el.innerHTML = `
+                    <div class="dropdown-item-header">
+                        <span class="dropdown-item-title">${modelName}</span>
+                        <span class="dropdown-tag-badge">Model</span>
+                    </div>
+                `;
+                el.addEventListener('click', () => {
+                    modelInput.value = modelName;
+                    closeModelDropdown();
+                });
+                modelDropdown.appendChild(el);
+            });
+        } else {
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'dropdown-empty-msg';
+            emptyEl.textContent = filterText
+                ? `No existing model matches "${filterText}". Type to add a new model.`
+                : `No existing models found. Type to add a new model.`;
+            modelDropdown.appendChild(emptyEl);
+        }
+    };
+
+    const openModelDropdown = () => {
+        if (!modelDropdown) return;
+        closeCategoryDropdown();
+        closeThemeDropdown();
+        renderModelDropdown(modelInput ? modelInput.value.trim() : '');
+        modelDropdown.classList.remove('hidden');
+        if (modelDropdownToggle) modelDropdownToggle.classList.add('is-open');
+        if (modelGroup) modelGroup.classList.add('is-open');
+    };
+
+    const closeModelDropdown = () => {
+        if (!modelDropdown) return;
+        modelDropdown.classList.add('hidden');
+        if (modelDropdownToggle) modelDropdownToggle.classList.remove('is-open');
+        if (modelGroup) modelGroup.classList.remove('is-open');
+        activeModelDropdownIndex = -1;
+    };
+
+    if (modelInput) {
+        modelInput.addEventListener('focus', () => {
+            openModelDropdown();
+        });
+
+        modelInput.addEventListener('click', () => {
+            openModelDropdown();
+        });
+
+        modelInput.addEventListener('input', () => {
+            openModelDropdown();
+        });
+
+        modelInput.addEventListener('keydown', (e) => {
+            if (!modelDropdown || modelDropdown.classList.contains('hidden')) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    openModelDropdown();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            const items = modelDropdown.querySelectorAll('.dropdown-item');
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeModelDropdownIndex = (activeModelDropdownIndex + 1) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeModelDropdownIndex));
+                items[activeModelDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeModelDropdownIndex = (activeModelDropdownIndex - 1 + items.length) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeModelDropdownIndex));
+                items[activeModelDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                if (activeModelDropdownIndex >= 0 && items[activeModelDropdownIndex]) {
+                    e.preventDefault();
+                    items[activeModelDropdownIndex].click();
+                } else {
+                    closeModelDropdown();
+                }
+            } else if (e.key === 'Escape') {
+                closeModelDropdown();
+            }
+        });
+    }
+
+    if (modelDropdownToggle) {
+        modelDropdownToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (modelDropdown.classList.contains('hidden')) {
+                openModelDropdown();
+                modelInput.focus();
+            } else {
+                closeModelDropdown();
+            }
+        });
+    }
+
+    // ── Theme Custom Dropdown ──
+    const renderThemeDropdown = (filterText = '') => {
+        if (!themeDropdown) return;
+        themeDropdown.innerHTML = '';
+        activeThemeDropdownIndex = -1;
+
+        const q = (filterText || '').trim().toLowerCase();
+        const filtered = allThemes.filter(t => !q || t.toLowerCase().includes(q));
+
+        if (filtered.length > 0) {
+            const header = document.createElement('div');
+            header.className = 'dropdown-section-title';
+            header.innerHTML = `<span>EXISTING THEMES (${filtered.length})</span>`;
+            themeDropdown.appendChild(header);
+
+            filtered.forEach(themeName => {
+                const el = document.createElement('div');
+                el.className = 'dropdown-item';
+                el.setAttribute('tabindex', '0');
+                el.innerHTML = `
+                    <div class="dropdown-item-header">
+                        <span class="dropdown-item-title">${themeName}</span>
+                        <span class="dropdown-tag-badge">Theme</span>
+                    </div>
+                `;
+                el.addEventListener('click', () => {
+                    themeInput.value = themeName;
+                    closeThemeDropdown();
+                });
+                themeDropdown.appendChild(el);
+            });
+        } else {
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'dropdown-empty-msg';
+            emptyEl.textContent = filterText
+                ? `No existing theme matches "${filterText}". Type to add a new theme.`
+                : `No existing themes found. Type to add a new theme.`;
+            themeDropdown.appendChild(emptyEl);
+        }
+    };
+
+    const openThemeDropdown = () => {
+        if (!themeDropdown) return;
+        closeCategoryDropdown();
+        closeModelDropdown();
+        renderThemeDropdown(themeInput ? themeInput.value.trim() : '');
+        themeDropdown.classList.remove('hidden');
+        if (themeDropdownToggle) themeDropdownToggle.classList.add('is-open');
+        if (themeGroup) themeGroup.classList.add('is-open');
+    };
+
+    const closeThemeDropdown = () => {
+        if (!themeDropdown) return;
+        themeDropdown.classList.add('hidden');
+        if (themeDropdownToggle) themeDropdownToggle.classList.remove('is-open');
+        if (themeGroup) themeGroup.classList.remove('is-open');
+        activeThemeDropdownIndex = -1;
+    };
+
+    if (themeInput) {
+        themeInput.addEventListener('focus', () => {
+            openThemeDropdown();
+        });
+
+        themeInput.addEventListener('click', () => {
+            openThemeDropdown();
+        });
+
+        themeInput.addEventListener('input', () => {
+            openThemeDropdown();
+        });
+
+        themeInput.addEventListener('keydown', (e) => {
+            if (!themeDropdown || themeDropdown.classList.contains('hidden')) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    openThemeDropdown();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            const items = themeDropdown.querySelectorAll('.dropdown-item');
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeThemeDropdownIndex = (activeThemeDropdownIndex + 1) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeThemeDropdownIndex));
+                items[activeThemeDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeThemeDropdownIndex = (activeThemeDropdownIndex - 1 + items.length) % items.length;
+                items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeThemeDropdownIndex));
+                items[activeThemeDropdownIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                if (activeThemeDropdownIndex >= 0 && items[activeThemeDropdownIndex]) {
+                    e.preventDefault();
+                    items[activeThemeDropdownIndex].click();
+                } else {
+                    closeThemeDropdown();
+                }
+            } else if (e.key === 'Escape') {
+                closeThemeDropdown();
+            }
+        });
+    }
+
+    if (themeDropdownToggle) {
+        themeDropdownToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (themeDropdown.classList.contains('hidden')) {
+                openThemeDropdown();
+                themeInput.focus();
+            } else {
+                closeThemeDropdown();
+            }
+        });
+    }
+
     // Close on click outside
     document.addEventListener('click', (e) => {
         if (categoryGroup && !categoryGroup.contains(e.target)) {
-            closeDropdown();
+            closeCategoryDropdown();
+        }
+        if (modelGroup && !modelGroup.contains(e.target)) {
+            closeModelDropdown();
+        }
+        if (themeGroup && !themeGroup.contains(e.target)) {
+            closeThemeDropdown();
         }
     });
 
@@ -377,8 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
             ]);
 
-            modelList.innerHTML = '';
-            themeList.innerHTML = '';
+            const modelsSet = new Set();
+            const themesSet = new Set();
 
             const knownSetIds = new Set();
             const rawPublic = [];
@@ -395,6 +656,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const modelName = (data.modelName || '').trim();
                     const theme = (data.theme || '').trim();
                     const description = data.description || '';
+
+                    if (modelName && modelName !== '/' && modelName.toLowerCase() !== 'unknown') {
+                        modelsSet.add(modelName);
+                    }
+                    if (theme && theme.toLowerCase() !== 'none') {
+                        themesSet.add(theme);
+                    }
 
                     const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
                     const allUrlsArchived = Array.isArray(data.urls) && data.urls.length > 0 && data.urls.every(u => archivedUrls.includes(u));
@@ -429,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Also check metadata tags for any additional categories not yet in photo_sets
+            // Also check metadata tags for any additional categories, models, and themes
             if (tagsSnap && tagsSnap.exists()) {
                 const data = tagsSnap.data();
 
@@ -462,24 +730,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (Array.isArray(data.models)) {
                     data.models.forEach(model => {
-                        if (model && model !== '/' && model.toLowerCase() !== 'unknown') {
-                            const opt = document.createElement('option');
-                            opt.value = model;
-                            modelList.appendChild(opt);
+                        const m = (typeof model === 'string' ? model : '').trim();
+                        if (m && m !== '/' && m.toLowerCase() !== 'unknown') {
+                            modelsSet.add(m);
                         }
                     });
                 }
 
                 if (Array.isArray(data.themes)) {
                     data.themes.forEach(theme => {
-                        if (theme && theme.toLowerCase() !== 'none') {
-                            const opt = document.createElement('option');
-                            opt.value = theme;
-                            themeList.appendChild(opt);
+                        const t = (typeof theme === 'string' ? theme : '').trim();
+                        if (t && t.toLowerCase() !== 'none') {
+                            themesSet.add(t);
                         }
                     });
                 }
             }
+
+            // Case-insensitive deduplication and alphabetical sorting
+            const dedupeCi = (arr) => {
+                const map = new Map();
+                arr.forEach(item => {
+                    const lower = item.toLowerCase();
+                    if (!map.has(lower)) {
+                        map.set(lower, item);
+                    }
+                });
+                return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+            };
+
+            allModels = dedupeCi(Array.from(modelsSet));
+            allThemes = dedupeCi(Array.from(themesSet));
 
             // Sort alphabetically within each section
             rawPublic.sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -487,8 +768,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             allPhotoSets = [...rawPublic, ...rawArchived];
 
-            // Render dropdown initial state
+            // Render dropdown initial states
             renderDropdown(categoryInput ? categoryInput.value.trim() : '');
+            renderModelDropdown(modelInput ? modelInput.value.trim() : '');
+            renderThemeDropdown(themeInput ? themeInput.value.trim() : '');
         } catch (error) {
             console.error("Error loading metadata:", error);
         }
@@ -880,7 +1163,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeExistingSet = null;
                 autoCarriedModel = null;
                 autoCarriedTheme = null;
-                closeDropdown();
+                closeCategoryDropdown();
+                closeModelDropdown();
+                closeThemeDropdown();
                 if (descInput) {
                     descInput.value = '';
                     descInput.disabled = false;

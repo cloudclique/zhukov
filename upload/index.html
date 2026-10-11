@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — Upload Portal</title>
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="upload.css">
+    <link rel="stylesheet" href="upload.css?v=26">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -47,16 +47,22 @@
                 <p id="existing-set-badge" class="existing-set-badge hidden"></p>
             </div>
 
-            <div class="input-group">
+            <div class="input-group dropdown-container" id="model-group">
                 <label for="model-input" class="input-label">Model Name (Optional)</label>
-                <input type="text" id="model-input" list="model-list" placeholder="e.g. Jane Doe" class="input-field">
-                <datalist id="model-list"></datalist>
+                <div class="input-with-toggle">
+                    <input type="text" id="model-input" placeholder="e.g. Jane Doe" class="input-field" autocomplete="off">
+                    <button type="button" id="model-dropdown-toggle" class="dropdown-toggle-btn" aria-label="Toggle model dropdown" tabindex="-1">&#x25BE;</button>
+                </div>
+                <div id="model-dropdown" class="custom-category-dropdown hidden"></div>
             </div>
 
-            <div class="input-group">
+            <div class="input-group dropdown-container" id="theme-group">
                 <label for="theme-input" class="input-label">Theme (Optional)</label>
-                <input type="text" id="theme-input" list="theme-list" placeholder="e.g. Noir Elegance" class="input-field">
-                <datalist id="theme-list"></datalist>
+                <div class="input-with-toggle">
+                    <input type="text" id="theme-input" placeholder="e.g. Noir Elegance" class="input-field" autocomplete="off">
+                    <button type="button" id="theme-dropdown-toggle" class="dropdown-toggle-btn" aria-label="Toggle theme dropdown" tabindex="-1">&#x25BE;</button>
+                </div>
+                <div id="theme-dropdown" class="custom-category-dropdown hidden"></div>
             </div>
 
             <div class="input-group">
@@ -90,7 +96,7 @@
     <div id="site-footer-slot"></div>
 
     <!-- Import Firebase modules and our custom upload script -->
-    <script type="module" src="upload.js"></script>
+    <script type="module" src="upload.js?v=26"></script>
 </body>
 
 </html>
