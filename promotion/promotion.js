@@ -17,16 +17,31 @@ const DEFAULT_PAGE_DATA = [
     {
         id: 'row_' + Date.now() + '_1',
         layout: '1',
-        spacing: 'medium',
+        spacing: 'none',
         bg: 'transparent',
         columns: [
             {
                 id: 'col_1_1',
                 blocks: [
-                    { id: 'b_1', type: 'badge', text: 'SPECIAL PROMOTION • LIMITED SESSIONS', color: 'crimson', align: 'center' },
-                    { id: 'b_2', type: 'title', text: 'EDITORIAL PROMOTION', level: 'h1', align: 'center' },
-                    { id: 'b_3', type: 'subtitle', text: 'EXCLUSIVE ATELIER SESSIONS & CURATED COMMISSIONS', color: 'muted', align: 'center' },
-                    { id: 'b_4', type: 'spacer', height: 24, line: 'none' }
+                    {
+                        id: 'b_hero_1',
+                        type: 'hero',
+                        tag: '01 / CONCEPT / EDITORIAL',
+                        titleTop: 'CAPTURING',
+                        titleItalic: 'THE',
+                        titlePlain: 'UNSEEN',
+                        subdeck: 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.',
+                        buttons: [
+                            { id: 'btn_hero_1', type: 'primary', label: 'EXPLORE PACKAGES →', linkUrl: '#packages' },
+                            { id: 'btn_hero_2', type: 'secondary', label: 'INQUIRE NOW', linkUrl: '/contact/' }
+                        ],
+                        buttonLabel: 'EXPLORE PACKAGES →',
+                        linkUrl: '#packages',
+                        secButtonLabel: 'INQUIRE NOW',
+                        secButtonLink: '/contact/',
+                        imageUrl: '/_images/theme_main.jpg',
+                        imageAlt: 'Stanislav Zhukov Editorial Photography'
+                    }
                 ]
             }
         ]
@@ -34,7 +49,7 @@ const DEFAULT_PAGE_DATA = [
     {
         id: 'row_' + Date.now() + '_2',
         layout: '2-equal',
-        spacing: 'medium',
+        spacing: 'none',
         bg: 'card',
         columns: [
             {
@@ -43,9 +58,9 @@ const DEFAULT_PAGE_DATA = [
                     {
                         id: 'b_5',
                         type: 'image',
-                        url: '/_images/beh/editorial.jpg',
+                        url: '/_images/theme_main.jpg',
                         alt: 'Editorial Fashion Shoot',
-                        caption: 'High Fashion & Editorial Atmosphere',
+                        caption: 'High Fashion & Sensual Editorial Atmosphere',
                         ratio: '4-5',
                         linkUrl: '/photoshoots/'
                     }
@@ -59,7 +74,7 @@ const DEFAULT_PAGE_DATA = [
                     {
                         id: 'b_8',
                         type: 'text',
-                        text: 'A fully tailored three-hour creative session exploring conceptual glamour, sensual portraiture, or fashion narrative. Includes collaborative moodboard direction, two distinct lighting setups, and magazine-grade retouching on all master deliverables.',
+                        text: 'A fully tailored creative session exploring conceptual glamour, sensual portraiture, or high-fashion narrative. Includes collaborative moodboard direction, two distinct lighting setups, and magazine-grade retouching on all master deliverables.',
                         align: 'left'
                     },
                     { id: 'b_9', type: 'spacer', height: 16, line: 'subtle' },
@@ -79,34 +94,71 @@ const DEFAULT_PAGE_DATA = [
     {
         id: 'row_' + Date.now() + '_3',
         layout: '3-equal',
-        spacing: 'medium',
+        spacing: 'none',
         bg: 'transparent',
         columns: [
             {
                 id: 'col_3_1',
                 blocks: [
-                    { id: 'b_11', type: 'subtitle', text: 'TIER I • ESSENTIAL', color: 'crimson', align: 'left' },
-                    { id: 'b_12', type: 'title', text: 'PORTRAIT CAPSULE', level: 'h3', align: 'left' },
-                    { id: 'b_13', type: 'text', text: '90-minute daylight or studio portraiture. Ideal for agency model test shoots, personal portfolios, and natural confidence building.', align: 'left' },
-                    { id: 'b_14', type: 'button', label: 'BOOK CAPSULE', linkUrl: '/contact/', style: 'outline', align: 'left', targetBlank: false }
+                    {
+                        id: 'b_11',
+                        type: 'pricing',
+                        kicker: 'TIER I • ESSENTIAL',
+                        title: 'PORTRAIT CAPSULE',
+                        price: '€280',
+                        period: 'per session',
+                        subtitle: '90-Minute Daylight or Studio Portraiture',
+                        desc: 'Ideal for agency model test shoots, personal portfolios, and natural confidence building.',
+                        features: '✓ 90 Minutes shooting time\n✓ 1 Studio daylight lighting setup\n✓ 6 Magazine-grade retouched deliverables\n✓ Private digital proofs gallery\n✓ Commercial & personal usage release',
+                        buttonLabel: 'BOOK CAPSULE',
+                        linkUrl: '/contact/',
+                        buttonStyle: 'outline',
+                        isFeatured: false,
+                        align: 'left'
+                    }
                 ]
             },
             {
                 id: 'col_3_2',
                 blocks: [
-                    { id: 'b_15', type: 'subtitle', text: 'TIER II • GLAMOUR', color: 'gold', align: 'left' },
-                    { id: 'b_16', type: 'title', text: 'SENSUAL ATELIER', level: 'h3', align: 'left' },
-                    { id: 'b_17', type: 'text', text: '2.5-hour intimate boudoir or glamour production with custom shadow play and emotive fine-art color grading.', align: 'left' },
-                    { id: 'b_18', type: 'button', label: 'BOOK ATELIER', linkUrl: '/contact/', style: 'solid', align: 'left', targetBlank: false }
+                    {
+                        id: 'b_12',
+                        type: 'pricing',
+                        kicker: 'TIER II • GLAMOUR',
+                        title: 'SENSUAL ATELIER',
+                        price: '€650',
+                        period: 'per session',
+                        subtitle: '3-Hour Intimate Boudoir or Haute Glamour',
+                        desc: 'Intimate boudoir or glamour production with custom shadow play and emotive fine-art color grading.',
+                        features: '✓ 3 Hours comprehensive studio time\n✓ 2 Distinct creative lighting setups\n✓ 15 High-fashion master retouches\n✓ Collaborative moodboard styling\n✓ Private high-res delivery gallery',
+                        buttonLabel: 'BOOK ATELIER',
+                        linkUrl: '/contact/',
+                        buttonStyle: 'gold',
+                        isFeatured: true,
+                        badge: 'MOST POPULAR',
+                        align: 'left'
+                    }
                 ]
             },
             {
                 id: 'col_3_3',
                 blocks: [
-                    { id: 'b_19', type: 'subtitle', text: 'TIER III • BESPOKE', color: 'crimson', align: 'left' },
-                    { id: 'b_20', type: 'title', text: 'THEMATIC ODYSSEY', level: 'h3', align: 'left' },
-                    { id: 'b_21', type: 'text', text: 'Half-day cinematic cosplay, fantasy world-building, and special atmospheric lighting with composite retouching.', align: 'left' },
-                    { id: 'b_22', type: 'button', label: 'BOOK ODYSSEY', linkUrl: '/contact/', style: 'outline', align: 'left', targetBlank: false }
+                    {
+                        id: 'b_13',
+                        type: 'pricing',
+                        kicker: 'TIER III • BESPOKE',
+                        title: 'THEMATIC ODYSSEY',
+                        price: '€1,200',
+                        period: 'full day',
+                        subtitle: 'Cinematic Cosplay & World-Building',
+                        desc: 'Half-day cinematic cosplay, fantasy world-building, and special atmospheric lighting with composite retouching.',
+                        features: '✓ Full half-day dedicated production\n✓ Special atmospheric FX lighting\n✓ 25 Master editorial art deliverables\n✓ Creative composite post-production\n✓ Direct creative director consultation',
+                        buttonLabel: 'BOOK ODYSSEY',
+                        linkUrl: '/contact/',
+                        buttonStyle: 'outline',
+                        isFeatured: false,
+                        align: 'left'
+                    }
                 ]
             }
         ]
@@ -114,22 +166,81 @@ const DEFAULT_PAGE_DATA = [
     {
         id: 'row_' + Date.now() + '_4',
         layout: '1',
-        spacing: 'spacious',
-        bg: 'card',
+        spacing: 'none',
+        bg: 'gold-tint',
         columns: [
             {
                 id: 'col_4_1',
                 blocks: [
                     {
-                        id: 'b_23',
+                        id: 'b_14',
+                        type: 'countdown',
+                        kicker: 'SEASONAL EDITORIAL PROMOTION',
+                        title: 'EXCLUSIVE PROMOTION SESSIONS CLOSE IN:',
+                        targetDate: '2026-11-01T23:59',
+                        note: 'Limited to 6 atelier commissions per month. Early booking ensures calendar priority.'
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        id: 'row_' + Date.now() + '_5',
+        layout: '2-equal',
+        spacing: 'none',
+        bg: 'card',
+        columns: [
+            {
+                id: 'col_5_1',
+                blocks: [
+                    { id: 'b_15', type: 'subtitle', text: 'FAQ & BOOKING POLICIES', color: 'crimson', align: 'left' },
+                    { id: 'b_16', type: 'title', text: 'COMMON INQUIRIES', level: 'h2', align: 'left' },
+                    {
+                        id: 'b_17',
+                        type: 'accordion',
+                        items: [
+                            { q: 'How do I reserve an editorial commission date?', a: 'You can submit an inquiry through our contact page. A 30% retainer confirms your selected date in our studio calendar.' },
+                            { q: 'Are moodboards and styling direction included?', a: 'Yes. Every booking includes a private collaborative moodboard and styling guidance prior to shooting.' },
+                            { q: 'When do I receive my retouched photographs?', a: 'Online preview proofs are shared within 48 hours. Master high-fashion retouches are delivered within 10 to 14 business days.' },
+                            { q: 'Can we shoot on location or in studio?', a: 'Both options are available. We operate a dedicated atelier studio and also shoot on private location sets.' }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'col_5_2',
+                blocks: [
+                    {
+                        id: 'b_18',
+                        type: 'image',
+                        url: '/_images/location_studio.jpg',
+                        alt: 'Studio Production Setup',
+                        caption: 'Zhukov Atelier Studio Environment',
+                        ratio: '4-5'
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        id: 'row_' + Date.now() + '_6',
+        layout: '1',
+        spacing: 'none',
+        bg: 'transparent',
+        columns: [
+            {
+                id: 'col_6_1',
+                blocks: [
+                    {
+                        id: 'b_19',
                         type: 'quote',
                         text: '“Every photograph should evoke confidence, grace, and effortless cinematic allure.”',
                         author: 'Stanislav Zhukov — Creative Director',
                         align: 'center'
                     },
-                    { id: 'b_24', type: 'spacer', height: 20, line: 'gold' },
+                    { id: 'b_20', type: 'spacer', height: 20, line: 'gold' },
                     {
-                        id: 'b_25',
+                        id: 'b_21',
                         type: 'button',
                         label: 'GET IN TOUCH DIRECTLY',
                         linkUrl: '/contact/',
@@ -145,6 +256,18 @@ const DEFAULT_PAGE_DATA = [
 
 const PRESETS_STORAGE_KEY = 'zhukov_promotion_presets';
 const ACTIVE_PRESET_KEY = 'zhukov_promotion_active_preset_id';
+
+// Verified Studio Photo Library assets available in repo
+const STUDIO_LIBRARY_IMAGES = [
+    { url: '/_images/theme_main.jpg', title: 'Main Editorial Portrait' },
+    { url: '/_images/theme_concept_a.jpg', title: 'Sensual Concept A' },
+    { url: '/_images/theme_concept_b.jpg', title: 'Haute Glamour Concept B' },
+    { url: '/_images/location_studio.jpg', title: 'Studio Production Setup' },
+    { url: '/_images/location_interior.jpg', title: 'Interior Atelier Atmosphere' },
+    { url: '/_images/location_waterfall.jpg', title: 'Outdoor Natural Location' },
+    { url: '/_images/moodboard_preview.jpg', title: 'Editorial Moodboard' },
+    { url: '/_images/editing_preview.jpg', title: 'Retouching & Grading Suite' }
+];
 
 // Initial built-in presets
 const INITIAL_PRESETS = [
@@ -170,7 +293,7 @@ const INITIAL_PRESETS = [
             {
                 id: 'row_sa_1',
                 layout: '2-equal',
-                spacing: 'spacious',
+                spacing: 'none',
                 bg: 'transparent',
                 columns: [
                     {
@@ -187,7 +310,7 @@ const INITIAL_PRESETS = [
                     {
                         id: 'col_sa_1_2',
                         blocks: [
-                            { id: 'b_sa_7', type: 'image', url: '/_images/beh/editorial.jpg', ratio: '4-5', alt: 'Summer Atelier Model' }
+                            { id: 'b_sa_7', type: 'image', url: '/_images/theme_concept_a.jpg', ratio: '4-5', alt: 'Summer Atelier Model' }
                         ]
                     }
                 ]
@@ -204,6 +327,62 @@ let requestedPresetMissing = null;
 let isPreviewMode = false;
 let currentTargetColId = null;
 let currentEditingBlockId = null;
+
+// History & Usability State
+let historyStack = [];
+let historyIndex = -1;
+let isUnsaved = false;
+let previewViewport = 'desktop'; // 'desktop' | 'tablet' | 'mobile'
+let presetsSearchTerm = '';
+let currentMovingBlockInfo = null; // { colId, blockId }
+
+function pushHistoryState() {
+    if (historyIndex < historyStack.length - 1) {
+        historyStack = historyStack.slice(0, historyIndex + 1);
+    }
+    historyStack.push(JSON.parse(JSON.stringify(pageData)));
+    if (historyStack.length > 40) {
+        historyStack.shift();
+    } else {
+        historyIndex++;
+    }
+    isUnsaved = true;
+    setupAdminControls();
+}
+window.pushHistoryState = pushHistoryState;
+
+window.undo = function () {
+    if (historyIndex > 0) {
+        historyIndex--;
+        pageData = JSON.parse(JSON.stringify(historyStack[historyIndex]));
+        savePageData(false);
+        renderPage();
+        setupAdminControls();
+        showToast('Undo performed ↶');
+    }
+};
+
+window.redo = function () {
+    if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        pageData = JSON.parse(JSON.stringify(historyStack[historyIndex]));
+        savePageData(false);
+        renderPage();
+        setupAdminControls();
+        showToast('Redo performed ↷');
+    }
+};
+
+window.setPreviewViewport = function (device) {
+    previewViewport = device;
+    const main = document.querySelector('.vogue-promotion-main');
+    if (main) {
+        main.classList.remove('preview-mobile', 'preview-tablet');
+        if (device === 'mobile') main.classList.add('preview-mobile');
+        if (device === 'tablet') main.classList.add('preview-tablet');
+    }
+    setupAdminControls();
+};
 
 // Slugify text for clean public URLs (.../promotion/preset-title)
 function slugify(text) {
@@ -310,6 +489,16 @@ function loadAllPresets() {
         savedPresets = JSON.parse(JSON.stringify(INITIAL_PRESETS));
         try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
     }
+
+    // Ensure built-in starter preset contains the latest pricing, countdown, and accordion showcases
+    const sigPreset = savedPresets.find(p => p.id === 'preset_signature_editorial');
+    const hasPricingBlock = sigPreset && (sigPreset.pageData || []).some(r => (r.columns || []).some(c => (c.blocks || []).some(b => b.type === 'pricing')));
+    if (sigPreset && !hasPricingBlock) {
+        sigPreset.pageData = JSON.parse(JSON.stringify(DEFAULT_PAGE_DATA));
+        try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
+    }
+
+    window.savedPresets = savedPresets;
     return savedPresets;
 }
 
@@ -546,10 +735,23 @@ function loadPageData() {
     } else {
         pageData = JSON.parse(JSON.stringify(DEFAULT_PAGE_DATA));
     }
+
+    const hasPricing = pageData.some(r => (r.columns || []).some(c => (c.blocks || []).some(b => b.type === 'pricing')));
+    if (!hasPricing && (!raw || pageData.length <= 4)) {
+        pageData = JSON.parse(JSON.stringify(DEFAULT_PAGE_DATA));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pageData)); } catch (_) {}
+    }
+
+    historyStack = [JSON.parse(JSON.stringify(pageData))];
+    historyIndex = 0;
+    isUnsaved = false;
+    window.pageData = pageData;
 }
 
 async function savePageData(showFeedback = true) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pageData)); } catch (_) {}
+    isUnsaved = false;
+    window.pageData = pageData;
 
     // If currently editing an existing preset, keep preset updated in sync
     if (currentActivePreset) {
@@ -648,22 +850,6 @@ function renderPage() {
 }
 
 function renderRow(row, rowIndex, isEditActive) {
-    let colHtml = '';
-    (row.columns || []).forEach((col, colIndex) => {
-        colHtml += renderColumn(col, row.id, colIndex, isEditActive);
-    });
-
-    const adminBar = isEditActive ? `
-        <div class="row-admin-bar">
-            <span style="font-size: 0.6rem; color: #a1a1aa; font-weight: 700; margin-right: 0.35rem;">ROW ${rowIndex + 1}</span>
-            <button type="button" class="row-action-btn" title="Change Layout / Columns" onclick="openRowSettingsModal('${row.id}')">📐 Layout</button>
-            <button type="button" class="row-action-btn" title="Move Up" onclick="moveRow(${rowIndex}, -1)" ${rowIndex === 0 ? 'disabled style="opacity:0.3;"' : ''}>↑</button>
-            <button type="button" class="row-action-btn" title="Move Down" onclick="moveRow(${rowIndex}, 1)" ${rowIndex === pageData.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>↓</button>
-            <button type="button" class="row-action-btn" title="Duplicate Row" onclick="duplicateRow('${row.id}')">⧉</button>
-            <button type="button" class="row-action-btn btn-danger" title="Delete Row" onclick="deleteRow('${row.id}')">🗑</button>
-        </div>
-    ` : '';
-
     const addRowBefore = isEditActive && rowIndex > 0 ? `
         <div class="add-row-zone">
             <button type="button" class="add-row-btn" onclick="addNewRow(${rowIndex})">
@@ -672,22 +858,87 @@ function renderRow(row, rowIndex, isEditActive) {
         </div>
     ` : '';
 
+    const numCols = (row.columns || []).length || 1;
+    let colWidths = Array.isArray(row.colWidths) && row.colWidths.length === numCols
+        ? row.colWidths.map(Number)
+        : Array(numCols).fill(100 / numCols);
+
+    const totalW = colWidths.reduce((a, b) => a + b, 0);
+    if (Math.abs(totalW - 100) > 0.5 && totalW > 0) {
+        colWidths = colWidths.map(w => (w / totalW) * 100);
+    }
+
+    const colGap = typeof row.colGap === 'number' ? row.colGap : 0;
+
+    let colHtml = '';
+    (row.columns || []).forEach((col, colIndex) => {
+        // Draggable resizer line between adjacent columns with gap button
+        if (colIndex > 0 && isEditActive) {
+            colHtml += `
+                <div class="col-resizer-line" data-row-id="${row.id}" data-split-index="${colIndex - 1}">
+                    <div class="col-resizer-hitbox" onmousedown="initColResize(event, '${row.id}', ${colIndex - 1})">
+                        <div class="col-resizer-visual-bar"></div>
+                    </div>
+                    <button type="button" class="col-divider-gap-btn" onclick="toggleColumnGapPopover(event, '${row.id}', ${colIndex - 1})" title="Adjust Column Spacing / Gap">
+                        <span class="gap-icon">↔</span>
+                        <span class="gap-label">${colGap}px</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        colHtml += renderColumn(col, row.id, colIndex, isEditActive, colWidths[colIndex], numCols);
+    });
+
+    const adminBar = isEditActive ? `
+        <div class="row-admin-bar">
+            <span style="font-size: 0.6rem; color: #a1a1aa; font-weight: 700; margin-right: 0.35rem;">ROW ${rowIndex + 1} (${numCols} COL${numCols > 1 ? 'S' : ''})</span>
+            <button type="button" class="row-action-btn" title="Add Column to the Right" onclick="addColumnToRow('${row.id}', ${numCols - 1}, 'right')">+ Column</button>
+            <button type="button" class="row-action-btn" title="Row Padding & Atmosphere" onclick="openRowSettingsModal('${row.id}')">📐 Layout</button>
+            <button type="button" class="row-action-btn" title="Move Up" onclick="moveRow(${rowIndex}, -1)" ${rowIndex === 0 ? 'disabled style="opacity:0.3;"' : ''}>↑</button>
+            <button type="button" class="row-action-btn" title="Move Down" onclick="moveRow(${rowIndex}, 1)" ${rowIndex === pageData.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>↓</button>
+            <button type="button" class="row-action-btn" title="Duplicate Row" onclick="duplicateRow('${row.id}')">⧉</button>
+            <button type="button" class="row-action-btn btn-danger" title="Delete Row" onclick="deleteRow('${row.id}')">🗑</button>
+        </div>
+    ` : '';
+
     return `
         ${addRowBefore}
-        <section class="pub-row layout-${row.layout || '1'} spacing-${row.spacing || 'medium'} bg-${row.bg || 'transparent'}" id="${row.id}">
+        <section class="pub-row spacing-${row.spacing || 'none'} bg-${row.bg || 'transparent'}" id="${row.id}" data-row-id="${row.id}">
             ${adminBar}
-            <div class="pub-row-inner">
+            <div class="pub-row-inner" style="gap: ${colGap}px;">
                 ${colHtml}
             </div>
         </section>
     `;
 }
 
-function renderColumn(col, rowId, colIndex, isEditActive) {
+function renderColumn(col, rowId, colIndex, isEditActive, colWidthPct, totalCols) {
     let blocksHtml = '';
     (col.blocks || []).forEach((block, blockIndex) => {
         blocksHtml += renderBlock(block, col.id, blockIndex, isEditActive);
     });
+
+    const colWidthFormatted = Math.round(colWidthPct || (100 / totalCols));
+
+    const colAdminBar = isEditActive ? `
+        <div class="col-admin-bar">
+            <button type="button" class="col-quick-add-btn" onclick="addColumnToRow('${rowId}', ${colIndex}, 'left')" title="Add column to the left of this column">
+                <span>+</span> Left
+            </button>
+            <span class="col-meta-pill" title="Column proportion">
+                Col ${colIndex + 1} • ${colWidthFormatted}%
+            </span>
+            ${totalCols > 1 ? `
+                <button type="button" class="col-quick-del-btn" onclick="deleteColumnFromRow('${rowId}', ${colIndex})" title="Remove this column">
+                    ✕
+                </button>
+            ` : ''}
+            <button type="button" class="col-quick-add-btn" onclick="addColumnToRow('${rowId}', ${colIndex}, 'right')" title="Add column to the right of this column">
+                <span>+</span> Right
+            </button>
+        </div>
+    ` : '';
 
     const addBlockBtn = isEditActive ? `
         <button type="button" class="col-add-block-btn" onclick="openBlockPicker('${col.id}')">
@@ -695,12 +946,49 @@ function renderColumn(col, rowId, colIndex, isEditActive) {
         </button>
     ` : '';
 
+    // Clickable edge triggers for quick side adding
+    const edgeTriggers = isEditActive ? `
+        <div class="col-edge-trigger edge-left" onclick="addColumnToRow('${rowId}', ${colIndex}, 'left')" title="Click to add column on left">
+            <span>+</span>
+        </div>
+        <div class="col-edge-trigger edge-right" onclick="addColumnToRow('${rowId}', ${colIndex}, 'right')" title="Click to add column on right">
+            <span>+</span>
+        </div>
+    ` : '';
+
     return `
-        <div class="pub-col" id="${col.id}" data-col-id="${col.id}">
+        <div class="pub-col" id="${col.id}" data-col-id="${col.id}" data-col-index="${colIndex}"
+             style="flex: ${colWidthPct} ${colWidthPct} 0px;">
+            ${colAdminBar}
+            ${edgeTriggers}
             ${blocksHtml}
             ${addBlockBtn}
         </div>
     `;
+}
+
+function getHeroButtons(block) {
+    if (Array.isArray(block.buttons)) {
+        return block.buttons;
+    }
+    const btns = [];
+    if (block.showButton !== false) {
+        btns.push({
+            id: 'hbtn_' + (block.id || '1') + '_1',
+            type: 'primary',
+            label: block.buttonLabel || 'EXPLORE PORTFOLIO',
+            linkUrl: block.linkUrl || '#packages'
+        });
+    }
+    if (block.showSecondaryButton) {
+        btns.push({
+            id: 'hbtn_' + (block.id || '1') + '_2',
+            type: 'secondary',
+            label: block.secButtonLabel || 'INQUIRE NOW',
+            linkUrl: block.secButtonLink || '/contact/'
+        });
+    }
+    return btns;
 }
 
 function renderBlock(block, colId, blockIndex, isEditActive) {
@@ -708,6 +996,155 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
     const alignClass = `align-${block.align || 'left'}`;
 
     switch (block.type) {
+        case 'hero':
+            const heroTag = block.tag || '01 / CONCEPT / EDITORIAL';
+            const heroTop = block.titleTop || 'CAPTURING';
+            const heroItalic = block.titleItalic || 'THE';
+            const heroPlain = block.titlePlain || 'UNSEEN';
+            const heroSubdeck = block.subdeck || 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.';
+            const heroBtn = block.buttonLabel || 'EXPLORE PORTFOLIO';
+            const heroLink = block.linkUrl || '#packages';
+            const heroImg = block.imageUrl || '/_images/theme_main.jpg';
+            const heroAlt = block.imageAlt || 'Editorial Hero Photography';
+
+            // Hero image alignment
+            const heroImgAlign = block.imageAlign || 'center';
+            let heroImgValign = '20%';
+            if (block.imageValign === 'top') heroImgValign = 'top';
+            else if (block.imageValign === 'center') heroImgValign = 'center';
+            else if (block.imageValign === 'bottom') heroImgValign = 'bottom';
+            else if (block.imageValign === 'editorial') heroImgValign = '20%';
+            const heroImgPosition = `${heroImgAlign} ${heroImgValign}`;
+
+            // Left section modular elements
+            const showTag = block.showTag !== false;
+            const showTitle = block.showTitle !== false;
+            const showSubdeck = block.showSubdeck !== false;
+            const showBtn = block.showButton !== false;
+            const showSecBtn = !!block.showSecondaryButton;
+            const showBadge = !!block.showBadge;
+            const showNote = !!block.showExtraNote;
+
+            const tagHtml = showTag ? `
+                <div class="pub-hero-item-wrapper hero-elem-tag">
+                    <span class="pub-hero-issue-tag hero-issue-tag" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="tag"` : ''}>
+                        ${escapeHtml(heroTag)}
+                    </span>
+                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'tag')" title="Remove Issue Tag">✕</button>` : ''}
+                </div>
+            ` : '';
+
+            const badgeHtml = showBadge ? `
+                <div class="pub-hero-item-wrapper hero-elem-badge" style="margin-bottom:0.75rem;">
+                    <span class="pub-badge color-${block.badgeColor || 'gold'}">
+                        ${escapeHtml(block.badgeText || 'SPECIAL FEATURE')}
+                    </span>
+                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'badge')" title="Remove Badge">✕</button>` : ''}
+                </div>
+            ` : '';
+
+            const titleHtml = showTitle ? `
+                <div class="pub-hero-item-wrapper hero-elem-title">
+                    <h1 class="pub-hero-main-title hero-main-title">
+                        <span class="pub-hero-line-top hero-line-top" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titleTop"` : ''}>
+                            ${escapeHtml(heroTop)}
+                        </span>
+                        <span class="pub-hero-line-bottom hero-line-bottom">
+                            <span class="pub-hero-line-italic line-italic" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titleItalic"` : ''}>
+                                ${escapeHtml(heroItalic)}
+                            </span>
+                            <span class="pub-hero-line-plain line-plain" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titlePlain"` : ''}>
+                                ${escapeHtml(heroPlain)}
+                            </span>
+                        </span>
+                    </h1>
+                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'title')" title="Remove Title">✕</button>` : ''}
+                </div>
+            ` : '';
+
+            const subdeckHtml = showSubdeck ? `
+                <div class="pub-hero-item-wrapper hero-elem-subdeck">
+                    <p class="pub-hero-subdeck hero-subdeck" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="subdeck"` : ''}>
+                        ${escapeHtml(heroSubdeck)}
+                    </p>
+                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'subdeck')" title="Remove Subdeck">✕</button>` : ''}
+                </div>
+            ` : '';
+
+            const noteHtml = showNote ? `
+                <div class="pub-hero-item-wrapper hero-elem-note" style="margin-bottom:1rem; font-size:0.8rem; color:#888; font-style:italic;">
+                    <span ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="extraNote"` : ''}>
+                        ${escapeHtml(block.extraNote || 'Limited editorial sessions available each season.')}
+                    </span>
+                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'extraNote')" title="Remove Note">✕</button>` : ''}
+                </div>
+            ` : '';
+
+            // Buttons list (supports multiple primary and secondary buttons)
+            const heroButtons = getHeroButtons(block);
+            const buttonsHtml = heroButtons.length > 0 ? `
+                <div class="pub-hero-action-container hero-action-container" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                    ${heroButtons.map((btn, bIndex) => {
+                        const isPrimary = btn.type === 'primary';
+                        const btnClass = isPrimary ? 'pub-hero-action-btn hero-action-btn' : 'pub-btn style-outline';
+                        const extraStyle = !isPrimary ? 'font-size:0.75rem; padding:0.6rem 1.4rem; letter-spacing:0.12em;' : '';
+                        return `
+                            <div class="pub-hero-item-wrapper hero-elem-btn" data-hero-btn-id="${btn.id}">
+                                <a href="${isEditActive ? '#' : (btn.linkUrl || '#')}"
+                                   class="${btnClass}"
+                                   style="${extraStyle}"
+                                   ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-btn-index="${bIndex}" data-field="heroButtonLabel"` : ''}>
+                                    ${escapeHtml(btn.label || (isPrimary ? 'PRIMARY ACTION' : 'SECONDARY ACTION'))}
+                                </a>
+                                ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroButton('${block.id}', ${bIndex})" title="Remove this ${btn.type} button">✕</button>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : '';
+
+            const addElementMenu = isEditActive ? `
+                <div class="hero-add-element-bar" style="margin-top: 1.5rem; position: relative;">
+                    <button type="button" class="hero-add-elem-btn" onclick="toggleHeroAddMenu(event, '${block.id}')" title="Add elements to the hero left section">
+                        <span>+</span> Add Element to Hero Left Section ▾
+                    </button>
+                    <div id="hero-add-menu-${block.id}" class="hero-add-dropdown-menu" style="display: none;">
+                        <button type="button" class="hero-menu-opt" onclick="addHeroButton('${block.id}', 'primary')">🔘 + Add Primary Action Button</button>
+                        <button type="button" class="hero-menu-opt" onclick="addHeroButton('${block.id}', 'secondary')">🔘 + Add Secondary Action Button</button>
+                        ${!showTag ? `<button type="button" class="hero-menu-opt" onclick="addHeroElement('${block.id}', 'tag')">🏷️ + Issue / Concept Tag</button>` : ''}
+                        ${!showBadge ? `<button type="button" class="hero-menu-opt" onclick="addHeroElement('${block.id}', 'badge')">✦ + Concept Badge</button>` : ''}
+                        ${!showTitle ? `<button type="button" class="hero-menu-opt" onclick="addHeroElement('${block.id}', 'title')">🔤 + Main Editorial Title</button>` : ''}
+                        ${!showSubdeck ? `<button type="button" class="hero-menu-opt" onclick="addHeroElement('${block.id}', 'subdeck')">📝 + Subdeck Description</button>` : ''}
+                        ${!showNote ? `<button type="button" class="hero-menu-opt" onclick="addHeroElement('${block.id}', 'extraNote')">💬 + Editorial Note / Extra Text</button>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            contentHtml = `
+                <div class="pub-editorial-hero" id="hero-${block.id}">
+                    <div class="pub-hero-text-container hero-text-container">
+                        <div class="pub-hero-editorial-card hero-editorial-card">
+                            ${tagHtml}
+                            ${badgeHtml}
+                            ${titleHtml}
+                            ${subdeckHtml}
+                            ${noteHtml}
+                            ${buttonsHtml}
+                            ${addElementMenu}
+                        </div>
+                    </div>
+                    <div class="pub-hero-diagonal-cut-wrapper hero-diagonal-cut-wrapper">
+                        <img src="${heroImg}" alt="${escapeHtml(heroAlt)}" class="pub-hero-img" id="hero-img" loading="eager" style="object-position: ${heroImgPosition} !important;">
+                        ${isEditActive ? `
+                            <button type="button" class="pub-hero-photo-btn" onclick="openBlockSettingsModal('${block.id}')" title="Change Hero Image & Alignment">
+                                📷 Hero Image & Alignment
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            break;
+
         case 'title':
             contentHtml = `
                 <${block.level || 'h2'} class="pub-title level-${block.level || 'h2'} ${alignClass}"
@@ -735,17 +1172,162 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             `;
             break;
 
-        case 'image':
-            const imgRatio = `ratio-${block.ratio || 'auto'}`;
-            const imgContent = `
-                <div class="pub-image-wrapper ${imgRatio}">
-                    <img src="${block.url || '/_images/editorial.png'}" alt="${block.alt || 'Photography image'}" class="pub-image" loading="lazy">
+        case 'pricing':
+            const isFeatured = !!block.isFeatured;
+            const featuredClass = isFeatured ? 'is-featured' : '';
+            const badgeText = block.badge || (isFeatured ? 'MOST POPULAR' : '');
+            const rawFeatures = Array.isArray(block.features) 
+                ? block.features 
+                : (typeof block.features === 'string' ? block.features.split('\n') : []);
+            const featuresList = rawFeatures.map(f => f.trim()).filter(Boolean);
+            const isPriceStrikethrough = !!block.strikethroughPrice;
+            const hasOrigPrice = !!block.originalPrice;
+            const hasDiscount = !!block.discount;
+
+            contentHtml = `
+                <div class="pub-pricing-card ${featuredClass} ${alignClass}">
+                    ${badgeText ? `<div class="pub-pricing-badge-slot">${escapeHtml(badgeText)}</div>` : ''}
+                    ${block.kicker ? `<div class="pub-pricing-kicker" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="kicker"` : ''}>${escapeHtml(block.kicker)}</div>` : ''}
+                    <h3 class="pub-pricing-title" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="title"` : ''}>${escapeHtml(block.title || 'PACKAGE NAME')}</h3>
+                    <div class="pub-pricing-price-wrap">
+                        ${hasOrigPrice ? `
+                            <span class="pub-pricing-original-price" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="originalPrice" title="Original Strikethrough Price"` : ''}>${escapeHtml(block.originalPrice)}</span>
+                        ` : ''}
+                        <span class="pub-pricing-price ${isPriceStrikethrough ? 'is-strikethrough' : ''}" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="price"` : ''}>${escapeHtml(block.price || '€450')}</span>
+                        ${block.period ? `<span class="pub-pricing-period" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="period"` : ''}>${escapeHtml(block.period)}</span>` : ''}
+                        ${hasDiscount ? `
+                            <span class="pub-pricing-discount-tag" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="discount" title="Promotional Discount"` : ''}>${escapeHtml(block.discount)}</span>
+                        ` : ''}
+                    </div>
+                    ${block.subtitle ? `<div class="pub-pricing-subtitle" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="subtitle"` : ''}>${escapeHtml(block.subtitle)}</div>` : ''}
+                    ${block.desc ? `<div class="pub-pricing-desc" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="desc"` : ''}>${escapeHtml(block.desc)}</div>` : ''}
+                    ${featuresList.length > 0 ? `
+                        <ul class="pub-pricing-features-list">
+                            ${featuresList.map(item => `
+                                <li class="pub-pricing-feature-item">
+                                    <span class="pub-pricing-feature-icon">✓</span>
+                                    <span>${escapeHtml(item.replace(/^✓\s*/, ''))}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    ` : ''}
+                    <div style="margin-top: auto; padding-top: 0.5rem;">
+                        <a href="${isEditActive ? '#' : (block.linkUrl || '/contact/')}"
+                           class="pub-btn style-${block.buttonStyle || (isFeatured ? 'gold' : 'solid')}"
+                           style="width: 100%; box-sizing: border-box; text-align: center;">
+                            ${escapeHtml(block.buttonLabel || 'BOOK THIS PACKAGE →')}
+                        </a>
+                    </div>
                 </div>
-                ${block.caption ? `<div class="pub-image-caption">${block.caption}</div>` : ''}
             `;
-            contentHtml = block.linkUrl && !isEditActive
-                ? `<a href="${block.linkUrl}" class="pub-image-link">${imgContent}</a>`
-                : imgContent;
+            break;
+
+        case 'countdown':
+            const targetDate = block.targetDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16);
+            contentHtml = `
+                <div class="pub-countdown-block" data-target-date="${targetDate}">
+                    ${block.kicker ? `<div class="pub-countdown-kicker">${escapeHtml(block.kicker)}</div>` : ''}
+                    <h2 class="pub-countdown-title">${escapeHtml(block.title || 'EXCLUSIVE OFFER CLOSES IN:')}</h2>
+                    <div class="pub-countdown-grid">
+                        <div class="pub-countdown-unit">
+                            <span class="pub-countdown-number cd-days">00</span>
+                            <span class="pub-countdown-label">Days</span>
+                        </div>
+                        <div class="pub-countdown-unit">
+                            <span class="pub-countdown-number cd-hours">00</span>
+                            <span class="pub-countdown-label">Hours</span>
+                        </div>
+                        <div class="pub-countdown-unit">
+                            <span class="pub-countdown-number cd-mins">00</span>
+                            <span class="pub-countdown-label">Mins</span>
+                        </div>
+                        <div class="pub-countdown-unit">
+                            <span class="pub-countdown-number cd-secs">00</span>
+                            <span class="pub-countdown-label">Secs</span>
+                        </div>
+                    </div>
+                    ${block.note ? `<p style="font-size:0.75rem; color:#888; margin-top:1rem; letter-spacing:0.05em;">${escapeHtml(block.note)}</p>` : ''}
+                </div>
+            `;
+            break;
+
+        case 'accordion':
+            const accordionItems = Array.isArray(block.items) && block.items.length > 0 ? block.items : [
+                { q: 'How do I reserve a date for an editorial commission?', a: 'You can submit an inquiry via our contact form. A 30% retainer confirms your selected date in our studio calendar.' },
+                { q: 'Are wardrobe direction and moodboards included?', a: 'Yes. Every booking includes a private collaborative moodboard and styling consultation prior to shooting.' },
+                { q: 'What is the delivery timeline for retouched deliverables?', a: 'High-resolution preview selections are available within 48 hours. Master high-fashion retouches are delivered within 10 to 14 business days.' }
+            ];
+
+            contentHtml = `
+                <div class="pub-accordion" id="acc_${block.id}">
+                    ${accordionItems.map((item, idx) => `
+                        <div class="pub-accordion-item ${idx === 0 ? 'is-open' : ''}">
+                            <button type="button" class="pub-accordion-header" onclick="toggleAccordionItem(this)">
+                                <span>${escapeHtml(item.q || item.question || 'Question')}</span>
+                                <span class="pub-accordion-icon">+</span>
+                            </button>
+                            <div class="pub-accordion-content">
+                                <p style="margin:0;">${escapeHtml(item.a || item.answer || 'Answer')}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            break;
+
+        case 'features':
+            const featItems = Array.isArray(block.items) && block.items.length > 0 ? block.items : [
+                { icon: '✦', title: 'Haute Couture Direction', desc: 'Personalized visual narrative with curated moodboard alignment.' },
+                { icon: '◈', title: 'Master Lighting Setups', desc: 'Two distinct atmospheric setups in daylight or cinema strobes.' },
+                { icon: '⚜', title: 'Magazine Deliverables', desc: 'High-end color grading and Vogue-standard skin retouching.' }
+            ];
+
+            contentHtml = `
+                <div class="pub-features-grid">
+                    ${featItems.map(item => `
+                        <div class="pub-feature-item">
+                            <div class="pub-feature-icon">${escapeHtml(item.icon || '✦')}</div>
+                            <h4 class="pub-feature-title">${escapeHtml(item.title || 'Feature Title')}</h4>
+                            <p class="pub-feature-desc">${escapeHtml(item.desc || 'Feature description details.')}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            break;
+
+        case 'image':
+            let horizAlign = block.align || 'center';
+            let vertAlign = block.valign || 'center';
+            let focalPos = block.focal || 'center';
+
+            // Support direct top/bottom values if passed in align
+            if (block.align === 'top') { vertAlign = 'top'; horizAlign = 'center'; }
+            else if (block.align === 'bottom') { vertAlign = 'bottom'; horizAlign = 'center'; }
+            else if (block.align === 'center-top') { vertAlign = 'top'; focalPos = 'top'; horizAlign = 'center'; }
+            else if (block.align === 'center-bottom') { vertAlign = 'bottom'; focalPos = 'bottom'; horizAlign = 'center'; }
+
+            const imgRatio = `ratio-${block.ratio || 'auto'}`;
+            const imgWidth = block.width || '100%';
+            const imgValign = `valign-${vertAlign}`;
+            const imgFocal = `focal-${focalPos}`;
+            const imgAlignClass = `align-${horizAlign}`;
+            const imageCore = `
+                <div class="pub-image-wrapper ${imgRatio}">
+                    <img src="${block.url || '/_images/theme_main.jpg'}" alt="${block.alt || 'Photography image'}" class="pub-image ${imgFocal}" loading="lazy">
+                </div>
+            `;
+            const imageWrapped = block.linkUrl && !isEditActive
+                ? `<a href="${block.linkUrl}" class="pub-image-link" style="display:block; width:100%;">${imageCore}</a>`
+                : imageCore;
+
+            contentHtml = `
+                <div class="pub-image-align-container ${imgAlignClass} ${imgValign}">
+                    <div class="pub-image-outer" style="max-width: ${imgWidth}; width: 100%;">
+                        ${imageWrapped}
+                        ${block.caption ? `<div class="pub-image-caption">${escapeHtml(block.caption)}</div>` : ''}
+                    </div>
+                </div>
+            `;
             break;
 
         case 'button':
@@ -815,6 +1397,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             <button type="button" class="block-tool-btn" title="Edit Properties" onclick="openBlockSettingsModal('${block.id}')">⚙️</button>
             <button type="button" class="block-tool-btn" title="Move Up" onclick="moveBlock('${colId}', ${blockIndex}, -1)">↑</button>
             <button type="button" class="block-tool-btn" title="Move Down" onclick="moveBlock('${colId}', ${blockIndex}, 1)">↓</button>
+            <button type="button" class="block-tool-btn" title="Move to Column / Row" onclick="openMoveBlockModal('${colId}', '${block.id}')">⇄</button>
             <button type="button" class="block-tool-btn" title="Duplicate" onclick="duplicateBlock('${colId}', '${block.id}')">⧉</button>
             <button type="button" class="block-tool-btn btn-delete" title="Delete" onclick="deleteBlock('${colId}', '${block.id}')">🗑</button>
         </div>
@@ -834,20 +1417,46 @@ function attachInlineEditListeners() {
         el.addEventListener('blur', () => {
             const blockId = el.getAttribute('data-block-id');
             const field = el.getAttribute('data-field');
+            const btnIdx = el.getAttribute('data-btn-index');
             const text = el.innerText.trim();
-            if (blockId && field) {
+            if (blockId && field === 'heroButtonLabel' && btnIdx !== null) {
+                updateHeroButtonField(blockId, parseInt(btnIdx, 10), 'label', text);
+            } else if (blockId && field) {
                 updateBlockField(blockId, field, text);
             }
         });
 
         // Prevent Enter causing unformatted div nesting on single-line headings
         el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3' || el.classList.contains('pub-subtitle') || el.classList.contains('pub-btn'))) {
+            if (e.key === 'Enter' && (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3' || el.classList.contains('pub-subtitle') || el.classList.contains('pub-btn') || el.classList.contains('pub-hero-issue-tag') || el.classList.contains('pub-hero-line-top') || el.classList.contains('pub-hero-line-italic') || el.classList.contains('pub-hero-line-plain') || el.classList.contains('pub-hero-action-btn'))) {
                 e.preventDefault();
                 el.blur();
             }
         });
     });
+}
+
+function updateHeroButtonField(blockId, btnIndex, field, value) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    const btns = getHeroButtons(block);
+    if (btns[btnIndex]) {
+        btns[btnIndex][field] = value;
+        block.buttons = btns;
+        const firstPrimary = btns.find(b => b.type === 'primary');
+        const firstSec = btns.find(b => b.type === 'secondary');
+        if (firstPrimary) {
+            block.buttonLabel = firstPrimary.label;
+            block.linkUrl = firstPrimary.linkUrl;
+            block.showButton = true;
+        }
+        if (firstSec) {
+            block.secButtonLabel = firstSec.label;
+            block.secButtonLink = firstSec.linkUrl;
+            block.showSecondaryButton = true;
+        }
+        savePageData(false);
+    }
 }
 
 function updateBlockField(blockId, field, value) {
@@ -883,10 +1492,13 @@ function findRowById(rowId) {
 
 // ── 5. Row Manipulation ───────────────────────────────────────────────────
 window.addNewRow = function (insertAtIndex = null) {
+    pushHistoryState();
     const newRow = {
         id: 'row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        layout: '1',
-        spacing: 'medium',
+        layout: 'dynamic',
+        colWidths: [100],
+        colGap: 0,
+        spacing: 'none',
         bg: 'transparent',
         columns: [
             {
@@ -910,6 +1522,7 @@ window.addNewRow = function (insertAtIndex = null) {
 
 window.deleteRow = function (rowId) {
     if (!confirm('Are you sure you want to delete this row and all its contents?')) return;
+    pushHistoryState();
     pageData = pageData.filter(r => r.id !== rowId);
     savePageData();
     renderPage();
@@ -918,6 +1531,7 @@ window.deleteRow = function (rowId) {
 window.moveRow = function (index, direction) {
     const target = index + direction;
     if (target < 0 || target >= pageData.length) return;
+    pushHistoryState();
     const temp = pageData[index];
     pageData[index] = pageData[target];
     pageData[target] = temp;
@@ -928,6 +1542,7 @@ window.moveRow = function (index, direction) {
 window.duplicateRow = function (rowId) {
     const index = pageData.findIndex(r => r.id === rowId);
     if (index === -1) return;
+    pushHistoryState();
     const clone = JSON.parse(JSON.stringify(pageData[index]));
     clone.id = 'row_' + Date.now();
     (clone.columns || []).forEach(col => {
@@ -941,40 +1556,261 @@ window.duplicateRow = function (rowId) {
     renderPage();
 };
 
-// ── 6. Column Layouts for Rows ────────────────────────────────────────────
-window.setRowLayout = function (rowId, layoutType) {
+// ── 6. Dynamic Column Operations (Add, Remove, Proportion Resize, Gap) ────
+window.addColumnToRow = function (rowId, colIndex, side = 'right') {
     const row = findRowById(rowId);
     if (!row) return;
 
-    row.layout = layoutType;
-    let targetColCount = 1;
-    if (layoutType.startsWith('2-')) targetColCount = 2;
-    else if (layoutType === '3-equal') targetColCount = 3;
-    else if (layoutType === '4-equal') targetColCount = 4;
-
+    pushHistoryState();
     row.columns = row.columns || [];
 
-    // Add extra columns if needed
-    while (row.columns.length < targetColCount) {
-        row.columns.push({
-            id: 'col_' + Date.now() + '_' + (row.columns.length + 1),
-            blocks: []
-        });
+    const newColId = 'col_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    const newCol = {
+        id: newColId,
+        blocks: []
+    };
+
+    const targetIndex = side === 'left' ? colIndex : colIndex + 1;
+    row.columns.splice(targetIndex, 0, newCol);
+
+    const numCols = row.columns.length;
+    row.colWidths = Array(numCols).fill(100 / numCols);
+    if (typeof row.colGap !== 'number') row.colGap = 0;
+
+    savePageData();
+    renderPage();
+    showToast(`Added column (${numCols} total) ✓`);
+};
+
+window.deleteColumnFromRow = function (rowId, colIndex) {
+    const row = findRowById(rowId);
+    if (!row || !row.columns || row.columns.length <= 1) return;
+
+    const col = row.columns[colIndex];
+    if (col && col.blocks && col.blocks.length > 0) {
+        if (!confirm(`Delete Column ${colIndex + 1} and its ${col.blocks.length} element(s)?`)) return;
     }
 
-    // If reducing columns, merge blocks from extra columns into the last remaining column
-    if (row.columns.length > targetColCount) {
-        const removedCols = row.columns.splice(targetColCount);
-        const lastCol = row.columns[row.columns.length - 1];
-        removedCols.forEach(col => {
-            (col.blocks || []).forEach(b => lastCol.blocks.push(b));
+    pushHistoryState();
+    row.columns.splice(colIndex, 1);
+
+    const numCols = row.columns.length;
+    row.colWidths = Array(numCols).fill(100 / numCols);
+
+    savePageData();
+    renderPage();
+    showToast(`Removed column (${numCols} remaining) ✓`);
+};
+
+window.resetCurrentRowToSingleColumn = function () {
+    const modal = document.getElementById('row-settings-modal');
+    const rowId = modal ? modal.getAttribute('data-target-row-id') : null;
+    const row = findRowById(rowId);
+    if (!row) return;
+
+    if (row.columns && row.columns.length > 1) {
+        const allBlocks = [];
+        row.columns.forEach(c => {
+            (c.blocks || []).forEach(b => allBlocks.push(b));
         });
+        row.columns = [
+            {
+                id: row.columns[0].id || ('col_' + Date.now()),
+                blocks: allBlocks
+            }
+        ];
     }
+    row.colWidths = [100];
+    row.colGap = 0;
 
     savePageData();
     renderPage();
     closeAllModals();
+    showToast('Reset row to 1 column ✓');
 };
+
+// Interactive Drag Resizer Engine
+let activeResizeState = null;
+
+window.initColResize = function (e, rowId, splitIndex) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const row = findRowById(rowId);
+    if (!row || !row.columns || row.columns.length <= splitIndex + 1) return;
+
+    const rowEl = document.getElementById(rowId);
+    if (!rowEl) return;
+    const innerEl = rowEl.querySelector('.pub-row-inner');
+    if (!innerEl) return;
+
+    const colEls = innerEl.querySelectorAll('.pub-col');
+    const leftColEl = colEls[splitIndex];
+    const rightColEl = colEls[splitIndex + 1];
+    if (!leftColEl || !rightColEl) return;
+
+    const numCols = row.columns.length;
+    let colWidths = Array.isArray(row.colWidths) && row.colWidths.length === numCols
+        ? [...row.colWidths.map(Number)]
+        : Array(numCols).fill(100 / numCols);
+
+    const leftColRect = leftColEl.getBoundingClientRect();
+    const rightColRect = rightColEl.getBoundingClientRect();
+    const pairWidthPx = leftColRect.width + rightColRect.width;
+    const combinedPct = colWidths[splitIndex] + colWidths[splitIndex + 1];
+
+    const tooltip = document.getElementById('col-resize-tooltip');
+    const tooltipText = document.getElementById('col-resize-tooltip-text');
+
+    activeResizeState = {
+        rowId,
+        splitIndex,
+        startX: e.clientX,
+        leftColEl,
+        rightColEl,
+        pairWidthPx,
+        combinedPct,
+        initialLeftPct: colWidths[splitIndex],
+        initialRightPct: colWidths[splitIndex + 1],
+        colWidths,
+        tooltip,
+        tooltipText
+    };
+
+    if (tooltip && tooltipText) {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top = (e.clientY - 36) + 'px';
+        tooltipText.textContent = `${Math.round(colWidths[splitIndex])}% ⬌ ${Math.round(colWidths[splitIndex + 1])}%`;
+    }
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleEl = e.currentTarget.closest('.col-resizer-line');
+    if (handleEl) handleEl.classList.add('is-dragging');
+
+    window.addEventListener('mousemove', onColResizeMove);
+    window.addEventListener('mouseup', onColResizeEnd);
+};
+
+function onColResizeMove(e) {
+    if (!activeResizeState) return;
+    const { startX, leftColEl, rightColEl, pairWidthPx, combinedPct, initialLeftPct, tooltip, tooltipText, splitIndex } = activeResizeState;
+
+    const deltaX = e.clientX - startX;
+    const deltaPct = (deltaX / pairWidthPx) * combinedPct;
+
+    const minPct = 10;
+    let newLeftPct = Math.max(minPct, Math.min(combinedPct - minPct, initialLeftPct + deltaPct));
+    let newRightPct = combinedPct - newLeftPct;
+
+    newLeftPct = Math.round(newLeftPct * 10) / 10;
+    newRightPct = Math.round(newRightPct * 10) / 10;
+
+    leftColEl.style.flex = `${newLeftPct} ${newLeftPct} 0px`;
+    rightColEl.style.flex = `${newRightPct} ${newRightPct} 0px`;
+
+    const leftMeta = leftColEl.querySelector('.col-meta-pill');
+    if (leftMeta) leftMeta.textContent = `Col ${splitIndex + 1} • ${Math.round(newLeftPct)}%`;
+    const rightMeta = rightColEl.querySelector('.col-meta-pill');
+    if (rightMeta) rightMeta.textContent = `Col ${splitIndex + 2} • ${Math.round(newRightPct)}%`;
+
+    if (tooltip && tooltipText) {
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top = (e.clientY - 36) + 'px';
+        tooltipText.textContent = `${Math.round(newLeftPct)}% ⬌ ${Math.round(newRightPct)}%`;
+    }
+
+    activeResizeState.currentLeftPct = newLeftPct;
+    activeResizeState.currentRightPct = newRightPct;
+}
+
+function onColResizeEnd(e) {
+    if (!activeResizeState) return;
+    const { rowId, splitIndex, colWidths, currentLeftPct, currentRightPct, tooltip } = activeResizeState;
+
+    window.removeEventListener('mousemove', onColResizeMove);
+    window.removeEventListener('mouseup', onColResizeEnd);
+
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (tooltip) tooltip.style.display = 'none';
+
+    document.querySelectorAll('.col-resizer-line.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+
+    if (currentLeftPct !== undefined && currentRightPct !== undefined) {
+        const row = findRowById(rowId);
+        if (row) {
+            pushHistoryState();
+            colWidths[splitIndex] = currentLeftPct;
+            colWidths[splitIndex + 1] = currentRightPct;
+            row.colWidths = colWidths;
+            savePageData();
+            showToast(`Column proportions saved: ${Math.round(currentLeftPct)}% / ${Math.round(currentRightPct)}% ✓`);
+        }
+    }
+
+    activeResizeState = null;
+}
+
+// Column Gap / Spacing Popover Handlers
+window.toggleColumnGapPopover = function (e, rowId, splitIndex) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const popover = document.getElementById('col-gap-popover');
+    if (!popover) return;
+
+    const row = findRowById(rowId);
+    if (!row) return;
+
+    popover.setAttribute('data-target-row-id', rowId);
+    popover.setAttribute('data-split-index', splitIndex);
+
+    const btnRect = e.currentTarget.getBoundingClientRect();
+    popover.style.display = 'flex';
+
+    let left = btnRect.left - 80;
+    if (left < 10) left = 10;
+    if (left + 230 > window.innerWidth) left = window.innerWidth - 240;
+
+    let top = btnRect.bottom + 8;
+    if (top + 160 > window.innerHeight) {
+        top = btnRect.top - 170;
+    }
+
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+};
+
+window.closeColumnGapPopover = function () {
+    const popover = document.getElementById('col-gap-popover');
+    if (popover) popover.style.display = 'none';
+};
+
+window.applyColumnGap = function (gapPx) {
+    const popover = document.getElementById('col-gap-popover');
+    const rowId = popover ? popover.getAttribute('data-target-row-id') : null;
+    const row = findRowById(rowId);
+    if (!row) return;
+
+    pushHistoryState();
+    row.colGap = gapPx;
+    savePageData();
+    renderPage();
+    closeColumnGapPopover();
+    showToast(`Column spacing set to ${gapPx}px ✓`);
+};
+
+document.addEventListener('click', (e) => {
+    const popover = document.getElementById('col-gap-popover');
+    if (popover && popover.style.display !== 'none') {
+        if (!popover.contains(e.target) && !e.target.closest('.col-divider-gap-btn')) {
+            closeColumnGapPopover();
+        }
+    }
+});
 
 // ── 7. Block Manipulation ─────────────────────────────────────────────────
 window.openBlockPicker = function (colId) {
@@ -990,10 +1826,30 @@ window.insertBlock = function (type) {
     const col = findColById(currentTargetColId);
     if (!col) return;
 
+    pushHistoryState();
     const newId = 'b_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
     let newBlock = { id: newId, type: type };
 
     switch (type) {
+        case 'hero':
+            newBlock.tag = '01 / CONCEPT / EDITORIAL';
+            newBlock.titleTop = 'CAPTURING';
+            newBlock.titleItalic = 'THE';
+            newBlock.titlePlain = 'UNSEEN';
+            newBlock.subdeck = 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.';
+            newBlock.buttons = [
+                { id: 'btn_' + Date.now() + '_1', type: 'primary', label: 'EXPLORE PACKAGES →', linkUrl: '#packages' },
+                { id: 'btn_' + Date.now() + '_2', type: 'secondary', label: 'INQUIRE NOW', linkUrl: '/contact/' }
+            ];
+            newBlock.buttonLabel = 'EXPLORE PACKAGES →';
+            newBlock.linkUrl = '#packages';
+            newBlock.secButtonLabel = 'INQUIRE NOW';
+            newBlock.secButtonLink = '/contact/';
+            newBlock.showButton = true;
+            newBlock.showSecondaryButton = true;
+            newBlock.imageUrl = '/_images/theme_main.jpg';
+            newBlock.imageAlt = 'Stanislav Zhukov Editorial Photography';
+            break;
         case 'title':
             newBlock.text = 'NEW EDITORIAL TITLE';
             newBlock.level = 'h2';
@@ -1008,11 +1864,53 @@ window.insertBlock = function (type) {
             newBlock.text = 'Enter your custom editorial text description here. Share stories, session instructions, or vision highlights.';
             newBlock.align = 'left';
             break;
+        case 'pricing':
+            newBlock.kicker = 'TIER II • MOST POPULAR';
+            newBlock.title = 'THE SENSUAL ATELIER';
+            newBlock.price = '€650';
+            newBlock.originalPrice = '€850';
+            newBlock.discount = 'SAVE €200';
+            newBlock.strikethroughPrice = false;
+            newBlock.period = 'per session';
+            newBlock.subtitle = '3-Hour Private Studio Production';
+            newBlock.desc = 'Intimate boudoir or fine-art glamour session with custom shadow play, 2 wardrobe changes, and master retouching.';
+            newBlock.features = '✓ Collaborative moodboard direction\n✓ 2 Distinct lighting configurations\n✓ 15 Magazine-grade master deliverables\n✓ Private high-res online gallery\n✓ Commercial & personal usage release';
+            newBlock.buttonLabel = 'BOOK ATELIER PACKAGE →';
+            newBlock.linkUrl = '/contact/';
+            newBlock.buttonStyle = 'gold';
+            newBlock.isFeatured = true;
+            newBlock.badge = 'RECOMMENDED';
+            newBlock.align = 'left';
+            break;
+        case 'countdown':
+            newBlock.kicker = 'SEASONAL EDITORIAL PROMOTION';
+            newBlock.title = 'EXCLUSIVE COMMISSIONS CLOSE IN:';
+            newBlock.targetDate = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 16);
+            newBlock.note = 'Limited to 6 atelier commissions per month. Early booking recommended.';
+            break;
+        case 'accordion':
+            newBlock.items = [
+                { q: 'How do I secure my date in the studio calendar?', a: 'Submit an inquiry through our contact page. A 30% retainer reserves your preferred date and time.' },
+                { q: 'Can I bring my own wardrobe or moodboard ideas?', a: 'Absolutely. We develop a shared digital moodboard prior to the shoot and guide your outfit choices.' },
+                { q: 'When do I receive the finished master photographs?', a: 'Online preview proofs are shared within 48 hours. Master high-fashion retouches are delivered within 10–14 days.' }
+            ];
+            break;
+        case 'features':
+            newBlock.items = [
+                { icon: '✦', title: 'Fine-Art Creative Direction', desc: 'Bespoke storytelling tailored to your confidence and vision.' },
+                { icon: '◈', title: 'Pro Studio & Natural Light', desc: 'Access to professional studio lighting and cinematic strobe gear.' },
+                { icon: '⚜', title: 'Magazine-Grade Retouching', desc: 'Vogue-caliber frequency separation and nuanced color harmony.' }
+            ];
+            break;
         case 'image':
-            newBlock.url = '/_images/editorial.png';
+            newBlock.url = '/_images/theme_main.jpg';
             newBlock.alt = 'Photoshoot Showcase';
             newBlock.ratio = '4-5';
             newBlock.caption = '';
+            newBlock.width = '100%';
+            newBlock.align = 'center';
+            newBlock.valign = 'center';
+            newBlock.focal = 'center';
             break;
         case 'button':
             newBlock.label = 'INQUIRE NOW →';
@@ -1050,6 +1948,7 @@ window.insertBlock = function (type) {
 window.deleteBlock = function (colId, blockId) {
     const col = findColById(colId);
     if (!col) return;
+    pushHistoryState();
     col.blocks = (col.blocks || []).filter(b => b.id !== blockId);
     savePageData();
     renderPage();
@@ -1060,6 +1959,7 @@ window.moveBlock = function (colId, index, direction) {
     if (!col) return;
     const target = index + direction;
     if (target < 0 || target >= col.blocks.length) return;
+    pushHistoryState();
     const temp = col.blocks[index];
     col.blocks[index] = col.blocks[target];
     col.blocks[target] = temp;
@@ -1072,12 +1972,220 @@ window.duplicateBlock = function (colId, blockId) {
     if (!col) return;
     const index = col.blocks.findIndex(b => b.id === blockId);
     if (index === -1) return;
+    pushHistoryState();
     const clone = JSON.parse(JSON.stringify(col.blocks[index]));
     clone.id = 'b_' + Date.now();
     col.blocks.splice(index + 1, 0, clone);
     savePageData();
     renderPage();
 };
+
+window.removeHeroElement = function (blockId, elemType) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    if (elemType === 'tag') block.showTag = false;
+    else if (elemType === 'title') block.showTitle = false;
+    else if (elemType === 'subdeck') block.showSubdeck = false;
+    else if (elemType === 'button') {
+        block.showButton = false;
+        block.buttons = getHeroButtons(block).filter(b => b.type !== 'primary');
+    } else if (elemType === 'secButton') {
+        block.showSecondaryButton = false;
+        block.buttons = getHeroButtons(block).filter(b => b.type !== 'secondary');
+    } else if (elemType === 'badge') block.showBadge = false;
+    else if (elemType === 'extraNote') block.showExtraNote = false;
+    savePageData(false);
+    renderPage();
+    showToast(`Removed element from hero section`);
+};
+
+window.addHeroElement = function (blockId, elemType) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    if (elemType === 'tag') {
+        block.showTag = true;
+        if (!block.tag) block.tag = '01 / CONCEPT / EDITORIAL';
+    } else if (elemType === 'title') {
+        block.showTitle = true;
+        if (!block.titleTop) block.titleTop = 'CAPTURING';
+        if (!block.titleItalic) block.titleItalic = 'THE';
+        if (!block.titlePlain) block.titlePlain = 'UNSEEN';
+    } else if (elemType === 'subdeck') {
+        block.showSubdeck = true;
+        if (!block.subdeck) block.subdeck = 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.';
+    } else if (elemType === 'button') {
+        window.addHeroButton(blockId, 'primary');
+        return;
+    } else if (elemType === 'secButton') {
+        window.addHeroButton(blockId, 'secondary');
+        return;
+    } else if (elemType === 'badge') {
+        block.showBadge = true;
+        if (!block.badgeText) block.badgeText = 'SPECIAL FEATURE';
+        if (!block.badgeColor) block.badgeColor = 'gold';
+    } else if (elemType === 'extraNote') {
+        block.showExtraNote = true;
+        if (!block.extraNote) block.extraNote = 'Limited editorial sessions available each season.';
+    }
+    savePageData(false);
+    renderPage();
+    showToast(`Added element to hero section`);
+};
+
+window.addHeroButton = function (blockId, type = 'primary') {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    const btns = getHeroButtons(block);
+    const newBtn = {
+        id: 'btn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        type: type === 'secondary' ? 'secondary' : 'primary',
+        label: type === 'secondary' ? 'INQUIRE NOW' : 'EXPLORE PACKAGES →',
+        linkUrl: type === 'secondary' ? '/contact/' : '#packages'
+    };
+    btns.push(newBtn);
+    block.buttons = btns;
+    if (type === 'primary') {
+        block.showButton = true;
+        block.buttonLabel = newBtn.label;
+        block.linkUrl = newBtn.linkUrl;
+    }
+    if (type === 'secondary') {
+        block.showSecondaryButton = true;
+        block.secButtonLabel = newBtn.label;
+        block.secButtonLink = newBtn.linkUrl;
+    }
+    savePageData(false);
+    renderPage();
+    showToast(`Added ${newBtn.type} button to hero section`);
+};
+
+window.removeHeroButton = function (blockId, btnIndex) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    const btns = getHeroButtons(block);
+    if (btnIndex >= 0 && btnIndex < btns.length) {
+        btns.splice(btnIndex, 1);
+        block.buttons = btns;
+        const firstPrimary = btns.find(b => b.type === 'primary');
+        const firstSec = btns.find(b => b.type === 'secondary');
+        block.showButton = !!firstPrimary;
+        if (firstPrimary) {
+            block.buttonLabel = firstPrimary.label;
+            block.linkUrl = firstPrimary.linkUrl;
+        }
+        block.showSecondaryButton = !!firstSec;
+        if (firstSec) {
+            block.secButtonLabel = firstSec.label;
+            block.secButtonLink = firstSec.linkUrl;
+        }
+        savePageData(false);
+        renderPage();
+        showToast(`Removed button from hero section`);
+    }
+};
+
+function syncHeroModalInputsToBlock(block) {
+    if (!block) return;
+    const tagInput = document.getElementById('edit-block-hero-tag');
+    if (tagInput) block.tag = tagInput.value;
+    const tagCheck = document.getElementById('edit-hero-show-tag');
+    if (tagCheck) block.showTag = tagCheck.checked;
+
+    const badgeCheck = document.getElementById('edit-hero-show-badge');
+    if (badgeCheck) block.showBadge = badgeCheck.checked;
+    const badgeText = document.getElementById('edit-hero-badge-text');
+    if (badgeText) block.badgeText = badgeText.value;
+    const badgeColor = document.getElementById('edit-hero-badge-color');
+    if (badgeColor) block.badgeColor = badgeColor.value;
+
+    const titleCheck = document.getElementById('edit-hero-show-title');
+    if (titleCheck) block.showTitle = titleCheck.checked;
+    const titleTop = document.getElementById('edit-block-hero-top');
+    if (titleTop) block.titleTop = titleTop.value;
+    const titleItalic = document.getElementById('edit-block-hero-italic');
+    if (titleItalic) block.titleItalic = titleItalic.value;
+    const titlePlain = document.getElementById('edit-block-hero-plain');
+    if (titlePlain) block.titlePlain = titlePlain.value;
+
+    const subdeckCheck = document.getElementById('edit-hero-show-subdeck');
+    if (subdeckCheck) block.showSubdeck = subdeckCheck.checked;
+    const subdeck = document.getElementById('edit-block-hero-subdeck');
+    if (subdeck) block.subdeck = subdeck.value;
+
+    const noteCheck = document.getElementById('edit-hero-show-note');
+    if (noteCheck) block.showExtraNote = noteCheck.checked;
+    const noteText = document.getElementById('edit-hero-extra-note');
+    if (noteText) block.extraNote = noteText.value;
+
+    const imgInput = document.getElementById('edit-block-hero-img');
+    if (imgInput) block.imageUrl = imgInput.value;
+    const altInput = document.getElementById('edit-block-hero-alt');
+    if (altInput) block.imageAlt = altInput.value;
+    const alignSelect = document.getElementById('edit-hero-img-align');
+    if (alignSelect) block.imageAlign = alignSelect.value;
+    const valignSelect = document.getElementById('edit-hero-img-valign');
+    if (valignSelect) block.imageValign = valignSelect.value;
+
+    // Read current buttons from modal
+    const btnItemEls = document.querySelectorAll('#hero-modal-buttons-list .hero-modal-btn-item');
+    if (btnItemEls.length > 0 || document.getElementById('hero-modal-buttons-list')) {
+        const curButtons = [];
+        btnItemEls.forEach((el, index) => {
+            curButtons.push({
+                id: 'btn_' + Date.now() + '_' + index,
+                type: el.querySelector('.hero-modal-btn-type')?.value || 'primary',
+                label: el.querySelector('.hero-modal-btn-label')?.value || '',
+                linkUrl: el.querySelector('.hero-modal-btn-link')?.value || ''
+            });
+        });
+        block.buttons = curButtons;
+    }
+}
+
+window.addHeroButtonFromModal = function (blockId, type = 'primary') {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const btns = getHeroButtons(block);
+    btns.push({
+        id: 'btn_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        type: type === 'secondary' ? 'secondary' : 'primary',
+        label: type === 'secondary' ? 'INQUIRE NOW' : 'EXPLORE PACKAGES →',
+        linkUrl: type === 'secondary' ? '/contact/' : '#packages'
+    });
+    block.buttons = btns;
+    openBlockSettingsModal(blockId);
+};
+
+window.removeHeroButtonFromModal = function (blockId, idx) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const btns = getHeroButtons(block);
+    if (idx >= 0 && idx < btns.length) {
+        btns.splice(idx, 1);
+        block.buttons = btns;
+        openBlockSettingsModal(blockId);
+    }
+};
+
+window.toggleHeroAddMenu = function (e, blockId) {
+    e.stopPropagation();
+    const menu = document.getElementById(`hero-add-menu-${blockId}`);
+    if (menu) {
+        const isShown = menu.style.display === 'flex';
+        document.querySelectorAll('.hero-add-dropdown-menu').forEach(m => m.style.display = 'none');
+        menu.style.display = isShown ? 'none' : 'flex';
+    }
+};
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.hero-add-dropdown-menu').forEach(m => m.style.display = 'none');
+});
 
 // ── 8. Settings Modals ────────────────────────────────────────────────────
 window.openRowSettingsModal = function (rowId) {
@@ -1089,12 +2197,19 @@ window.openRowSettingsModal = function (rowId) {
 
     modal.setAttribute('data-target-row-id', rowId);
 
-    const layoutSelect = document.getElementById('row-layout-select');
+    const colsCountEl = document.getElementById('row-modal-cols-count');
+    const numCols = (row.columns || []).length || 1;
+    if (colsCountEl) {
+        colsCountEl.textContent = `${numCols} Column${numCols > 1 ? 's' : ''}`;
+    }
+
+    const gapSelect = document.getElementById('row-gap-select');
+    if (gapSelect) gapSelect.value = String(typeof row.colGap === 'number' ? row.colGap : 0);
+
     const spacingSelect = document.getElementById('row-spacing-select');
     const bgSelect = document.getElementById('row-bg-select');
 
-    if (layoutSelect) layoutSelect.value = row.layout || '1';
-    if (spacingSelect) spacingSelect.value = row.spacing || 'medium';
+    if (spacingSelect) spacingSelect.value = row.spacing || 'none';
     if (bgSelect) bgSelect.value = row.bg || 'transparent';
 
     modal.classList.add('is-open');
@@ -1106,20 +2221,20 @@ window.saveRowSettings = function () {
     const row = findRowById(rowId);
     if (!row) return;
 
-    const layout = document.getElementById('row-layout-select')?.value || '1';
-    const spacing = document.getElementById('row-spacing-select')?.value || 'medium';
+    pushHistoryState();
+
+    const gap = parseInt(document.getElementById('row-gap-select')?.value || '0', 10);
+    const spacing = document.getElementById('row-spacing-select')?.value || 'none';
     const bg = document.getElementById('row-bg-select')?.value || 'transparent';
 
+    row.colGap = gap;
     row.spacing = spacing;
     row.bg = bg;
 
-    if (row.layout !== layout) {
-        window.setRowLayout(rowId, layout);
-    } else {
-        savePageData();
-        renderPage();
-        closeAllModals();
-    }
+    savePageData();
+    renderPage();
+    closeAllModals();
+    showToast('Row settings applied ✓');
 };
 
 window.openBlockSettingsModal = function (blockId) {
@@ -1135,8 +2250,8 @@ window.openBlockSettingsModal = function (blockId) {
 
     let fieldsHtml = '';
 
-    // Common Alignment
-    if (block.type !== 'spacer' && block.type !== 'video') {
+    // Common Alignment (Image uses its own dedicated multi-axis alignment panel)
+    if (block.type !== 'spacer' && block.type !== 'video' && block.type !== 'image') {
         fieldsHtml += `
             <div class="builder-form-group">
                 <label class="builder-label">Alignment</label>
@@ -1150,6 +2265,178 @@ window.openBlockSettingsModal = function (blockId) {
     }
 
     switch (block.type) {
+        case 'hero':
+            fieldsHtml += `
+                <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.22); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
+                    <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0.6rem; display:block; letter-spacing:0.08em; font-size:0.75rem;">
+                        📷 HERO COVER IMAGE & ALIGNMENT
+                    </label>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+                        <button type="button" class="pub-btn style-solid" onclick="openStudioGalleryModal()" style="font-size:0.72rem; padding:0.45rem 0.85rem; width:auto;">
+                            <span>🖼️ Choose from Studio Photo Library</span>
+                        </button>
+                        <label class="pub-btn style-outline" style="font-size:0.72rem; padding:0.45rem 0.85rem; cursor:pointer; width:auto; display:inline-flex; align-items:center;">
+                            <span>📤 Upload Local Photo</span>
+                            <input type="file" accept="image/*" style="display:none;" onchange="handleModalImageUpload(event)">
+                        </label>
+                    </div>
+                    <div id="block-settings-hero-img-preview" style="text-align:center; padding:0.5rem; background:rgba(0,0,0,0.04); border-radius:4px; margin-bottom:0.75rem;">
+                        <img src="${escapeHtml(block.imageUrl || '/_images/theme_main.jpg')}" alt="Hero Preview" style="max-height:140px; border-radius:4px; object-fit:cover; border:1px solid rgba(197,160,89,0.3);">
+                    </div>
+                    <div class="builder-form-group">
+                        <label class="builder-label">Hero Image URL</label>
+                        <input type="text" id="edit-block-hero-img" class="builder-input" value="${escapeHtml(block.imageUrl || '')}" placeholder="/_images/theme_main.jpg" oninput="const p = document.querySelector('#block-settings-hero-img-preview img'); if (p) p.src = this.value;">
+                    </div>
+                    <div class="builder-form-group">
+                        <label class="builder-label">Image Alt Text</label>
+                        <input type="text" id="edit-block-hero-alt" class="builder-input" value="${escapeHtml(block.imageAlt || '')}" placeholder="Stanislav Zhukov Editorial Photography">
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                        <div>
+                            <label class="builder-label" style="font-size:0.72rem;">Horizontal Alignment</label>
+                            <select id="edit-hero-img-align" class="builder-select" style="font-size:0.75rem;">
+                                <option value="center" ${block.imageAlign === 'center' || !block.imageAlign ? 'selected' : ''}>Center</option>
+                                <option value="left" ${block.imageAlign === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="right" ${block.imageAlign === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="builder-label" style="font-size:0.72rem;">Vertical Alignment</label>
+                            <select id="edit-hero-img-valign" class="builder-select" style="font-size:0.75rem;">
+                                <option value="editorial" ${block.imageValign === 'editorial' || !block.imageValign ? 'selected' : ''}>Upper 20% (Editorial Focus)</option>
+                                <option value="top" ${block.imageValign === 'top' ? 'selected' : ''}>Top (Face / Head)</option>
+                                <option value="center" ${block.imageValign === 'center' ? 'selected' : ''}>Center (Middle)</option>
+                                <option value="bottom" ${block.imageValign === 'bottom' ? 'selected' : ''}>Bottom (Body / Lower)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.22); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
+                    <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0.6rem; display:block; letter-spacing:0.08em; font-size:0.75rem;">
+                        🗂️ HERO LEFT SECTION ELEMENTS (ADD / REMOVE & EDIT)
+                    </label>
+
+                    <!-- Element 1: Issue Tag -->
+                    <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
+                        <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-hero-show-tag" ${block.showTag !== false ? 'checked' : ''} onchange="document.getElementById('edit-hero-tag-fields').style.display = this.checked ? 'block' : 'none';">
+                            <span style="font-weight:600;">🏷️ Issue / Concept Tag</span>
+                        </label>
+                        <div id="edit-hero-tag-fields" style="display:${block.showTag !== false ? 'block' : 'none'}; margin-top:0.4rem;">
+                            <input type="text" id="edit-block-hero-tag" class="builder-input" value="${escapeHtml(block.tag || '01 / CONCEPT / EDITORIAL')}" placeholder="e.g. 01 / CONCEPT / EDITORIAL">
+                        </div>
+                    </div>
+
+                    <!-- Element 2: Concept Badge -->
+                    <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
+                        <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-hero-show-badge" ${block.showBadge ? 'checked' : ''} onchange="document.getElementById('edit-hero-badge-fields').style.display = this.checked ? 'grid' : 'none';">
+                            <span style="font-weight:600;">✦ Concept Badge</span>
+                        </label>
+                        <div id="edit-hero-badge-fields" style="display:${block.showBadge ? 'grid' : 'none'}; grid-template-columns: 2fr 1fr; gap:0.5rem; margin-top:0.4rem;">
+                            <input type="text" id="edit-hero-badge-text" class="builder-input" value="${escapeHtml(block.badgeText || 'SPECIAL FEATURE')}" placeholder="Badge Text">
+                            <select id="edit-hero-badge-color" class="builder-select">
+                                <option value="gold" ${block.badgeColor === 'gold' ? 'selected' : ''}>Gold</option>
+                                <option value="crimson" ${block.badgeColor === 'crimson' ? 'selected' : ''}>Crimson</option>
+                                <option value="dark" ${block.badgeColor === 'dark' ? 'selected' : ''}>Dark</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Element 3: Main Title -->
+                    <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
+                        <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-hero-show-title" ${block.showTitle !== false ? 'checked' : ''} onchange="document.getElementById('edit-hero-title-fields').style.display = this.checked ? 'block' : 'none';">
+                            <span style="font-weight:600;">🔤 Main Editorial Title</span>
+                        </label>
+                        <div id="edit-hero-title-fields" style="display:${block.showTitle !== false ? 'block' : 'none'}; margin-top:0.4rem;">
+                            <div class="builder-form-group" style="margin-bottom:0.4rem;">
+                                <label class="builder-label" style="font-size:0.68rem;">Line 1 (Top Word)</label>
+                                <input type="text" id="edit-block-hero-top" class="builder-input" value="${escapeHtml(block.titleTop || 'CAPTURING')}" placeholder="e.g. CAPTURING">
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                                <div>
+                                    <label class="builder-label" style="font-size:0.68rem;">Line 2 (Italic Serif Word)</label>
+                                    <input type="text" id="edit-block-hero-italic" class="builder-input" value="${escapeHtml(block.titleItalic || 'THE')}" placeholder="e.g. THE">
+                                </div>
+                                <div>
+                                    <label class="builder-label" style="font-size:0.68rem;">Line 2 (Plain Serif Word)</label>
+                                    <input type="text" id="edit-block-hero-plain" class="builder-input" value="${escapeHtml(block.titlePlain || 'UNSEEN')}" placeholder="e.g. UNSEEN">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Element 4: Subdeck -->
+                    <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
+                        <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-hero-show-subdeck" ${block.showSubdeck !== false ? 'checked' : ''} onchange="document.getElementById('edit-hero-subdeck-fields').style.display = this.checked ? 'block' : 'none';">
+                            <span style="font-weight:600;">📝 Subdeck Description</span>
+                        </label>
+                        <div id="edit-hero-subdeck-fields" style="display:${block.showSubdeck !== false ? 'block' : 'none'}; margin-top:0.4rem;">
+                            <textarea id="edit-block-hero-subdeck" class="builder-textarea" style="min-height:60px;">${escapeHtml(block.subdeck || '')}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Element 5 & 6: Action Buttons Manager (Multiple Primary & Secondary) -->
+                    <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                            <label class="builder-label" style="font-weight:600; margin-bottom:0; display:flex; align-items:center; gap:0.4rem;">
+                                <span>🔘 Action Buttons (${getHeroButtons(block).length})</span>
+                            </label>
+                            <div style="display:flex; gap:0.4rem;">
+                                <button type="button" class="pub-btn style-solid" onclick="addHeroButtonFromModal('${block.id}', 'primary')" style="font-size:0.68rem; padding:0.3rem 0.65rem; width:auto;">
+                                    + Primary
+                                </button>
+                                <button type="button" class="pub-btn style-outline" onclick="addHeroButtonFromModal('${block.id}', 'secondary')" style="font-size:0.68rem; padding:0.3rem 0.65rem; width:auto;">
+                                    + Secondary
+                                </button>
+                            </div>
+                        </div>
+                        <div id="hero-modal-buttons-list" style="display:flex; flex-direction:column; gap:0.6rem;">
+                            ${getHeroButtons(block).map((btn, idx) => `
+                                <div class="hero-modal-btn-item" data-btn-idx="${idx}" style="background:rgba(0,0,0,0.03); border:1px solid rgba(197,160,89,0.25); border-radius:4px; padding:0.6rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <span style="font-size:0.7rem; font-weight:700; color:var(--pub-gold, #c5a059);">#${idx + 1}</span>
+                                            <select class="builder-select hero-modal-btn-type" style="padding:0.2rem 0.4rem; font-size:0.7rem; height:auto; width:auto;">
+                                                <option value="primary" ${btn.type === 'primary' ? 'selected' : ''}>Primary (Solid)</option>
+                                                <option value="secondary" ${btn.type === 'secondary' ? 'selected' : ''}>Secondary (Outline)</option>
+                                            </select>
+                                        </div>
+                                        <button type="button" class="hero-item-del-btn" style="position:static; opacity:1; pointer-events:auto; width:20px; height:20px; font-size:0.65rem;" onclick="removeHeroButtonFromModal('${block.id}', ${idx})" title="Delete Button">✕</button>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.4rem;">
+                                        <div>
+                                            <label class="builder-label" style="font-size:0.65rem;">Button Label</label>
+                                            <input type="text" class="builder-input hero-modal-btn-label" value="${escapeHtml(btn.label || '')}" placeholder="Button Label">
+                                        </div>
+                                        <div>
+                                            <label class="builder-label" style="font-size:0.65rem;">Destination URL</label>
+                                            <input type="text" class="builder-input hero-modal-btn-link" value="${escapeHtml(btn.linkUrl || '')}" placeholder="Destination URL">
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${getHeroButtons(block).length === 0 ? `<p style="font-size:0.75rem; color:#888; font-style:italic; margin:0.25rem 0;">No buttons added yet. Click "+ Primary" or "+ Secondary" above to add buttons.</p>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Element 7: Editorial Note -->
+                    <div>
+                        <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-hero-show-note" ${block.showExtraNote ? 'checked' : ''} onchange="document.getElementById('edit-hero-note-fields').style.display = this.checked ? 'block' : 'none';">
+                            <span style="font-weight:600;">💬 Editorial Note / Extra Text</span>
+                        </label>
+                        <div id="edit-hero-note-fields" style="display:${block.showExtraNote ? 'block' : 'none'}; margin-top:0.4rem;">
+                            <input type="text" id="edit-hero-extra-note" class="builder-input" value="${escapeHtml(block.extraNote || 'Limited editorial sessions available each season.')}" placeholder="Extra note text...">
+                        </div>
+                    </div>
+                </div>
+            `;
+            break;
+
         case 'title':
             fieldsHtml += `
                 <div class="builder-form-group">
@@ -1197,8 +2484,60 @@ window.openBlockSettingsModal = function (blockId) {
         case 'image':
             fieldsHtml += `
                 <div class="builder-form-group">
+                    <label class="builder-label">Studio Photo Assets</label>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+                        <button type="button" class="pub-btn style-solid" onclick="openStudioGalleryModal()" style="font-size:0.72rem; padding:0.45rem 0.85rem; width:auto;">
+                            <span>🖼️ Choose from Studio Photo Library</span>
+                        </button>
+                        <label class="pub-btn style-outline" style="font-size:0.72rem; padding:0.45rem 0.85rem; cursor:pointer; width:auto; display:inline-flex; align-items:center;">
+                            <span>📤 Upload Local Photo</span>
+                            <input type="file" accept="image/*" style="display:none;" onchange="handleModalImageUpload(event)">
+                        </label>
+                    </div>
+                    <div id="block-settings-img-preview" style="text-align:center; padding:0.5rem; background:rgba(0,0,0,0.04); border-radius:4px; margin-bottom:0.75rem;">
+                        <img src="${escapeHtml(block.url || '/_images/theme_main.jpg')}" alt="Preview" style="max-height:140px; border-radius:4px; object-fit:cover; border:1px solid rgba(197,160,89,0.3);">
+                    </div>
+                </div>
+                <div class="builder-form-group">
                     <label class="builder-label">Image URL</label>
-                    <input type="text" id="edit-block-url" class="builder-input" value="${escapeHtml(block.url || '')}" placeholder="https://example.com/photo.jpg or /_images/...">
+                    <input type="text" id="edit-block-url" class="builder-input" value="${escapeHtml(block.url || '')}" placeholder="https://... or /_images/..." oninput="const p = document.querySelector('#block-settings-img-preview img'); if (p) p.src = this.value;">
+                </div>
+
+                <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.22); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
+                    <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0.6rem; display:block; letter-spacing:0.08em; font-size:0.75rem;">
+                        📐 IMAGE ALIGNMENT
+                    </label>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                        <div>
+                            <label class="builder-label" style="font-size:0.72rem;">Horizontal Alignment</label>
+                            <select id="edit-block-align" class="builder-select" style="font-size:0.75rem;">
+                                <option value="left" ${block.align === 'left' ? 'selected' : ''}>Left</option>
+                                <option value="center" ${block.align === 'center' || !block.align ? 'selected' : ''}>Center</option>
+                                <option value="right" ${block.align === 'right' ? 'selected' : ''}>Right</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="builder-label" style="font-size:0.72rem;">Vertical Alignment</label>
+                            <select id="edit-block-valign" class="builder-select" style="font-size:0.75rem;">
+                                <option value="top" ${block.valign === 'top' ? 'selected' : ''}>Top</option>
+                                <option value="center" ${block.valign === 'center' || !block.valign ? 'selected' : ''}>Center</option>
+                                <option value="bottom" ${block.valign === 'bottom' ? 'selected' : ''}>Bottom</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="builder-form-group">
+                    <label class="builder-label">Image Width / Scale (Alignment will position this)</label>
+                    <select id="edit-block-width" class="builder-select">
+                        <option value="100%" ${block.width === '100%' || !block.width ? 'selected' : ''}>100% (Full Column Width)</option>
+                        <option value="80%" ${block.width === '80%' ? 'selected' : ''}>80% Width</option>
+                        <option value="60%" ${block.width === '60%' ? 'selected' : ''}>60% Width</option>
+                        <option value="50%" ${block.width === '50%' ? 'selected' : ''}>50% Width (Half Column)</option>
+                        <option value="40%" ${block.width === '40%' ? 'selected' : ''}>40% Width</option>
+                        <option value="30%" ${block.width === '30%' ? 'selected' : ''}>30% Width</option>
+                    </select>
                 </div>
                 <div class="builder-form-group">
                     <label class="builder-label">Aspect Ratio</label>
@@ -1221,6 +2560,155 @@ window.openBlockSettingsModal = function (blockId) {
                 <div class="builder-form-group">
                     <label class="builder-label">Clickable Link Destination (Optional)</label>
                     <input type="text" id="edit-block-link" class="builder-input" value="${escapeHtml(block.linkUrl || '')}" placeholder="e.g. /photoshoots/ or https://...">
+                </div>
+            `;
+            break;
+
+        case 'pricing':
+            const featText = Array.isArray(block.features)
+                ? block.features.join('\n')
+                : (block.features || '');
+            fieldsHtml += `
+                <div class="builder-form-group">
+                    <label class="builder-label">Package Title / Name</label>
+                    <input type="text" id="edit-block-title" class="builder-input" value="${escapeHtml(block.title || '')}" placeholder="e.g. THE SENSUAL ATELIER">
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Kicker / Category Tag</label>
+                    <input type="text" id="edit-block-kicker" class="builder-input" value="${escapeHtml(block.kicker || '')}" placeholder="e.g. TIER II • SIGNATURE">
+                </div>
+                <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.22); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
+                    <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0.6rem; display:block; letter-spacing:0.08em; font-size:0.75rem;">
+                        🏷️ PRICING & PROMOTIONAL DISCOUNT
+                    </label>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.6rem;">
+                        <div class="builder-form-group" style="margin-bottom:0;">
+                            <label class="builder-label">Price</label>
+                            <input type="text" id="edit-block-price" class="builder-input" value="${escapeHtml(block.price || '')}" placeholder="e.g. €450 or €280">
+                        </div>
+                        <div class="builder-form-group" style="margin-bottom:0;">
+                            <label class="builder-label">Period / Billing Note</label>
+                            <input type="text" id="edit-block-period" class="builder-input" value="${escapeHtml(block.period || '')}" placeholder="e.g. per session">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:0.6rem; padding-top:0.6rem; border-top:1px dashed rgba(197,160,89,0.3);">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-bottom:0.6rem;">
+                            <div>
+                                <label class="builder-label" style="font-size:0.72rem;">Original Price (Strikethrough)</label>
+                                <input type="text" id="edit-block-orig-price" class="builder-input" value="${escapeHtml(block.originalPrice || '')}" placeholder="e.g. €350">
+                                <span style="font-size:0.65rem; color:#888; display:block; margin-top:2px;">Crossed out before price (e.g. <span style="text-decoration:line-through;">€350</span> €280)</span>
+                            </div>
+                            <div>
+                                <label class="builder-label" style="font-size:0.72rem;">Discount Badge / Text (Optional)</label>
+                                <input type="text" id="edit-block-discount" class="builder-input" value="${escapeHtml(block.discount || '')}" placeholder="e.g. -20% OFF or SAVE €70">
+                                <span style="font-size:0.65rem; color:#888; display:block; margin-top:2px;">Promotional badge next to price</span>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.5rem; background:rgba(0,0,0,0.03); padding:0.4rem 0.6rem; border-radius:4px;">
+                            <label style="display:flex; align-items:center; gap:0.45rem; font-size:0.75rem; cursor:pointer;">
+                                <input type="checkbox" id="edit-block-strikethrough-price" ${block.strikethroughPrice ? 'checked' : ''}>
+                                <span style="font-weight:600;">Strikethrough price directly</span>
+                            </label>
+                            <span style="font-size:0.68rem; color:#888;">(Crosses out the price text)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Duration / Subtitle</label>
+                    <input type="text" id="edit-block-subtitle" class="builder-input" value="${escapeHtml(block.subtitle || '')}" placeholder="e.g. 3-Hour Private Studio Production">
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Description</label>
+                    <textarea id="edit-block-desc" class="builder-textarea" style="min-height:70px;">${escapeHtml(block.desc || '')}</textarea>
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Included Features (One line per feature)</label>
+                    <textarea id="edit-block-features" class="builder-textarea" style="min-height:100px;" placeholder="Collaborative moodboard direction\n2 Distinct lighting configurations\n15 Magazine-grade deliverables">${escapeHtml(featText)}</textarea>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="builder-form-group">
+                        <label class="builder-label">Button Label</label>
+                        <input type="text" id="edit-block-btn-label" class="builder-input" value="${escapeHtml(block.buttonLabel || 'BOOK THIS PACKAGE →')}">
+                    </div>
+                    <div class="builder-form-group">
+                        <label class="builder-label">Button Style</label>
+                        <select id="edit-block-btn-style" class="builder-select">
+                            <option value="gold" ${block.buttonStyle === 'gold' ? 'selected' : ''}>Luxury Gold Accent</option>
+                            <option value="solid" ${block.buttonStyle === 'solid' ? 'selected' : ''}>Solid Vogue Black / White</option>
+                            <option value="outline" ${block.buttonStyle === 'outline' ? 'selected' : ''}>Minimal Hairline Outline</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Button Link URL</label>
+                    <input type="text" id="edit-block-btn-link" class="builder-input" value="${escapeHtml(block.linkUrl || '/contact/')}">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
+                    <div class="builder-form-group">
+                        <label class="builder-label">Highlight Badge Text</label>
+                        <input type="text" id="edit-block-badge" class="builder-input" value="${escapeHtml(block.badge || '')}" placeholder="e.g. RECOMMENDED">
+                    </div>
+                    <div class="builder-form-group" style="display:flex; align-items:center; padding-top:1.5rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; cursor:pointer;">
+                            <input type="checkbox" id="edit-block-featured" ${block.isFeatured ? 'checked' : ''}>
+                            <span>Highlight as Featured Tier (Gold border & glow)</span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'countdown':
+            fieldsHtml += `
+                <div class="builder-form-group">
+                    <label class="builder-label">Kicker / Top Tag</label>
+                    <input type="text" id="edit-block-kicker" class="builder-input" value="${escapeHtml(block.kicker || '')}" placeholder="e.g. SEASONAL EDITORIAL PROMOTION">
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Headline Title</label>
+                    <input type="text" id="edit-block-title" class="builder-input" value="${escapeHtml(block.title || '')}" placeholder="e.g. EXCLUSIVE COMMISSIONS CLOSE IN:">
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Target Expiration Date & Time</label>
+                    <input type="datetime-local" id="edit-block-target-date" class="builder-input" value="${block.targetDate || ''}">
+                </div>
+                <div class="builder-form-group">
+                    <label class="builder-label">Urgency Note / Footnote</label>
+                    <input type="text" id="edit-block-note" class="builder-input" value="${escapeHtml(block.note || '')}" placeholder="e.g. Limited to 6 atelier commissions per month.">
+                </div>
+            `;
+            break;
+
+        case 'accordion':
+            const accItems = Array.isArray(block.items) && block.items.length > 0 ? block.items : [
+                { q: 'How do I secure my date in the studio calendar?', a: 'Submit an inquiry through our contact page. A 30% retainer reserves your date.' },
+                { q: 'Can I bring my own wardrobe or moodboard ideas?', a: 'Absolutely. We develop a shared digital moodboard prior to shooting.' }
+            ];
+            const accFormatted = accItems.map(it => `Q: ${it.q || it.question || ''}\nA: ${it.a || it.answer || ''}`).join('\n\n');
+            fieldsHtml += `
+                <div class="builder-form-group">
+                    <label class="builder-label">FAQ Questions & Answers (Format: Q: Question followed by A: Answer)</label>
+                    <textarea id="edit-block-accordion-items" class="builder-textarea" style="min-height:160px; font-size:0.75rem; line-height:1.5;">${escapeHtml(accFormatted)}</textarea>
+                    <p style="font-size:0.68rem; color:#888; margin-top:0.35rem;">Separate multiple FAQ pairs with double newlines.</p>
+                </div>
+            `;
+            break;
+
+        case 'features':
+            const featGridItems = Array.isArray(block.items) && block.items.length > 0 ? block.items : [
+                { icon: '✦', title: 'Fine-Art Creative Direction', desc: 'Bespoke storytelling tailored to your confidence.' },
+                { icon: '◈', title: 'Pro Studio & Natural Light', desc: 'Access to professional studio lighting.' },
+                { icon: '⚜', title: 'Magazine-Grade Retouching', desc: 'Vogue-caliber frequency separation.' }
+            ];
+            const featFormatted = featGridItems.map(it => `${it.icon || '✦'} | ${it.title || ''} | ${it.desc || ''}`).join('\n');
+            fieldsHtml += `
+                <div class="builder-form-group">
+                    <label class="builder-label">Feature Perks (Format: Icon | Title | Description)</label>
+                    <textarea id="edit-block-features-items" class="builder-textarea" style="min-height:130px; font-size:0.75rem; line-height:1.5;">${escapeHtml(featFormatted)}</textarea>
+                    <p style="font-size:0.68rem; color:#888; margin-top:0.35rem;">One feature perk per line. Example icons: ✦, ◈, ⚜, ❖, ◫</p>
                 </div>
             `;
             break;
@@ -1318,10 +2806,67 @@ window.saveBlockSettings = function () {
     const block = findBlockById(currentEditingBlockId);
     if (!block) return;
 
+    pushHistoryState();
+
     const align = document.getElementById('edit-block-align')?.value;
     if (align) block.align = align;
+    const valign = document.getElementById('edit-block-valign')?.value;
+    if (valign) {
+        block.valign = valign;
+        block.focal = valign;
+    }
 
     switch (block.type) {
+        case 'hero':
+            block.showTag = !!document.getElementById('edit-hero-show-tag')?.checked;
+            block.tag = document.getElementById('edit-block-hero-tag')?.value || '';
+            block.showBadge = !!document.getElementById('edit-hero-show-badge')?.checked;
+            block.badgeText = document.getElementById('edit-hero-badge-text')?.value || 'SPECIAL FEATURE';
+            block.badgeColor = document.getElementById('edit-hero-badge-color')?.value || 'gold';
+            block.showTitle = !!document.getElementById('edit-hero-show-title')?.checked;
+            block.titleTop = document.getElementById('edit-block-hero-top')?.value || '';
+            block.titleItalic = document.getElementById('edit-block-hero-italic')?.value || '';
+            block.titlePlain = document.getElementById('edit-block-hero-plain')?.value || '';
+            block.showSubdeck = !!document.getElementById('edit-hero-show-subdeck')?.checked;
+            block.subdeck = document.getElementById('edit-block-hero-subdeck')?.value || '';
+
+            // Read dynamic buttons list from modal if present
+            const btnItemEls = document.querySelectorAll('#hero-modal-buttons-list .hero-modal-btn-item');
+            if (btnItemEls.length > 0 || document.getElementById('hero-modal-buttons-list')) {
+                const parsedButtons = [];
+                btnItemEls.forEach((el, index) => {
+                    const type = el.querySelector('.hero-modal-btn-type')?.value || 'primary';
+                    const label = el.querySelector('.hero-modal-btn-label')?.value || '';
+                    const linkUrl = el.querySelector('.hero-modal-btn-link')?.value || '';
+                    parsedButtons.push({
+                        id: 'btn_' + Date.now() + '_' + index,
+                        type: type,
+                        label: label,
+                        linkUrl: linkUrl
+                    });
+                });
+                block.buttons = parsedButtons;
+                const firstPrimary = parsedButtons.find(b => b.type === 'primary');
+                const firstSec = parsedButtons.find(b => b.type === 'secondary');
+                block.showButton = !!firstPrimary;
+                if (firstPrimary) {
+                    block.buttonLabel = firstPrimary.label;
+                    block.linkUrl = firstPrimary.linkUrl;
+                }
+                block.showSecondaryButton = !!firstSec;
+                if (firstSec) {
+                    block.secButtonLabel = firstSec.label;
+                    block.secButtonLink = firstSec.linkUrl;
+                }
+            }
+
+            block.showExtraNote = !!document.getElementById('edit-hero-show-note')?.checked;
+            block.extraNote = document.getElementById('edit-hero-extra-note')?.value || '';
+            block.imageUrl = document.getElementById('edit-block-hero-img')?.value || '/_images/theme_main.jpg';
+            block.imageAlt = document.getElementById('edit-block-hero-alt')?.value || 'Editorial Hero Photography';
+            block.imageAlign = document.getElementById('edit-hero-img-align')?.value || 'center';
+            block.imageValign = document.getElementById('edit-hero-img-valign')?.value || 'editorial';
+            break;
         case 'title':
             block.text = document.getElementById('edit-block-text')?.value || '';
             block.level = document.getElementById('edit-block-level')?.value || 'h2';
@@ -1336,9 +2881,63 @@ window.saveBlockSettings = function () {
         case 'image':
             block.url = document.getElementById('edit-block-url')?.value || '';
             block.ratio = document.getElementById('edit-block-ratio')?.value || 'auto';
+            block.width = document.getElementById('edit-block-width')?.value || '100%';
             block.alt = document.getElementById('edit-block-alt')?.value || '';
             block.caption = document.getElementById('edit-block-caption')?.value || '';
             block.linkUrl = document.getElementById('edit-block-link')?.value || '';
+            block.align = document.getElementById('edit-block-align')?.value || 'center';
+            block.valign = document.getElementById('edit-block-valign')?.value || 'center';
+            block.focal = block.valign;
+            break;
+        case 'pricing':
+            block.title = document.getElementById('edit-block-title')?.value || 'PACKAGE NAME';
+            block.kicker = document.getElementById('edit-block-kicker')?.value || '';
+            block.price = document.getElementById('edit-block-price')?.value || '€450';
+            block.period = document.getElementById('edit-block-period')?.value || '';
+            block.originalPrice = document.getElementById('edit-block-orig-price')?.value || '';
+            block.discount = document.getElementById('edit-block-discount')?.value || '';
+            block.strikethroughPrice = !!document.getElementById('edit-block-strikethrough-price')?.checked;
+            block.subtitle = document.getElementById('edit-block-subtitle')?.value || '';
+            block.desc = document.getElementById('edit-block-desc')?.value || '';
+            block.features = document.getElementById('edit-block-features')?.value || '';
+            block.buttonLabel = document.getElementById('edit-block-btn-label')?.value || 'BOOK THIS PACKAGE →';
+            block.linkUrl = document.getElementById('edit-block-btn-link')?.value || '/contact/';
+            block.buttonStyle = document.getElementById('edit-block-btn-style')?.value || 'gold';
+            block.badge = document.getElementById('edit-block-badge')?.value || '';
+            block.isFeatured = !!document.getElementById('edit-block-featured')?.checked;
+            break;
+        case 'countdown':
+            block.kicker = document.getElementById('edit-block-kicker')?.value || '';
+            block.title = document.getElementById('edit-block-title')?.value || 'OFFER CLOSES IN:';
+            block.targetDate = document.getElementById('edit-block-target-date')?.value || '';
+            block.note = document.getElementById('edit-block-note')?.value || '';
+            break;
+        case 'accordion':
+            const rawAcc = document.getElementById('edit-block-accordion-items')?.value || '';
+            const pairs = rawAcc.split(/\n\s*\n/).map(chunk => {
+                const lines = chunk.trim().split('\n');
+                let q = '';
+                let a = '';
+                lines.forEach(l => {
+                    if (/^Q:\s*/i.test(l)) q = l.replace(/^Q:\s*/i, '').trim();
+                    else if (/^A:\s*/i.test(l)) a = l.replace(/^A:\s*/i, '').trim();
+                    else if (!q) q = l.trim();
+                    else a += (a ? ' ' : '') + l.trim();
+                });
+                return { q, a };
+            }).filter(p => p.q);
+            if (pairs.length > 0) block.items = pairs;
+            break;
+        case 'features':
+            const rawFeat = document.getElementById('edit-block-features-items')?.value || '';
+            const parsedFeats = rawFeat.split('\n').map(line => {
+                const parts = line.split('|').map(s => s.trim());
+                if (parts.length >= 3) return { icon: parts[0], title: parts[1], desc: parts[2] };
+                if (parts.length === 2) return { icon: '✦', title: parts[0], desc: parts[1] };
+                if (parts.length === 1 && parts[0]) return { icon: '✦', title: parts[0], desc: '' };
+                return null;
+            }).filter(Boolean);
+            if (parsedFeats.length > 0) block.items = parsedFeats;
             break;
         case 'button':
             block.label = document.getElementById('edit-block-label')?.value || '';
@@ -1384,6 +2983,7 @@ function setupAdminControls() {
             <span class="admin-pulse-dot"></span>
             <span>BUILDER MODE</span>
         </div>
+        ${isUnsaved ? '<span class="admin-unsaved-badge" title="You have unsaved canvas edits">● Unsaved</span>' : '<span class="admin-saved-badge" title="All edits saved">✓ Saved</span>'}
         ${currentActivePreset ? `
             <div class="active-preset-pill" onclick="openSavePresetModal()" title="Click to view or edit preset details">
                 <span>🔖</span>
@@ -1400,12 +3000,26 @@ function setupAdminControls() {
             </button>
         `}
         <div class="admin-bar-divider"></div>
+        <button type="button" class="admin-bar-btn" onclick="undo()" ${historyIndex <= 0 ? 'disabled' : ''} title="Undo (Ctrl+Z)">
+            <span>↶ Undo</span>
+        </button>
+        <button type="button" class="admin-bar-btn" onclick="redo()" ${historyIndex >= historyStack.length - 1 ? 'disabled' : ''} title="Redo (Ctrl+Y)">
+            <span>↷ Redo</span>
+        </button>
         <button type="button" class="admin-bar-btn ${isPreviewMode ? 'btn-active' : ''}" id="btn-toggle-preview" onclick="toggleVisitorPreview()">
-            <span>${isPreviewMode ? '✏️ Edit Mode' : '👁️ Preview as Visitor'}</span>
+            <span>${isPreviewMode ? '✏️ Edit Mode' : '👁️ Preview'}</span>
         </button>
-        <button type="button" class="admin-bar-btn" onclick="addNewRow()">
-            <span>+ Add Row</span>
-        </button>
+        ${isPreviewMode ? `
+            <div class="device-viewport-group">
+                <button type="button" class="device-btn ${previewViewport === 'desktop' ? 'is-active' : ''}" onclick="setPreviewViewport('desktop')" title="Desktop View">🖥️ Full</button>
+                <button type="button" class="device-btn ${previewViewport === 'tablet' ? 'is-active' : ''}" onclick="setPreviewViewport('tablet')" title="Tablet View">📟 Tablet</button>
+                <button type="button" class="device-btn ${previewViewport === 'mobile' ? 'is-active' : ''}" onclick="setPreviewViewport('mobile')" title="Mobile View">📱 Mobile</button>
+            </div>
+        ` : `
+            <button type="button" class="admin-bar-btn" onclick="addNewRow()">
+                <span>+ Add Row</span>
+            </button>
+        `}
         <button type="button" class="admin-bar-btn btn-primary" onclick="savePageData()">
             <span>💾 Save</span>
         </button>
@@ -1427,9 +3041,12 @@ function setupAdminControls() {
 
 window.toggleVisitorPreview = function () {
     isPreviewMode = !isPreviewMode;
+    if (!isPreviewMode) {
+        setPreviewViewport('desktop');
+    }
     renderPage();
     setupAdminControls();
-    showToast(isPreviewMode ? 'Switched to clean visitor view mode' : 'Switched to edit mode');
+    showToast(isPreviewMode ? 'Switched to visitor preview mode' : 'Switched to visual editor');
 };
 
 window.clearEntirePage = function () {
@@ -1745,26 +3362,70 @@ window.deleteCustomPreset = async function (presetId) {
     }
 };
 
+window.onPresetsSearchInput = function (e) {
+    presetsSearchTerm = (e.target.value || '').toLowerCase().trim();
+    renderCustomPresetsList();
+};
+
+window.duplicateCustomPreset = async function (presetId) {
+    const preset = savedPresets.find(p => p.id === presetId);
+    if (!preset) return;
+
+    let baseSlug = slugify(preset.title) + '-copy';
+    let finalSlug = baseSlug;
+    let counter = 1;
+    while (savedPresets.some(p => p.slug === finalSlug)) {
+        counter++;
+        finalSlug = `${baseSlug}-${counter}`;
+    }
+
+    const clone = {
+        id: 'preset_' + Date.now(),
+        title: preset.title + ' (Copy)',
+        slug: finalSlug,
+        description: preset.description || '',
+        isDefault: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        pageData: JSON.parse(JSON.stringify(preset.pageData || []))
+    };
+
+    savedPresets.unshift(clone);
+    renderCustomPresetsList();
+    setupAdminControls();
+
+    try {
+        await saveAllPresets(savedPresets);
+        showToast(`Duplicated preset as "${clone.title}" ✓`);
+    } catch (_) {
+        showToast(`Duplicated preset locally ✓`);
+    }
+};
+
 function renderCustomPresetsList() {
     const container = document.getElementById('custom-presets-list');
     const countBadge = document.getElementById('custom-presets-count');
     if (!container) return;
 
+    const filtered = presetsSearchTerm
+        ? savedPresets.filter(p => (p.title || '').toLowerCase().includes(presetsSearchTerm) || (p.slug || '').toLowerCase().includes(presetsSearchTerm) || (p.description || '').toLowerCase().includes(presetsSearchTerm))
+        : savedPresets;
+
     if (countBadge) {
-        countBadge.textContent = `${savedPresets.length} Preset${savedPresets.length === 1 ? '' : 's'}`;
+        countBadge.textContent = `${filtered.length} of ${savedPresets.length} Preset${savedPresets.length === 1 ? '' : 's'}`;
     }
 
-    if (savedPresets.length === 0) {
+    if (filtered.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding:1.5rem 1rem; color:#888; font-size:0.75rem;">
-                No custom presets saved yet. Build a layout and click "+ Save As Preset" to create your first public promotion link.
+                ${presetsSearchTerm ? `No presets match "${escapeHtml(presetsSearchTerm)}".` : 'No custom presets saved yet. Build a layout and click "+ Save As Preset" to create your first public promotion link.'}
             </div>
         `;
         return;
     }
 
     let html = '';
-    savedPresets.forEach(p => {
+    filtered.forEach(p => {
         const isCurrent = currentActivePreset && currentActivePreset.id === p.id;
         const totalRows = (p.pageData || []).length;
         const totalBlocks = (p.pageData || []).reduce((acc, row) => acc + (row.columns || []).reduce((cAcc, col) => cAcc + (col.blocks || []).length, 0), 0);
@@ -1793,6 +3454,7 @@ function renderCustomPresetsList() {
 
                 <div class="preset-card-actions">
                     <button type="button" class="preset-btn btn-load" onclick="loadPresetIntoBuilder('${p.id}')">⚡ Load in Builder</button>
+                    <button type="button" class="preset-btn" onclick="duplicateCustomPreset('${p.id}')">⧉ Clone</button>
                     <button type="button" class="preset-btn" onclick="copyPresetPublicUrl('${p.slug}')">📋 Copy Link</button>
                     <a href="/promotion/${encodeURIComponent(p.slug)}" target="_blank" class="preset-btn">↗ View Public</a>
                     ${!p.isDefault ? `<button type="button" class="preset-btn" onclick="setPresetAsDefault('${p.id}')">★ Set as Default</button>` : ''}
@@ -1821,7 +3483,7 @@ window.applyPresetTemplate = function (type) {
             {
                 id: 'row_' + Date.now() + '_1',
                 layout: '2-equal',
-                spacing: 'spacious',
+                spacing: 'none',
                 bg: 'transparent',
                 columns: [
                     {
@@ -1957,16 +3619,226 @@ window.importJsonData = function () {
     }
 };
 
-// ── 10. Modals Universal Handlers ─────────────────────────────────────────
+// ── 10. Move Element & Studio Photo Library Handlers ──────────────────────
+window.openMoveBlockModal = function (colId, blockId) {
+    currentMovingBlockInfo = { colId, blockId };
+    const modal = document.getElementById('move-block-modal');
+    const select = document.getElementById('move-target-select');
+    if (!modal || !select) return;
+
+    let opts = '';
+    pageData.forEach((row, rIdx) => {
+        const rowTitle = `Row ${rIdx + 1} (${row.layout || '1'})`;
+        (row.columns || []).forEach((c, cIdx) => {
+            const isCurrent = c.id === colId;
+            opts += `<option value="${c.id}" ${isCurrent ? 'disabled' : ''}>${rowTitle} — Column ${cIdx + 1} ${isCurrent ? '(Current)' : ''}</option>`;
+        });
+    });
+
+    select.innerHTML = opts;
+    modal.classList.add('is-open');
+};
+
+window.executeMoveBlock = function () {
+    if (!currentMovingBlockInfo || !currentMovingBlockInfo.colId || !currentMovingBlockInfo.blockId) return;
+    const targetColId = document.getElementById('move-target-select')?.value;
+    if (!targetColId || targetColId === currentMovingBlockInfo.colId) {
+        closeAllModals();
+        return;
+    }
+
+    const srcCol = findColById(currentMovingBlockInfo.colId);
+    const destCol = findColById(targetColId);
+    if (!srcCol || !destCol) return;
+
+    const blockIdx = (srcCol.blocks || []).findIndex(b => b.id === currentMovingBlockInfo.blockId);
+    if (blockIdx === -1) return;
+
+    pushHistoryState();
+    const [movedBlock] = srcCol.blocks.splice(blockIdx, 1);
+    destCol.blocks = destCol.blocks || [];
+    destCol.blocks.push(movedBlock);
+
+    currentMovingBlockInfo = null;
+    savePageData();
+    renderPage();
+    closeAllModals();
+    showToast('Element relocated successfully ⇄');
+};
+
+const STUDIO_PHOTOS = [
+    { url: '/_images/theme_main.jpg', title: 'Vogue Noir Editorial Cover', category: 'High Fashion' },
+    { url: '/_images/theme_concept_a.jpg', title: 'Cinematic Strobe & Shadow', category: 'Editorial' },
+    { url: '/_images/theme_concept_b.jpg', title: 'High-Fashion Monolith', category: 'Noir Atelier' },
+    { url: '/_images/location_studio.jpg', title: 'Industrial Cyclorama Atelier', category: 'Studio Location' },
+    { url: '/_images/location_interior.jpg', title: 'Baroque Penthouse Suite', category: 'Interior Space' },
+    { url: '/_images/location_waterfall.jpg', title: 'Nordic Mist Waterfall', category: 'Outdoor Location' },
+    { url: '/_images/moodboard_preview.jpg', title: 'Curated Moodboard Direction', category: 'Creative Direction' },
+    { url: '/_images/editing_preview.jpg', title: 'Master Retouching Suite', category: 'Post-Production' }
+];
+
+window.openStudioGalleryModal = function () {
+    const modal = document.getElementById('studio-gallery-modal');
+    const grid = document.getElementById('studio-library-grid');
+    if (!modal || !grid) return;
+
+    grid.innerHTML = STUDIO_PHOTOS.map(photo => `
+        <div class="studio-photo-card" onclick="selectStudioLibraryImage('${photo.url}')">
+            <div class="studio-photo-thumb-wrap">
+                <img src="${photo.url}" alt="${escapeHtml(photo.title)}" class="studio-photo-thumb" loading="lazy">
+            </div>
+            <div class="studio-photo-info">
+                <span class="studio-photo-name">${escapeHtml(photo.title)}</span>
+                <span class="studio-photo-meta">${escapeHtml(photo.category)}</span>
+            </div>
+        </div>
+    `).join('');
+
+    modal.classList.add('is-open');
+};
+
+window.selectStudioLibraryImage = function (url) {
+    const heroUrlInput = document.getElementById('edit-block-hero-img');
+    const urlInput = document.getElementById('edit-block-url');
+    if (heroUrlInput) {
+        heroUrlInput.value = url;
+        const previewImg = document.querySelector('#block-settings-hero-img-preview img');
+        if (previewImg) previewImg.src = url;
+    } else if (urlInput) {
+        urlInput.value = url;
+        const previewImg = document.querySelector('#block-settings-img-preview img');
+        if (previewImg) previewImg.src = url;
+    } else if (currentEditingBlockId) {
+        const block = findBlockById(currentEditingBlockId);
+        if (block && block.type === 'image') {
+            pushHistoryState();
+            block.url = url;
+            savePageData();
+            renderPage();
+        } else if (block && block.type === 'hero') {
+            pushHistoryState();
+            block.imageUrl = url;
+            savePageData();
+            renderPage();
+        }
+    }
+    const modal = document.getElementById('studio-gallery-modal');
+    if (modal) modal.classList.remove('is-open');
+    showToast('Selected studio image ✓');
+};
+
+window.handleModalImageUpload = function (event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const status = document.getElementById('upload-status-indicator');
+    if (status) status.textContent = 'Processing image...';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        window.selectStudioLibraryImage(dataUrl);
+        if (status) status.textContent = '';
+        showToast('Local image loaded ✓');
+    };
+    reader.onerror = () => {
+        if (status) status.textContent = 'Failed to load file';
+        showToast('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
+};
+
+// ── 11. Interactive Accordion & Countdown Handlers ────────────────────────
+window.toggleAccordionItem = function (buttonEl) {
+    const item = buttonEl.closest('.pub-accordion-item');
+    if (!item) return;
+    const isOpen = item.classList.contains('is-open');
+    const parentAccordion = item.closest('.pub-accordion');
+    if (parentAccordion) {
+        parentAccordion.querySelectorAll('.pub-accordion-item').forEach(it => it.classList.remove('is-open'));
+    }
+    if (!isOpen) {
+        item.classList.add('is-open');
+    }
+};
+
+function updateAllCountdowns() {
+    const countdownBoxes = document.querySelectorAll('.pub-countdown-block');
+    if (!countdownBoxes.length) return;
+
+    const now = Date.now();
+    countdownBoxes.forEach(box => {
+        const targetDateStr = box.getAttribute('data-target-date');
+        if (!targetDateStr) return;
+
+        const targetTime = new Date(targetDateStr).getTime();
+        const diff = targetTime - now;
+
+        const daysEl = box.querySelector('.cd-days');
+        const hoursEl = box.querySelector('.cd-hours');
+        const minsEl = box.querySelector('.cd-mins');
+        const secsEl = box.querySelector('.cd-secs');
+
+        if (diff <= 0) {
+            if (daysEl) daysEl.textContent = '00';
+            if (hoursEl) hoursEl.textContent = '00';
+            if (minsEl) minsEl.textContent = '00';
+            if (secsEl) secsEl.textContent = '00';
+            return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+        if (daysEl) daysEl.textContent = String(days).padStart(2, '0');
+        if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+        if (minsEl) minsEl.textContent = String(mins).padStart(2, '0');
+        if (secsEl) secsEl.textContent = String(secs).padStart(2, '0');
+    });
+}
+setInterval(updateAllCountdowns, 1000);
+
+// ── 12. Modals Universal Handlers & Keyboard Shortcuts ───────────────────
 window.closeAllModals = function () {
     document.querySelectorAll('.builder-modal-backdrop').forEach(m => {
         m.classList.remove('is-open');
     });
 };
 
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.classList && e.target.classList.contains('builder-modal-backdrop')) {
+        closeAllModals();
+    }
+});
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeAllModals();
+        return;
+    }
+
+    if (!checkIsAdmin()) return;
+
+    const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+            e.preventDefault();
+            window.redo();
+        } else if (!isInput) {
+            e.preventDefault();
+            window.undo();
+        }
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        if (!isInput) {
+            e.preventDefault();
+            window.redo();
+        }
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        savePageData();
     }
 });
 

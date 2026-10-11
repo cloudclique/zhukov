@@ -10,7 +10,7 @@
     
     <!-- Design System & Typography -->
     <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="promotion.css">
+    <link rel="stylesheet" href="promotion.css?v=2.7">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -43,6 +43,10 @@
                 <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
             </div>
             <div class="block-picker-grid">
+                <button type="button" class="block-type-card" onclick="insertBlock('hero')">
+                    <span class="block-type-name"><span>👑</span> EDITORIAL HERO</span>
+                    <span class="block-type-desc">Flagship Vogue cover hero with full-bleed diagonal image cut, serif typography, and action button</span>
+                </button>
                 <button type="button" class="block-type-card" onclick="insertBlock('title')">
                     <span class="block-type-name"><span>✦</span> TITLE</span>
                     <span class="block-type-desc">Editorial headline (H1, H2, or H3) with Instrument Serif font</span>
@@ -74,6 +78,22 @@
                 <button type="button" class="block-type-card" onclick="insertBlock('quote')">
                     <span class="block-type-name"><span>❝</span> QUOTE</span>
                     <span class="block-type-desc">Editorial pull-quote with attribution line in curated serif styling</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('pricing')">
+                    <span class="block-type-name"><span>💳</span> PRICING PACKAGE</span>
+                    <span class="block-type-desc">Dedicated luxury editorial tier with price, inclusions checklist, highlight badge &amp; booking button</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('countdown')">
+                    <span class="block-type-name"><span>⏳</span> COUNTDOWN TIMER</span>
+                    <span class="block-type-desc">Live ticking urgency timer with luxury serif numbers for seasonal or limited-slot offers</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('accordion')">
+                    <span class="block-type-name"><span>▾</span> FAQ / ACCORDION</span>
+                    <span class="block-type-desc">Expandable editorial questions &amp; answers for booking policies, delivery timelines, and details</span>
+                </button>
+                <button type="button" class="block-type-card" onclick="insertBlock('features')">
+                    <span class="block-type-name"><span>⚜</span> FEATURES &amp; PERKS</span>
+                    <span class="block-type-desc">Formatted list or grid of package highlights, styling direction, and atelier perks</span>
                 </button>
                 <button type="button" class="block-type-card" onclick="insertBlock('video')">
                     <span class="block-type-name"><span>▶</span> VIDEO</span>
@@ -107,23 +127,37 @@
             </div>
             
             <div class="builder-form-group">
-                <label class="builder-label" for="row-layout-select">Column Structure</label>
-                <select id="row-layout-select" class="builder-select">
-                    <option value="1">1 Column (Full Width Standard)</option>
-                    <option value="2-equal">2 Columns (50% / 50% Balanced)</option>
-                    <option value="2-60-40">2 Columns (60% Main / 40% Side)</option>
-                    <option value="2-40-60">2 Columns (40% Side / 60% Main)</option>
-                    <option value="3-equal">3 Columns Equal (33% Triplet Grid)</option>
-                    <option value="4-equal">4 Columns Equal (25% Quad Grid)</option>
+                <label class="builder-label">Column Layout</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.03); border:1px solid rgba(0,0,0,0.08); padding:0.65rem 0.85rem; border-radius:4px;">
+                    <div>
+                        <strong id="row-modal-cols-count" style="font-size:0.82rem; display:block;">1 Column</strong>
+                        <span style="font-size:0.68rem; color:#888;">Click "+ Left" or "+ Right" on canvas columns to add columns, and drag divider lines to resize.</span>
+                    </div>
+                    <button type="button" class="pub-btn style-outline" id="btn-reset-row-cols" onclick="resetCurrentRowToSingleColumn()" style="font-size:0.68rem; padding:0.35rem 0.7rem; width:auto; white-space:nowrap;">
+                        Reset to 1 Column
+                    </button>
+                </div>
+            </div>
+
+            <div class="builder-form-group">
+                <label class="builder-label" for="row-gap-select">Column Spacing / Gap</label>
+                <select id="row-gap-select" class="builder-select">
+                    <option value="0">0px (Seamless / Flush / Full Bleed)</option>
+                    <option value="16">16px (Subtle Space)</option>
+                    <option value="24">24px (Standard Editorial Gap)</option>
+                    <option value="32">32px (Spacious Gap)</option>
+                    <option value="48">48px (Wide Atelier Gap)</option>
+                    <option value="64">64px (Extra Wide Gap)</option>
                 </select>
             </div>
 
             <div class="builder-form-group">
                 <label class="builder-label" for="row-spacing-select">Row Vertical Spacing</label>
                 <select id="row-spacing-select" class="builder-select">
-                    <option value="compact">Compact (2rem / 32px padding)</option>
-                    <option value="medium">Standard Vogue (4.5rem / 72px padding)</option>
-                    <option value="spacious">Spacious Atelier (7rem / 112px padding)</option>
+                    <option value="none">Zero Padding (0px Seamless / Full Bleed)</option>
+                    <option value="compact">Compact (1.75rem / 28px padding)</option>
+                    <option value="medium">Standard Vogue (3.5rem / 56px padding)</option>
+                    <option value="spacious">Spacious Atelier (5.5rem / 88px padding)</option>
                 </select>
             </div>
 
@@ -229,6 +263,9 @@
                 <span class="preset-section-title">YOUR SAVED PRESETS</span>
                 <span class="preset-count-badge" id="custom-presets-count">0 Presets</span>
             </div>
+            <div class="preset-search-box" style="margin-bottom: 0.85rem;">
+                <input type="text" id="presets-search-input" class="builder-input" placeholder="🔍 Search presets by title or URL slug..." oninput="onPresetsSearchInput(this.value)" style="font-size:0.78rem; padding:0.5rem 0.75rem;">
+            </div>
             <div id="custom-presets-list" class="custom-presets-container">
                 <!-- Dynamically rendered custom preset cards -->
             </div>
@@ -272,8 +309,73 @@
         </div>
     </div>
 
+    <!-- 6. Move Element to Column / Row Modal -->
+    <div class="builder-modal-backdrop" id="move-block-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="move-block-title">
+        <div class="builder-modal-card" style="max-width: 480px;">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="move-block-title">MOVE ELEMENT</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <p style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#777; margin:0 0 1.25rem 0; line-height: 1.5;">
+                Transfer this element into another row or column container on the canvas:
+            </p>
+            <div class="builder-form-group">
+                <label class="builder-label" for="move-target-select">Destination Column</label>
+                <select id="move-target-select" class="builder-select"></select>
+            </div>
+            <div class="builder-btn-row">
+                <button type="button" class="pub-btn style-outline" onclick="closeAllModals()">Cancel</button>
+                <button type="button" class="builder-submit-btn" onclick="executeMoveBlock()">Move Element</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Studio Image Gallery Picker Modal -->
+    <div class="builder-modal-backdrop" id="studio-gallery-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="studio-gallery-title">
+        <div class="builder-modal-card" style="max-width: 760px;">
+            <div class="builder-modal-header">
+                <h3 class="builder-modal-title" id="studio-gallery-title">STUDIO PHOTO LIBRARY</h3>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            <p style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#777; margin:0 0 1.25rem 0; line-height: 1.5;">
+                Select a high-resolution studio photo or upload a new photo directly to your showcase.
+            </p>
+            <div class="studio-library-actions" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; gap:1rem; flex-wrap:wrap;">
+                <label class="builder-submit-btn" style="cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem; font-size:0.7rem; padding:0.6rem 1.15rem;">
+                    <span>📤 Upload Local Image</span>
+                    <input type="file" id="modal-image-file-input" accept="image/*" style="display:none;" onchange="handleModalImageUpload(event)">
+                </label>
+                <span id="upload-status-indicator" style="font-size:0.72rem; color:#888;"></span>
+            </div>
+            <div class="studio-library-grid" id="studio-library-grid">
+                <!-- Dynamically rendered studio photo cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Spacing / Gap Popover -->
+    <div id="col-gap-popover" class="col-gap-popover" style="display:none;" data-target-row-id="" data-split-index="">
+        <div class="col-gap-popover-header">
+            <span>COLUMN SPACING</span>
+            <button type="button" class="gap-popover-close" onclick="closeColumnGapPopover()">&times;</button>
+        </div>
+        <div class="col-gap-presets-grid">
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(0)">0px (Flush)</button>
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(16)">16px</button>
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(24)">24px</button>
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(32)">32px</button>
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(48)">48px</button>
+            <button type="button" class="gap-preset-btn" onclick="applyColumnGap(64)">64px</button>
+        </div>
+    </div>
+
+    <!-- Live Drag Resizing Percentage Tooltip -->
+    <div id="col-resize-tooltip" class="col-resize-tooltip" style="display:none;">
+        <span id="col-resize-tooltip-text">50% ⬌ 50%</span>
+    </div>
+
     <!-- Promotion Page Builder Engine -->
-    <script type="module" src="promotion.js"></script>
+    <script type="module" src="promotion.js?v=2.7"></script>
 </body>
 
 </html>
