@@ -18,6 +18,10 @@ const DEFAULT_PAGE_DATA = [
         id: 'row_' + Date.now() + '_1',
         layout: '1',
         spacing: 'none',
+        paddingTop: 0,
+        paddingRight: 0,
+        paddingBottom: 0,
+        paddingLeft: 0,
         bg: 'transparent',
         columns: [
             {
@@ -30,6 +34,11 @@ const DEFAULT_PAGE_DATA = [
                         titleTop: 'CAPTURING',
                         titleItalic: 'THE',
                         titlePlain: 'UNSEEN',
+                        titleWords: [
+                            { text: 'CAPTURING', style: 'plain' },
+                            { text: 'THE', style: 'italic' },
+                            { text: 'UNSEEN', style: 'plain' }
+                        ],
                         subdeck: 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.',
                         buttons: [
                             { id: 'btn_hero_1', type: 'primary', label: 'EXPLORE PACKAGES →', linkUrl: '#packages' },
@@ -894,7 +903,7 @@ function renderRow(row, rowIndex, isEditActive) {
         <div class="row-admin-bar">
             <span style="font-size: 0.6rem; color: #a1a1aa; font-weight: 700; margin-right: 0.35rem;">ROW ${rowIndex + 1} (${numCols} COL${numCols > 1 ? 'S' : ''})</span>
             <button type="button" class="row-action-btn" title="Add Column to the Right" onclick="addColumnToRow('${row.id}', ${numCols - 1}, 'right')">+ Column</button>
-            <button type="button" class="row-action-btn" title="Row Padding & Atmosphere" onclick="openRowSettingsModal('${row.id}')">📐 Layout</button>
+            <button type="button" class="row-action-btn" title="Row Padding & Atmosphere" onclick="openRowSettingsModal('${row.id}')">📐 Padding &amp; Layout</button>
             <button type="button" class="row-action-btn" title="Move Up" onclick="moveRow(${rowIndex}, -1)" ${rowIndex === 0 ? 'disabled style="opacity:0.3;"' : ''}>↑</button>
             <button type="button" class="row-action-btn" title="Move Down" onclick="moveRow(${rowIndex}, 1)" ${rowIndex === pageData.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>↓</button>
             <button type="button" class="row-action-btn" title="Duplicate Row" onclick="duplicateRow('${row.id}')">⧉</button>
@@ -902,9 +911,17 @@ function renderRow(row, rowIndex, isEditActive) {
         </div>
     ` : '';
 
+    // Calculate individual row padding
+    const customPaddingStyles = [];
+    if (typeof row.paddingTop === 'number') customPaddingStyles.push(`padding-top: ${row.paddingTop}px !important`);
+    if (typeof row.paddingRight === 'number') customPaddingStyles.push(`padding-right: ${row.paddingRight}px !important`);
+    if (typeof row.paddingBottom === 'number') customPaddingStyles.push(`padding-bottom: ${row.paddingBottom}px !important`);
+    if (typeof row.paddingLeft === 'number') customPaddingStyles.push(`padding-left: ${row.paddingLeft}px !important`);
+    const rowInlineStyle = customPaddingStyles.length > 0 ? `style="${customPaddingStyles.join('; ')};"` : '';
+
     return `
         ${addRowBefore}
-        <section class="pub-row spacing-${row.spacing || 'none'} bg-${row.bg || 'transparent'}" id="${row.id}" data-row-id="${row.id}">
+        <section class="pub-row spacing-${row.spacing || 'none'} bg-${row.bg || 'transparent'}" id="${row.id}" data-row-id="${row.id}" ${rowInlineStyle}>
             ${adminBar}
             <div class="pub-row-inner" style="gap: ${colGap}px;">
                 ${colHtml}
@@ -991,6 +1008,53 @@ function getHeroButtons(block) {
     return btns;
 }
 
+function getHeroTitleWords(block) {
+    if (!block) return [];
+    if (Array.isArray(block.titleWords) && block.titleWords.length > 0) {
+        return block.titleWords.map(w => ({
+            text: typeof w === 'string' ? w : (w.text || ''),
+            style: typeof w === 'string' ? 'plain' : (w.style || 'plain')
+        }));
+    }
+    const words = [];
+    const top = (block.titleTop !== undefined ? block.titleTop : 'CAPTURING').trim();
+    const italic = (block.titleItalic !== undefined ? block.titleItalic : 'THE').trim();
+    const plain = (block.titlePlain !== undefined ? block.titlePlain : 'UNSEEN').trim();
+    if (top) words.push({ text: top, style: 'plain' });
+    if (italic) words.push({ text: italic, style: 'italic' });
+    if (plain) words.push({ text: plain, style: 'plain' });
+    return words.length > 0 ? words : [
+        { text: 'CAPTURING', style: 'plain' },
+        { text: 'THE', style: 'italic' },
+        { text: 'UNSEEN', style: 'plain' }
+    ];
+}
+
+window.changeHeroWordStyle = function (blockId, wordIdx, newStyle) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    const words = getHeroTitleWords(block);
+    if (words[wordIdx]) {
+        words[wordIdx].style = newStyle;
+        block.titleWords = words;
+        savePageData();
+        renderPage();
+        showToast(`Styled word "${words[wordIdx].text}" as ${newStyle} ✓`);
+    }
+};
+
+window.updateHeroWordText = function (blockId, wordIdx, newText) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    const words = getHeroTitleWords(block);
+    if (words[wordIdx]) {
+        words[wordIdx].text = newText;
+        block.titleWords = words;
+        savePageData(false);
+    }
+};
+
 function renderBlock(block, colId, blockIndex, isEditActive) {
     let contentHtml = '';
     const alignClass = `align-${block.align || 'left'}`;
@@ -998,9 +1062,6 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
     switch (block.type) {
         case 'hero':
             const heroTag = block.tag || '01 / CONCEPT / EDITORIAL';
-            const heroTop = block.titleTop || 'CAPTURING';
-            const heroItalic = block.titleItalic || 'THE';
-            const heroPlain = block.titlePlain || 'UNSEEN';
             const heroSubdeck = block.subdeck || 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.';
             const heroBtn = block.buttonLabel || 'EXPLORE PORTFOLIO';
             const heroLink = block.linkUrl || '#packages';
@@ -1043,22 +1104,35 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                 </div>
             ` : '';
 
+            const heroWords = getHeroTitleWords(block);
             const titleHtml = showTitle ? `
                 <div class="pub-hero-item-wrapper hero-elem-title">
-                    <h1 class="pub-hero-main-title hero-main-title">
-                        <span class="pub-hero-line-top hero-line-top" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titleTop"` : ''}>
-                            ${escapeHtml(heroTop)}
-                        </span>
-                        <span class="pub-hero-line-bottom hero-line-bottom">
-                            <span class="pub-hero-line-italic line-italic" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titleItalic"` : ''}>
-                                ${escapeHtml(heroItalic)}
+                    <h1 class="pub-hero-main-title hero-main-title single-line-title" data-hero-block-id="${block.id}">
+                        ${heroWords.map((word, wIdx) => `
+                            <span class="pub-hero-title-word word-style-${word.style || 'plain'}" data-word-idx="${wIdx}" data-block-id="${block.id}">
+                                <span class="pub-hero-word-text" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="heroTitleWordText" data-word-idx="${wIdx}" title="Click to edit text"` : ''}>${escapeHtml(word.text)}</span>
+                                ${isEditActive ? `
+                                    <div class="hero-title-word-toolbar" onclick="event.stopPropagation()">
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'plain' || !word.style ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'plain')" title="Serif Standard">Serif</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'italic' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'italic')" title="Italic Serif">Italic</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'gold' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'gold')" title="Luxury Gold">Gold</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'gold-italic' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'gold-italic')" title="Gold Italic Serif">Gold Italic</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'crimson' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'crimson')" title="Crimson Accent">Crimson</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'sans' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'sans')" title="Modern Sans">Sans</button>
+                                        <button type="button" class="hero-word-style-chip ${word.style === 'outline' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'outline')" title="Outline Serif">Outline</button>
+                                    </div>
+                                ` : ''}
                             </span>
-                            <span class="pub-hero-line-plain line-plain" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="titlePlain"` : ''}>
-                                ${escapeHtml(heroPlain)}
-                            </span>
-                        </span>
+                        `).join(' ')}
                     </h1>
-                    ${isEditActive ? `<button type="button" class="hero-item-del-btn" onclick="removeHeroElement('${block.id}', 'title')" title="Remove Title">✕</button>` : ''}
+                    ${isEditActive ? `
+                        <div style="display:flex; gap:0.35rem; align-items:center; margin-top:0.35rem;">
+                            <button type="button" class="pub-btn style-outline" onclick="openBlockSettingsModal('${block.id}')" style="font-size:0.65rem; padding:0.22rem 0.6rem; width:auto;">
+                                ✍️ Words &amp; Styling
+                            </button>
+                            <button type="button" class="hero-item-del-btn" style="position:static; opacity:1; pointer-events:auto;" onclick="removeHeroElement('${block.id}', 'title')" title="Remove Title">✕</button>
+                        </div>
+                    ` : ''}
                 </div>
             ` : '';
 
@@ -1418,9 +1492,12 @@ function attachInlineEditListeners() {
             const blockId = el.getAttribute('data-block-id');
             const field = el.getAttribute('data-field');
             const btnIdx = el.getAttribute('data-btn-index');
+            const wordIdx = el.getAttribute('data-word-idx');
             const text = el.innerText.trim();
             if (blockId && field === 'heroButtonLabel' && btnIdx !== null) {
                 updateHeroButtonField(blockId, parseInt(btnIdx, 10), 'label', text);
+            } else if (blockId && field === 'heroTitleWordText' && wordIdx !== null) {
+                updateHeroWordText(blockId, parseInt(wordIdx, 10), text);
             } else if (blockId && field) {
                 updateBlockField(blockId, field, text);
             }
@@ -1428,7 +1505,7 @@ function attachInlineEditListeners() {
 
         // Prevent Enter causing unformatted div nesting on single-line headings
         el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3' || el.classList.contains('pub-subtitle') || el.classList.contains('pub-btn') || el.classList.contains('pub-hero-issue-tag') || el.classList.contains('pub-hero-line-top') || el.classList.contains('pub-hero-line-italic') || el.classList.contains('pub-hero-line-plain') || el.classList.contains('pub-hero-action-btn'))) {
+            if (e.key === 'Enter' && (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3' || el.classList.contains('pub-subtitle') || el.classList.contains('pub-btn') || el.classList.contains('pub-hero-issue-tag') || el.classList.contains('pub-hero-line-top') || el.classList.contains('pub-hero-line-italic') || el.classList.contains('pub-hero-line-plain') || el.classList.contains('pub-hero-action-btn') || el.classList.contains('pub-hero-word-text'))) {
                 e.preventDefault();
                 el.blur();
             }
@@ -2088,6 +2165,78 @@ window.removeHeroButton = function (blockId, btnIndex) {
     }
 };
 
+window.updateHeroModalTitlePreview = function () {
+    const previewContainer = document.getElementById('hero-modal-title-preview');
+    if (!previewContainer) return;
+    const wordItemEls = document.querySelectorAll('#hero-modal-title-words-list .hero-modal-title-word-item');
+    const words = [];
+    wordItemEls.forEach(el => {
+        const text = el.querySelector('.hero-modal-word-text')?.value || '';
+        const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+        if (text.trim()) {
+            words.push({ text: text.trim(), style: style });
+        }
+    });
+    previewContainer.innerHTML = words.map(w => `<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span>`).join(' ') || '<span style="color:#aaa; font-style:italic;">(No words entered)</span>';
+};
+
+window.addHeroTitleWordFromModal = function (blockId) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const words = getHeroTitleWords(block);
+    words.push({ text: 'EDITORIAL', style: 'plain' });
+    block.titleWords = words;
+    window.openBlockSettingsModal(blockId);
+};
+
+window.removeHeroTitleWordFromModal = function (blockId, wordIndex) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const words = getHeroTitleWords(block);
+    if (words[wordIndex]) {
+        words.splice(wordIndex, 1);
+        block.titleWords = words;
+        window.openBlockSettingsModal(blockId);
+    }
+};
+
+window.moveHeroTitleWordFromModal = function (blockId, wordIndex, direction) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const words = getHeroTitleWords(block);
+    const targetIndex = wordIndex + direction;
+    if (targetIndex >= 0 && targetIndex < words.length) {
+        const temp = words[wordIndex];
+        words[wordIndex] = words[targetIndex];
+        words[targetIndex] = temp;
+        block.titleWords = words;
+        window.openBlockSettingsModal(blockId);
+    }
+};
+
+window.splitHeroTitleIntoWordsFromModal = function (blockId) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    syncHeroModalInputsToBlock(block);
+    const input = document.getElementById('hero-modal-title-quick-input');
+    const text = input ? input.value.trim() : '';
+    if (!text) {
+        showToast('Please type a title to split into words');
+        return;
+    }
+    const parts = text.split(/\s+/).filter(Boolean);
+    const words = parts.map((part, idx) => ({
+        text: part.toUpperCase(),
+        style: idx === 1 ? 'italic' : 'plain'
+    }));
+    block.titleWords = words;
+    window.openBlockSettingsModal(blockId);
+    showToast(`Converted title into ${words.length} words ✓`);
+};
+
 function syncHeroModalInputsToBlock(block) {
     if (!block) return;
     const tagInput = document.getElementById('edit-block-hero-tag');
@@ -2104,12 +2253,24 @@ function syncHeroModalInputsToBlock(block) {
 
     const titleCheck = document.getElementById('edit-hero-show-title');
     if (titleCheck) block.showTitle = titleCheck.checked;
-    const titleTop = document.getElementById('edit-block-hero-top');
-    if (titleTop) block.titleTop = titleTop.value;
-    const titleItalic = document.getElementById('edit-block-hero-italic');
-    if (titleItalic) block.titleItalic = titleItalic.value;
-    const titlePlain = document.getElementById('edit-block-hero-plain');
-    if (titlePlain) block.titlePlain = titlePlain.value;
+
+    const wordItemEls = document.querySelectorAll('#hero-modal-title-words-list .hero-modal-title-word-item');
+    if (wordItemEls.length > 0) {
+        const words = [];
+        wordItemEls.forEach(el => {
+            const text = el.querySelector('.hero-modal-word-text')?.value || '';
+            const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+            if (text.trim()) {
+                words.push({ text: text.trim(), style: style });
+            }
+        });
+        if (words.length > 0) {
+            block.titleWords = words;
+            block.titleTop = words[0]?.text || '';
+            block.titleItalic = words[1]?.text || '';
+            block.titlePlain = words.slice(2).map(w => w.text).join(' ') || '';
+        }
+    }
 
     const subdeckCheck = document.getElementById('edit-hero-show-subdeck');
     if (subdeckCheck) block.showSubdeck = subdeckCheck.checked;
@@ -2206,13 +2367,37 @@ window.openRowSettingsModal = function (rowId) {
     const gapSelect = document.getElementById('row-gap-select');
     if (gapSelect) gapSelect.value = String(typeof row.colGap === 'number' ? row.colGap : 0);
 
-    const spacingSelect = document.getElementById('row-spacing-select');
     const bgSelect = document.getElementById('row-bg-select');
-
-    if (spacingSelect) spacingSelect.value = row.spacing || 'none';
     if (bgSelect) bgSelect.value = row.bg || 'transparent';
 
+    // Populate individual padding values (Top, Right, Bottom, Left)
+    const ptInput = document.getElementById('row-padding-top');
+    const prInput = document.getElementById('row-padding-right');
+    const pbInput = document.getElementById('row-padding-bottom');
+    const plInput = document.getElementById('row-padding-left');
+
+    let defTop = 0, defBottom = 0;
+    if (row.spacing === 'compact') { defTop = 28; defBottom = 28; }
+    else if (row.spacing === 'medium') { defTop = 56; defBottom = 56; }
+    else if (row.spacing === 'spacious') { defTop = 88; defBottom = 88; }
+
+    if (ptInput) ptInput.value = typeof row.paddingTop === 'number' ? row.paddingTop : defTop;
+    if (prInput) prInput.value = typeof row.paddingRight === 'number' ? row.paddingRight : 0;
+    if (pbInput) pbInput.value = typeof row.paddingBottom === 'number' ? row.paddingBottom : defBottom;
+    if (plInput) plInput.value = typeof row.paddingLeft === 'number' ? row.paddingLeft : 0;
+
     modal.classList.add('is-open');
+};
+
+window.applyRowPaddingPreset = function (top, right, bottom, left) {
+    const ptInput = document.getElementById('row-padding-top');
+    const prInput = document.getElementById('row-padding-right');
+    const pbInput = document.getElementById('row-padding-bottom');
+    const plInput = document.getElementById('row-padding-left');
+    if (ptInput) ptInput.value = top;
+    if (prInput) prInput.value = right;
+    if (pbInput) pbInput.value = bottom;
+    if (plInput) plInput.value = left;
 };
 
 window.saveRowSettings = function () {
@@ -2224,17 +2409,25 @@ window.saveRowSettings = function () {
     pushHistoryState();
 
     const gap = parseInt(document.getElementById('row-gap-select')?.value || '0', 10);
-    const spacing = document.getElementById('row-spacing-select')?.value || 'none';
     const bg = document.getElementById('row-bg-select')?.value || 'transparent';
 
-    row.colGap = gap;
-    row.spacing = spacing;
+    const pt = parseInt(document.getElementById('row-padding-top')?.value || '0', 10);
+    const pr = parseInt(document.getElementById('row-padding-right')?.value || '0', 10);
+    const pb = parseInt(document.getElementById('row-padding-bottom')?.value || '0', 10);
+    const pl = parseInt(document.getElementById('row-padding-left')?.value || '0', 10);
+
+    row.colGap = isNaN(gap) ? 0 : gap;
     row.bg = bg;
+    row.paddingTop = isNaN(pt) ? 0 : pt;
+    row.paddingRight = isNaN(pr) ? 0 : pr;
+    row.paddingBottom = isNaN(pb) ? 0 : pb;
+    row.paddingLeft = isNaN(pl) ? 0 : pl;
+    row.spacing = 'custom';
 
     savePageData();
     renderPage();
     closeAllModals();
-    showToast('Row settings applied ✓');
+    showToast('Row padding & layout applied ✓');
 };
 
 window.openBlockSettingsModal = function (blockId) {
@@ -2344,26 +2537,55 @@ window.openBlockSettingsModal = function (blockId) {
                         </div>
                     </div>
 
-                    <!-- Element 3: Main Title -->
+                    <!-- Element 3: Main Title (1 Line & Individual Word Styling) -->
                     <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
                         <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                             <input type="checkbox" id="edit-hero-show-title" ${block.showTitle !== false ? 'checked' : ''} onchange="document.getElementById('edit-hero-title-fields').style.display = this.checked ? 'block' : 'none';">
-                            <span style="font-weight:600;">🔤 Main Editorial Title</span>
+                            <span style="font-weight:600;">🔤 Main Editorial Title (1 Line &amp; Word Styling)</span>
                         </label>
-                        <div id="edit-hero-title-fields" style="display:${block.showTitle !== false ? 'block' : 'none'}; margin-top:0.4rem;">
-                            <div class="builder-form-group" style="margin-bottom:0.4rem;">
-                                <label class="builder-label" style="font-size:0.68rem;">Line 1 (Top Word)</label>
-                                <input type="text" id="edit-block-hero-top" class="builder-input" value="${escapeHtml(block.titleTop || 'CAPTURING')}" placeholder="e.g. CAPTURING">
+                        <div id="edit-hero-title-fields" style="display:${block.showTitle !== false ? 'block' : 'none'}; margin-top:0.6rem;">
+                            <!-- Live 1-line preview -->
+                            <div style="background:rgba(0,0,0,0.04); border-radius:4px; padding:0.65rem; margin-bottom:0.6rem; text-align:left;">
+                                <span style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:0.25rem;">Live 1-Line Preview:</span>
+                                <div id="hero-modal-title-preview" style="display:flex; flex-wrap:wrap; align-items:baseline; gap:0.3em; font-size:1.25rem;">
+                                    ${getHeroTitleWords(block).map(w => `<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span>`).join(' ')}
+                                </div>
                             </div>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-                                <div>
-                                    <label class="builder-label" style="font-size:0.68rem;">Line 2 (Italic Serif Word)</label>
-                                    <input type="text" id="edit-block-hero-italic" class="builder-input" value="${escapeHtml(block.titleItalic || 'THE')}" placeholder="e.g. THE">
-                                </div>
-                                <div>
-                                    <label class="builder-label" style="font-size:0.68rem;">Line 2 (Plain Serif Word)</label>
-                                    <input type="text" id="edit-block-hero-plain" class="builder-input" value="${escapeHtml(block.titlePlain || 'UNSEEN')}" placeholder="e.g. UNSEEN">
-                                </div>
+
+                            <!-- Quick Sentence Splitter -->
+                            <div style="display:flex; gap:0.4rem; margin-bottom:0.75rem;">
+                                <input type="text" id="hero-modal-title-quick-input" class="builder-input" placeholder="Type or paste title (e.g. CAPTURING THE UNSEEN)..." style="font-size:0.75rem;">
+                                <button type="button" class="pub-btn style-outline" onclick="splitHeroTitleIntoWordsFromModal('${block.id}')" style="font-size:0.68rem; padding:0.35rem 0.65rem; width:auto; white-space:nowrap;">
+                                    Split into Words
+                                </button>
+                            </div>
+
+                            <!-- Word-by-word list -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                                <label class="builder-label" style="font-size:0.68rem; font-weight:600; margin:0;">Words &amp; Styling (${getHeroTitleWords(block).length} Words):</label>
+                                <button type="button" class="pub-btn style-solid" onclick="addHeroTitleWordFromModal('${block.id}')" style="font-size:0.65rem; padding:0.25rem 0.55rem; width:auto;">
+                                    + Add Word
+                                </button>
+                            </div>
+                            <div id="hero-modal-title-words-list" style="display:flex; flex-direction:column; gap:0.45rem;">
+                                ${getHeroTitleWords(block).map((word, wIdx, arr) => `
+                                    <div class="hero-modal-title-word-item" data-word-idx="${wIdx}" style="display:flex; gap:0.4rem; align-items:center; background:rgba(0,0,0,0.02); border:1px solid rgba(0,0,0,0.08); border-radius:4px; padding:0.4rem;">
+                                        <span style="font-size:0.65rem; font-weight:700; color:var(--pub-gold, #c5a059); min-width:18px;">#${wIdx + 1}</span>
+                                        <input type="text" class="builder-input hero-modal-word-text" value="${escapeHtml(word.text)}" placeholder="Word" style="flex:2; font-size:0.75rem; padding:0.3rem 0.5rem;" oninput="updateHeroModalTitlePreview()">
+                                        <select class="builder-select hero-modal-word-style" style="flex:2; font-size:0.72rem; padding:0.3rem 0.4rem;" onchange="updateHeroModalTitlePreview()">
+                                            <option value="plain" ${word.style === 'plain' || !word.style ? 'selected' : ''}>Serif (Standard)</option>
+                                            <option value="italic" ${word.style === 'italic' ? 'selected' : ''}>Italic Serif (*The*)</option>
+                                            <option value="gold" ${word.style === 'gold' ? 'selected' : ''}>Luxury Gold</option>
+                                            <option value="gold-italic" ${word.style === 'gold-italic' ? 'selected' : ''}>Gold Italic (*Gold*)</option>
+                                            <option value="crimson" ${word.style === 'crimson' ? 'selected' : ''}>Crimson Accent</option>
+                                            <option value="sans" ${word.style === 'sans' ? 'selected' : ''}>Modern Sans (Bold)</option>
+                                            <option value="outline" ${word.style === 'outline' ? 'selected' : ''}>Outlined Serif</option>
+                                        </select>
+                                        <button type="button" class="row-action-btn" onclick="moveHeroTitleWordFromModal('${block.id}', ${wIdx}, -1)" ${wIdx === 0 ? 'disabled style="opacity:0.3;"' : ''} title="Move left">◀</button>
+                                        <button type="button" class="row-action-btn" onclick="moveHeroTitleWordFromModal('${block.id}', ${wIdx}, 1)" ${wIdx === arr.length - 1 ? 'disabled style="opacity:0.3;"' : ''} title="Move right">▶</button>
+                                        <button type="button" class="hero-item-del-btn" style="position:static; opacity:1; pointer-events:auto; width:20px; height:20px; font-size:0.65rem;" onclick="removeHeroTitleWordFromModal('${block.id}', ${wIdx})" title="Delete Word">✕</button>
+                                    </div>
+                                `).join('')}
                             </div>
                         </div>
                     </div>
@@ -2824,9 +3046,23 @@ window.saveBlockSettings = function () {
             block.badgeText = document.getElementById('edit-hero-badge-text')?.value || 'SPECIAL FEATURE';
             block.badgeColor = document.getElementById('edit-hero-badge-color')?.value || 'gold';
             block.showTitle = !!document.getElementById('edit-hero-show-title')?.checked;
-            block.titleTop = document.getElementById('edit-block-hero-top')?.value || '';
-            block.titleItalic = document.getElementById('edit-block-hero-italic')?.value || '';
-            block.titlePlain = document.getElementById('edit-block-hero-plain')?.value || '';
+            const wordItemEls = document.querySelectorAll('#hero-modal-title-words-list .hero-modal-title-word-item');
+            if (wordItemEls.length > 0) {
+                const words = [];
+                wordItemEls.forEach(el => {
+                    const text = el.querySelector('.hero-modal-word-text')?.value || '';
+                    const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+                    if (text.trim()) {
+                        words.push({ text: text.trim(), style: style });
+                    }
+                });
+                if (words.length > 0) {
+                    block.titleWords = words;
+                    block.titleTop = words[0]?.text || '';
+                    block.titleItalic = words[1]?.text || '';
+                    block.titlePlain = words.slice(2).map(w => w.text).join(' ') || '';
+                }
+            }
             block.showSubdeck = !!document.getElementById('edit-hero-show-subdeck')?.checked;
             block.subdeck = document.getElementById('edit-block-hero-subdeck')?.value || '';
 
@@ -3666,49 +3902,620 @@ window.executeMoveBlock = function () {
     showToast('Element relocated successfully ⇄');
 };
 
-const STUDIO_PHOTOS = [
-    { url: '/_images/theme_main.jpg', title: 'Vogue Noir Editorial Cover', category: 'High Fashion' },
-    { url: '/_images/theme_concept_a.jpg', title: 'Cinematic Strobe & Shadow', category: 'Editorial' },
-    { url: '/_images/theme_concept_b.jpg', title: 'High-Fashion Monolith', category: 'Noir Atelier' },
-    { url: '/_images/location_studio.jpg', title: 'Industrial Cyclorama Atelier', category: 'Studio Location' },
-    { url: '/_images/location_interior.jpg', title: 'Baroque Penthouse Suite', category: 'Interior Space' },
-    { url: '/_images/location_waterfall.jpg', title: 'Nordic Mist Waterfall', category: 'Outdoor Location' },
-    { url: '/_images/moodboard_preview.jpg', title: 'Curated Moodboard Direction', category: 'Creative Direction' },
-    { url: '/_images/editing_preview.jpg', title: 'Master Retouching Suite', category: 'Post-Production' }
-];
+// ==========================================================================
+// 10. STUDIO PHOTO ARCHIVE — MASTER-DETAIL ALBUM & IMAGE PICKER ENGINE
+// ==========================================================================
+let cachedStudioPhotoSets = null;
+let activeStudioSetId = 'all'; // 'all', 'all_archived', 'single_shots', or set id
+let activeStudioArchiveFilter = 'all'; // 'all', 'active', 'archived'
+let activeStudioSelectedUrl = null;
+let activeStudioGridDensity = 'normal'; // 'compact', 'normal', 'large'
+let activeStudioSearchQuery = '';
 
-window.openStudioGalleryModal = function () {
+window.openStudioGalleryModal = async function () {
     const modal = document.getElementById('studio-gallery-modal');
-    const grid = document.getElementById('studio-library-grid');
-    if (!modal || !grid) return;
-
-    grid.innerHTML = STUDIO_PHOTOS.map(photo => `
-        <div class="studio-photo-card" onclick="selectStudioLibraryImage('${photo.url}')">
-            <div class="studio-photo-thumb-wrap">
-                <img src="${photo.url}" alt="${escapeHtml(photo.title)}" class="studio-photo-thumb" loading="lazy">
-            </div>
-            <div class="studio-photo-info">
-                <span class="studio-photo-name">${escapeHtml(photo.title)}</span>
-                <span class="studio-photo-meta">${escapeHtml(photo.category)}</span>
-            </div>
-        </div>
-    `).join('');
+    if (!modal) return;
 
     modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+
+    // Reset search
+    activeStudioSearchQuery = '';
+    const searchInput = document.getElementById('studio-library-search');
+    const clearBtn = document.getElementById('studio-search-clear-btn');
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    // Reset selection state
+    activeStudioSelectedUrl = null;
+    updateStudioFooterSelection();
+
+    // Check if we already have complete cached data with archive flags
+    const hasArchivedData = cachedStudioPhotoSets && cachedStudioPhotoSets.length > 0 && cachedStudioPhotoSets.some(s => 'isArchived' in s);
+    if (hasArchivedData) {
+        renderStudioLibraryUI();
+        return;
+    }
+
+    // Show loading state in both panels
+    const sidebarList = document.getElementById('studio-sets-list');
+    const photosGrid = document.getElementById('studio-photos-grid');
+    const statsText = document.getElementById('studio-stats-text');
+    const currentMeta = document.getElementById('studio-current-set-meta');
+
+    if (sidebarList) {
+        sidebarList.innerHTML = `
+            <div style="padding: 2.5rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                <div style="font-size: 1.4rem; margin-bottom: 0.6rem; animation: spin 1s linear infinite; display: inline-block; color: var(--pub-gold, #c5a059);">✦</div>
+                <p style="font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;">Loading sets & archives…</p>
+            </div>
+        `;
+    }
+    if (photosGrid) {
+        photosGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 4rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                <div style="font-size: 1.8rem; margin-bottom: 0.8rem; animation: spin 1s linear infinite; display: inline-block; color: var(--pub-gold, #c5a059);">✦</div>
+                <p style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase;">Loading studio photoshoot archive…</p>
+            </div>
+        `;
+    }
+    if (statsText) statsText.textContent = 'Connecting to studio database…';
+    if (currentMeta) currentMeta.textContent = 'Loading imagery…';
+
+    try {
+        const [setsSnap, singleSnap, orderDoc] = await Promise.all([
+            getDocs(collection(db, 'photo_sets')).catch(err => {
+                console.warn('Could not fetch photo_sets for studio picker:', err);
+                return { empty: true, forEach: () => {} };
+            }),
+            getDocs(collection(db, 'single_shots')).catch(err => {
+                console.warn('Could not fetch single_shots for studio picker:', err);
+                return { empty: true, forEach: () => {} };
+            }),
+            getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
+        ]);
+
+        const sets = [];
+
+        // 1. Process Photoshoot Sets (including archived sets & photos)
+        if (setsSnap && !setsSnap.empty) {
+            setsSnap.forEach(docSnap => {
+                const data = docSnap.data();
+                const rawUrls = Array.isArray(data.urls) ? data.urls.filter(Boolean) : [];
+                if (rawUrls.length === 0) return;
+
+                const archivedUrlsList = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                const archivedUrlsSet = new Set(archivedUrlsList);
+                const allPhotosArchived = rawUrls.length > 0 && rawUrls.every(u => archivedUrlsSet.has(u));
+                const isSetArchived = Boolean(data.archived === true || allPhotosArchived);
+
+                // Show newest to oldest
+                const orderedUrls = [...rawUrls].reverse();
+                const name = data.categoryName || data.title || docSnap.id || 'Photoshoot Set';
+                const model = data.modelName && data.modelName !== 'Unknown' && data.modelName !== 'Mixed' && data.modelName !== '/' ? data.modelName.trim() : '';
+                const theme = data.theme || '';
+                const date = data.date || '';
+
+                const archivedCount = isSetArchived ? orderedUrls.length : orderedUrls.filter(u => archivedUrlsSet.has(u)).length;
+
+                sets.push({
+                    id: docSnap.id,
+                    name: name,
+                    model: model,
+                    theme: theme,
+                    date: date,
+                    urls: orderedUrls,
+                    archivedUrls: archivedUrlsSet,
+                    isArchived: isSetArchived,
+                    archivedCount: archivedCount,
+                    coverUrl: orderedUrls[0] || ''
+                });
+            });
+        }
+
+        // 2. Process Single Shots (including archived single shots)
+        if (singleSnap && !singleSnap.empty) {
+            const singleItems = [];
+            const singleArchivedUrls = new Set();
+
+            singleSnap.forEach(docSnap => {
+                const d = docSnap.data();
+                if (d.url) {
+                    singleItems.push(d);
+                    if (d.archived === true) {
+                        singleArchivedUrls.add(d.url);
+                    }
+                }
+            });
+
+            const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
+            const orderMap = new Map();
+            customOrder.forEach((url, idx) => orderMap.set(url, idx));
+
+            singleItems.sort((a, b) => {
+                const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : -1;
+                const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : -1;
+                if (idxA !== idxB) {
+                    if (idxA === -1) return -1;
+                    if (idxB === -1) return 1;
+                    return idxA - idxB;
+                }
+                return new Date(b.date || 0) - new Date(a.date || 0);
+            });
+
+            const singleUrls = singleItems.map(item => item.url).filter(Boolean);
+            if (singleUrls.length > 0) {
+                sets.unshift({
+                    id: 'single_shots',
+                    name: 'Single Shots',
+                    model: 'Editorial Portraits',
+                    theme: 'Mixed',
+                    date: '',
+                    urls: singleUrls,
+                    archivedUrls: singleArchivedUrls,
+                    isArchived: false,
+                    archivedCount: singleArchivedUrls.size,
+                    coverUrl: singleUrls[0] || ''
+                });
+            }
+        }
+
+        // Fallbacks if no database items
+        if (sets.length === 0) {
+            sets.push(
+                {
+                    id: 'fallback_editorial',
+                    name: 'Vogue Paris Editorial',
+                    model: 'Elena V.',
+                    theme: 'Haute Couture',
+                    date: '2026-08-14',
+                    urls: [
+                        'https://i.ibb.co/d4Vrdj32/image-2.webp',
+                        'https://i.ibb.co/PsZXrKDf/image-0.webp',
+                        'https://i.ibb.co/yByqsxc7/image-5.webp',
+                        'https://i.ibb.co/TxT3LCYZ/image-1.webp'
+                    ],
+                    archivedUrls: new Set(),
+                    isArchived: false,
+                    archivedCount: 0,
+                    coverUrl: 'https://i.ibb.co/d4Vrdj32/image-2.webp'
+                },
+                {
+                    id: 'fallback_archived_noir',
+                    name: 'Haute Couture Monochrome Noir (Archived)',
+                    model: 'Anastasia S.',
+                    theme: 'Monochrome Film',
+                    date: '2026-07-22',
+                    urls: [
+                        'https://i.ibb.co/hx18J6x6/image-8.webp',
+                        'https://i.ibb.co/CKCTtpm0/image-2.webp',
+                        'https://i.ibb.co/2YvP0Ggx/image-4.webp',
+                        'https://i.ibb.co/gZgCv2SK/image-10.webp'
+                    ],
+                    archivedUrls: new Set(['https://i.ibb.co/hx18J6x6/image-8.webp', 'https://i.ibb.co/CKCTtpm0/image-2.webp']),
+                    isArchived: true,
+                    archivedCount: 4,
+                    coverUrl: 'https://i.ibb.co/hx18J6x6/image-8.webp'
+                }
+            );
+        }
+
+        cachedStudioPhotoSets = sets;
+        // Default active set
+        if (!activeStudioSetId) {
+            activeStudioSetId = 'all';
+        }
+        renderStudioLibraryUI();
+    } catch (err) {
+        console.error('Failed to load studio photo sets:', err);
+        if (photosGrid) {
+            photosGrid.innerHTML = `<div style="grid-column:1 / -1; padding:3rem; text-align:center; color:#f87171; font-family:'Inter',sans-serif;">Error connecting to photo library.</div>`;
+        }
+    }
 };
 
-window.selectStudioLibraryImage = function (url) {
+function renderStudioLibraryUI() {
+    if (!cachedStudioPhotoSets) return;
+
+    const realSets = cachedStudioPhotoSets.filter(s => s.id !== 'single_shots');
+    const totalActiveSets = realSets.filter(s => !s.isArchived).length;
+    const totalArchivedSets = realSets.filter(s => s.isArchived).length;
+    const totalPhotos = cachedStudioPhotoSets.reduce((sum, s) => sum + (s.urls ? s.urls.length : 0), 0);
+
+    const statsText = document.getElementById('studio-stats-text');
+    if (statsText) {
+        statsText.textContent = `${totalActiveSets} Active Sets • ${totalArchivedSets} Archived Sets • ${totalPhotos} Total Photos`;
+    }
+
+    renderStudioSidebar();
+    renderStudioPhotosCanvas();
+}
+
+window.setStudioArchiveFilter = function (filter) {
+    activeStudioArchiveFilter = filter || 'all';
+
+    // Update active tab buttons
+    document.querySelectorAll('.studio-filter-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.getAttribute('data-filter') === activeStudioArchiveFilter);
+    });
+
+    // Smart set switching when filter changes
+    if (activeStudioArchiveFilter === 'archived') {
+        const currentSet = cachedStudioPhotoSets?.find(s => s.id === activeStudioSetId);
+        if (!currentSet || (!currentSet.isArchived && activeStudioSetId !== 'all_archived')) {
+            const firstArchived = cachedStudioPhotoSets?.find(s => s.isArchived);
+            activeStudioSetId = firstArchived ? firstArchived.id : 'all_archived';
+        }
+    } else if (activeStudioArchiveFilter === 'active') {
+        const currentSet = cachedStudioPhotoSets?.find(s => s.id === activeStudioSetId);
+        if (currentSet && currentSet.isArchived) {
+            activeStudioSetId = 'all';
+        }
+    }
+
+    renderStudioSidebar();
+    renderStudioPhotosCanvas();
+};
+
+function getAllArchivedPhotos() {
+    if (!cachedStudioPhotoSets) return [];
+    const archivedPhotos = [];
+    const seen = new Set();
+    cachedStudioPhotoSets.forEach(set => {
+        set.urls.forEach(url => {
+            if (!url || seen.has(url)) return;
+            const isArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(url));
+            if (isArchived) {
+                seen.add(url);
+                archivedPhotos.push({
+                    url: url,
+                    setName: set.name,
+                    isArchived: true
+                });
+            }
+        });
+    });
+    return archivedPhotos;
+}
+
+function renderStudioSidebar() {
+    const list = document.getElementById('studio-sets-list');
+    const countBadge = document.getElementById('studio-sidebar-set-count');
+    if (!list || !cachedStudioPhotoSets) return;
+
+    const query = activeStudioSearchQuery.toLowerCase();
+
+    // Filter sets by search and archive tab
+    const filteredSets = cachedStudioPhotoSets.filter(set => {
+        // Tab filter
+        if (activeStudioArchiveFilter === 'active' && set.isArchived) return false;
+        if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return false;
+
+        // Search query
+        if (!query) return true;
+        const matchesName = (set.name || '').toLowerCase().includes(query);
+        const matchesModel = (set.model || '').toLowerCase().includes(query);
+        const matchesTheme = (set.theme || '').toLowerCase().includes(query);
+        return matchesName || matchesModel || matchesTheme;
+    });
+
+    const allArchivedPhotos = getAllArchivedPhotos();
+
+    if (countBadge) {
+        if (activeStudioArchiveFilter === 'archived') {
+            countBadge.textContent = `${filteredSets.length} archived set${filteredSets.length === 1 ? '' : 's'}`;
+        } else if (activeStudioArchiveFilter === 'active') {
+            countBadge.textContent = `${filteredSets.length} active set${filteredSets.length === 1 ? '' : 's'}`;
+        } else {
+            countBadge.textContent = `${filteredSets.length} set${filteredSets.length === 1 ? '' : 's'}`;
+        }
+    }
+
+    const totalPhotos = cachedStudioPhotoSets.reduce((acc, s) => acc + s.urls.length, 0);
+
+    let html = '';
+
+    // Quick entry items (shown if no restrictive search query)
+    if (!query) {
+        if (activeStudioArchiveFilter === 'all' || activeStudioArchiveFilter === 'active') {
+            const isAllActive = activeStudioSetId === 'all';
+            html += `
+                <div class="studio-set-item ${isAllActive ? 'is-active' : ''}" onclick="window.selectStudioSet('all')">
+                    <div class="studio-set-item-thumb icon-thumb">✦</div>
+                    <div class="studio-set-item-info">
+                        <div class="studio-set-item-title">All Studio Photos</div>
+                        <div class="studio-set-item-sub">Continuous Portfolio Stream</div>
+                    </div>
+                    <span class="studio-set-item-badge">${totalPhotos}</span>
+                </div>
+            `;
+        }
+
+        // Show "All Archived Photos" vault item if archived photos exist
+        if (allArchivedPhotos.length > 0 && (activeStudioArchiveFilter === 'all' || activeStudioArchiveFilter === 'archived')) {
+            const isArchivedVaultActive = activeStudioSetId === 'all_archived';
+            html += `
+                <div class="studio-set-item ${isArchivedVaultActive ? 'is-active' : ''}" onclick="window.selectStudioSet('all_archived')">
+                    <div class="studio-set-item-thumb icon-thumb" style="color:#fbbf24; background:rgba(217,119,6,0.12); border-color:rgba(245,158,11,0.35);">📦</div>
+                    <div class="studio-set-item-info">
+                        <div class="studio-set-item-title" style="${isArchivedVaultActive ? 'color:#fbbf24;' : ''}">All Archived Photos</div>
+                        <div class="studio-set-item-sub">Vault Collection (${allArchivedPhotos.length} photos)</div>
+                    </div>
+                    <span class="studio-set-item-badge badge-archived">${allArchivedPhotos.length}</span>
+                </div>
+            `;
+        }
+    }
+
+    if (filteredSets.length === 0) {
+        html += `
+            <div style="padding: 2.5rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif; font-size: 0.72rem;">
+                ${activeStudioArchiveFilter === 'archived' ? 'No archived photoshoot sets match this criteria.' : `No photoshoot sets match "${escapeHtml(activeStudioSearchQuery)}".`}
+            </div>
+        `;
+    } else {
+        filteredSets.forEach(set => {
+            const isActive = activeStudioSetId === set.id;
+            const displayName = (set.name && set.name.trim() !== '-' && set.name.trim() !== '') ? set.name : (set.model ? `Photoshoot • ${set.model}` : 'Editorial Set');
+            const modelPart = set.model ? `Model: ${escapeHtml(set.model)}` : (set.theme ? escapeHtml(set.theme) : `${set.urls.length} photos`);
+            const subtitle = set.isArchived ? `📦 Archived Set • ${modelPart}` : modelPart;
+
+            const badgeHtml = set.isArchived
+                ? `<span class="studio-set-item-badge badge-archived">ARCHIVED (${set.urls.length})</span>`
+                : (set.archivedCount > 0
+                    ? `<span class="studio-set-item-badge">${set.urls.length} (${set.archivedCount} 📦)</span>`
+                    : `<span class="studio-set-item-badge">${set.urls.length}</span>`);
+
+            html += `
+                <div class="studio-set-item ${isActive ? 'is-active' : ''} ${set.isArchived ? 'is-archived-item' : ''}" onclick="window.selectStudioSet('${escapeHtml(set.id)}')">
+                    <img src="${escapeHtml(set.coverUrl || '/_images/theme_main.jpg')}" alt="${escapeHtml(displayName)}" class="studio-set-item-thumb" loading="lazy">
+                    <div class="studio-set-item-info">
+                        <div class="studio-set-item-title">${escapeHtml(displayName)}</div>
+                        <div class="studio-set-item-sub">${subtitle}</div>
+                    </div>
+                    ${badgeHtml}
+                </div>
+            `;
+        });
+    }
+
+    list.innerHTML = html;
+}
+
+function renderStudioPhotosCanvas() {
+    const grid = document.getElementById('studio-photos-grid');
+    const titleEl = document.getElementById('studio-current-set-title');
+    const metaEl = document.getElementById('studio-current-set-meta');
+    if (!grid || !cachedStudioPhotoSets) return;
+
+    // Apply grid density class
+    grid.className = `studio-photos-grid ${activeStudioGridDensity === 'compact' ? 'density-compact' : (activeStudioGridDensity === 'large' ? 'density-large' : '')}`;
+
+    let photosToDisplay = [];
+    let currentSetName = 'All Studio Photos';
+    let currentSetMeta = '';
+
+    const query = activeStudioSearchQuery.toLowerCase();
+
+    if (query) {
+        // When searching, find matching photos across all sets (respecting archive filter)
+        currentSetName = `Search: "${escapeHtml(activeStudioSearchQuery)}"`;
+        cachedStudioPhotoSets.forEach(set => {
+            if (activeStudioArchiveFilter === 'active' && set.isArchived) return;
+            if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return;
+            const matchesSet = (set.name || '').toLowerCase().includes(query) || (set.model || '').toLowerCase().includes(query) || (set.theme || '').toLowerCase().includes(query);
+            set.urls.forEach(u => {
+                const isPhotoArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(u));
+                if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                if (matchesSet || u.toLowerCase().includes(query)) {
+                    photosToDisplay.push({
+                        url: u,
+                        setName: set.name,
+                        isArchived: isPhotoArchived
+                    });
+                }
+            });
+        });
+        currentSetMeta = `${photosToDisplay.length} matching photos found across sets`;
+    } else if (activeStudioSetId === 'all_archived') {
+        currentSetName = 'All Archived Imagery';
+        photosToDisplay = getAllArchivedPhotos();
+        currentSetMeta = `Archived Vault • ${photosToDisplay.length} Total Hidden & Archived Photographs`;
+    } else if (activeStudioSetId === 'all') {
+        currentSetName = 'All Studio Photos';
+        cachedStudioPhotoSets.forEach(set => {
+            if (activeStudioArchiveFilter === 'active' && set.isArchived) return;
+            if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return;
+            set.urls.forEach(u => {
+                const isPhotoArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(u));
+                if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                photosToDisplay.push({
+                    url: u,
+                    setName: set.name,
+                    isArchived: isPhotoArchived
+                });
+            });
+        });
+        currentSetMeta = `Studio Archive • ${photosToDisplay.length} High-Resolution Photographs`;
+    } else {
+        const found = cachedStudioPhotoSets.find(s => s.id === activeStudioSetId);
+        if (found) {
+            currentSetName = (found.name && found.name.trim() !== '-' && found.name.trim() !== '') ? found.name : (found.model ? `Photoshoot • ${found.model}` : 'Editorial Set');
+            const modelPart = found.model ? `Model: ${found.model} • ` : '';
+            const themePart = found.theme ? `Theme: ${found.theme} • ` : '';
+            const archivePart = found.isArchived ? '📦 ARCHIVED SET • ' : '';
+
+            found.urls.forEach(u => {
+                const isPhotoArchived = found.isArchived || (found.archivedUrls && found.archivedUrls.has(u));
+                if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                photosToDisplay.push({
+                    url: u,
+                    setName: found.name,
+                    isArchived: isPhotoArchived
+                });
+            });
+
+            currentSetMeta = `${archivePart}${modelPart}${themePart}${photosToDisplay.length} Photographs`;
+        } else {
+            currentSetName = 'Photoshoot Set';
+            currentSetMeta = 'No photos available';
+        }
+    }
+
+    if (titleEl) titleEl.textContent = currentSetName;
+    if (metaEl) metaEl.textContent = currentSetMeta;
+
+    if (photosToDisplay.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 4rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">No photographs found in this collection.</p>
+                <p style="font-size: 0.72rem; color: #64748b;">Try clearing your search query or selecting another set from the sidebar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = photosToDisplay.map(({ url, setName, isArchived }) => {
+        const isSelected = activeStudioSelectedUrl === url;
+        return `
+            <div class="studio-photo-card ${isSelected ? 'is-selected' : ''} ${isArchived ? 'is-archived' : ''}"
+                 data-photo-url="${escapeHtml(url)}"
+                 data-photo-set="${escapeHtml(setName)}"
+                 data-photo-archived="${isArchived ? 'true' : 'false'}"
+                 onclick="window.chooseStudioPhoto('${escapeHtml(url)}', false)"
+                 ondblclick="window.chooseStudioPhoto('${escapeHtml(url)}', true)">
+                <img src="${escapeHtml(url)}" alt="${escapeHtml(setName)}" loading="lazy">
+                ${isArchived ? '<div class="studio-photo-card-archived-tag">📦 ARCHIVED</div>' : ''}
+                <div class="studio-photo-card-check">✓</div>
+                <div class="studio-photo-hover-tag">${isArchived ? '📦 Archived • Double-click to apply' : 'Double-click to apply'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.selectStudioSet = function (setId) {
+    activeStudioSetId = setId;
+    renderStudioSidebar();
+    renderStudioPhotosCanvas();
+
+    // On mobile, switch view to canvas
+    const body = document.querySelector('.studio-picker-body');
+    if (body) body.classList.add('view-canvas');
+};
+
+window.switchStudioMobileView = function (view) {
+    const body = document.querySelector('.studio-picker-body');
+    if (body) {
+        if (view === 'sidebar') {
+            body.classList.remove('view-canvas');
+        } else {
+            body.classList.add('view-canvas');
+        }
+    }
+};
+
+window.filterStudioLibrarySets = function (query) {
+    activeStudioSearchQuery = query || '';
+    const clearBtn = document.getElementById('studio-search-clear-btn');
+    if (clearBtn) {
+        clearBtn.style.display = activeStudioSearchQuery ? 'block' : 'none';
+    }
+    renderStudioSidebar();
+    renderStudioPhotosCanvas();
+};
+
+window.clearStudioSearch = function () {
+    const searchInput = document.getElementById('studio-library-search');
+    if (searchInput) searchInput.value = '';
+    window.filterStudioLibrarySets('');
+};
+
+window.setStudioGridDensity = function (density) {
+    activeStudioGridDensity = density || 'normal';
+    document.querySelectorAll('.studio-density-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-density') === activeStudioGridDensity);
+    });
+    const grid = document.getElementById('studio-photos-grid');
+    if (grid) {
+        grid.className = `studio-photos-grid ${activeStudioGridDensity === 'compact' ? 'density-compact' : (activeStudioGridDensity === 'large' ? 'density-large' : '')}`;
+    }
+};
+
+window.chooseStudioPhoto = function (url, isDoubleClick = false) {
+    activeStudioSelectedUrl = url;
+
+    // Update active highlight on cards
+    document.querySelectorAll('.studio-photo-card').forEach(card => {
+        const cardUrl = card.getAttribute('data-photo-url');
+        card.classList.toggle('is-selected', cardUrl === url);
+    });
+
+    updateStudioFooterSelection();
+
+    if (isDoubleClick) {
+        window.confirmStudioSelection();
+    }
+};
+
+function updateStudioFooterSelection() {
+    const previewContainer = document.getElementById('studio-selected-preview');
+    const applyBtn = document.getElementById('studio-apply-selection-btn');
+    if (!previewContainer) return;
+
+    if (!activeStudioSelectedUrl) {
+        previewContainer.innerHTML = `<span class="studio-no-selection-hint">Click a photo to select • Double-click to apply immediately</span>`;
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.style.opacity = '0.4';
+            applyBtn.style.cursor = 'not-allowed';
+        }
+        return;
+    }
+
+    const card = document.querySelector(`.studio-photo-card[data-photo-url="${activeStudioSelectedUrl}"]`);
+    const setName = card ? card.getAttribute('data-photo-set') : 'Studio Photo';
+    const isArchived = card ? card.getAttribute('data-photo-archived') === 'true' : false;
+
+    previewContainer.innerHTML = `
+        <img src="${escapeHtml(activeStudioSelectedUrl)}" alt="Selected preview" class="studio-selected-preview-img">
+        <div class="studio-selected-preview-info">
+            <div class="studio-selected-preview-title">
+                Selected Photo from "${escapeHtml(setName)}"
+                ${isArchived ? '<span style="color:#fbbf24; font-size:0.65rem; margin-left:0.35rem;">[📦 ARCHIVED]</span>' : ''}
+            </div>
+            <div class="studio-selected-preview-desc">Ready to apply to active element</div>
+        </div>
+    `;
+
+    if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.style.opacity = '1';
+        applyBtn.style.cursor = 'pointer';
+    }
+}
+
+window.confirmStudioSelection = function () {
+    if (!activeStudioSelectedUrl) return;
+    const url = activeStudioSelectedUrl;
+
     const heroUrlInput = document.getElementById('edit-block-hero-img');
     const urlInput = document.getElementById('edit-block-url');
+
     if (heroUrlInput) {
         heroUrlInput.value = url;
         const previewImg = document.querySelector('#block-settings-hero-img-preview img');
         if (previewImg) previewImg.src = url;
-    } else if (urlInput) {
+    }
+    if (urlInput) {
         urlInput.value = url;
         const previewImg = document.querySelector('#block-settings-img-preview img');
         if (previewImg) previewImg.src = url;
-    } else if (currentEditingBlockId) {
+    }
+
+    if (currentEditingBlockId) {
         const block = findBlockById(currentEditingBlockId);
         if (block && block.type === 'image') {
             pushHistoryState();
@@ -3722,9 +4529,25 @@ window.selectStudioLibraryImage = function (url) {
             renderPage();
         }
     }
+
+    window.closeStudioGalleryModal();
+    showToast('Applied studio image ✓');
+};
+
+window.selectStudioLibraryImage = function (url) {
+    activeStudioSelectedUrl = url;
+    window.confirmStudioSelection();
+};
+
+window.closeStudioGalleryModal = function () {
     const modal = document.getElementById('studio-gallery-modal');
     if (modal) modal.classList.remove('is-open');
-    showToast('Selected studio image ✓');
+
+    // Only restore body overflow if no other modal is open
+    const openModals = document.querySelectorAll('.builder-modal-backdrop.is-open');
+    if (openModals.length === 0) {
+        document.body.style.overflow = '';
+    }
 };
 
 window.handleModalImageUpload = function (event) {
@@ -3732,14 +4555,15 @@ window.handleModalImageUpload = function (event) {
     if (!file) return;
 
     const status = document.getElementById('upload-status-indicator');
-    if (status) status.textContent = 'Processing image...';
+    if (status) status.textContent = 'Processing local image...';
 
     const reader = new FileReader();
     reader.onload = (e) => {
         const dataUrl = e.target.result;
-        window.selectStudioLibraryImage(dataUrl);
+        activeStudioSelectedUrl = dataUrl;
         if (status) status.textContent = '';
-        showToast('Local image loaded ✓');
+        window.confirmStudioSelection();
+        showToast('Local image uploaded and applied ✓');
     };
     reader.onerror = () => {
         if (status) status.textContent = 'Failed to load file';
@@ -3802,19 +4626,31 @@ setInterval(updateAllCountdowns, 1000);
 
 // ── 12. Modals Universal Handlers & Keyboard Shortcuts ───────────────────
 window.closeAllModals = function () {
-    document.querySelectorAll('.builder-modal-backdrop').forEach(m => {
+    document.querySelectorAll('.builder-modal-backdrop, .studio-picker-backdrop').forEach(m => {
         m.classList.remove('is-open');
     });
+    document.body.style.overflow = '';
 };
 
 document.addEventListener('click', (e) => {
-    if (e.target && e.target.classList && e.target.classList.contains('builder-modal-backdrop')) {
-        closeAllModals();
+    if (e.target && e.target.classList) {
+        if (e.target.classList.contains('studio-picker-backdrop')) {
+            window.closeStudioGalleryModal();
+            return;
+        }
+        if (e.target.classList.contains('builder-modal-backdrop')) {
+            closeAllModals();
+        }
     }
 });
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        const studioModal = document.getElementById('studio-gallery-modal');
+        if (studioModal && studioModal.classList.contains('is-open')) {
+            window.closeStudioGalleryModal();
+            return;
+        }
         closeAllModals();
         return;
     }
