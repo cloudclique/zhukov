@@ -480,127 +480,173 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- Image Picker Popup ---
-    const pickerOverlay = document.getElementById('picker-overlay');
-    const pickerBody = document.getElementById('picker-body');
-    const pickerCloseBtn = document.getElementById('picker-close-btn');
-    let activeSlotIndex = -1;
-    let pickerLoaded = false;
+    // ==========================================================================
+    // STUDIO PHOTO ARCHIVE — MASTER-DETAIL ALBUM & IMAGE PICKER ENGINE
+    // ==========================================================================
+    let cachedStudioPhotoSets = null;
+    let activeStudioSetId = 'all'; // 'all', 'all_archived', 'single_shots', or set id
+    let activeStudioArchiveFilter = 'all'; // 'all', 'active', 'archived'
+    let activeStudioSelectedUrl = null;
+    let activeStudioSelectedSetName = '';
+    let activeStudioGridDensity = 'normal'; // 'compact', 'normal', 'large'
+    let activeStudioSearchQuery = '';
+    let activeSlotIndex = -1; // 'hero', 'profile', or number 0..7
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function showToast(message) {
+        let toast = document.querySelector('.cookie-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'cookie-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
 
     const openPicker = async (slotIndex) => {
-        if (!pickerOverlay) return;
+        const modal = document.getElementById('studio-gallery-modal');
+        if (!modal) return;
+
         activeSlotIndex = slotIndex;
-        const pickerTitle = pickerOverlay.querySelector('.picker-title');
-        if (pickerTitle) {
-            if (slotIndex === 'hero') {
-                pickerTitle.textContent = 'Choose hero cover image — hold for 2 seconds to select';
-            } else if (slotIndex === 'profile') {
-                pickerTitle.textContent = 'Choose profile photo — hold for 2 seconds to select';
-            } else {
-                pickerTitle.textContent = 'Choose an image — hold for 2 seconds to select';
-            }
-        }
+        modal.classList.add('is-open');
         document.body.classList.add('picker-open');
-        pickerOverlay.style.display = 'flex';
-        requestAnimationFrame(() => pickerOverlay.classList.add('show'));
         document.body.style.overflow = 'hidden';
 
-        if (!pickerLoaded) {
-            await loadPickerContent();
-            pickerLoaded = true;
+        // Reset search
+        activeStudioSearchQuery = '';
+        const searchInput = document.getElementById('studio-library-search');
+        const clearBtn = document.getElementById('studio-search-clear-btn');
+        if (searchInput) searchInput.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // Reset selection state
+        activeStudioSelectedUrl = null;
+        activeStudioSelectedSetName = '';
+        updateStudioFooterSelection();
+
+        // Context-aware title or prompt
+        const statsText = document.getElementById('studio-stats-text');
+        let targetLabel = 'Curated Gallery Slot';
+        if (slotIndex === 'hero') targetLabel = 'Hero Cover Image';
+        else if (slotIndex === 'profile') targetLabel = 'About Profile Image';
+        else if (typeof slotIndex === 'number') targetLabel = `Recent Work Slot #${slotIndex + 1}`;
+
+        if (statsText) {
+            statsText.textContent = `Selecting ${targetLabel} • Connecting to studio archive…`;
         }
-    };
 
-    const closePicker = () => {
-        if (!pickerOverlay) return;
-        pickerOverlay.classList.remove('show');
-        document.body.classList.remove('picker-open');
-        setTimeout(() => {
-            pickerOverlay.style.display = 'none';
-            document.body.style.overflow = '';
-        }, 350);
-        activeSlotIndex = -1;
-    };
+        // Check if we already have complete cached data
+        if (cachedStudioPhotoSets && cachedStudioPhotoSets.length > 0) {
+            renderStudioLibraryUI(targetLabel);
+            return;
+        }
 
-    if (pickerCloseBtn) pickerCloseBtn.addEventListener('click', closePicker);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && pickerOverlay && pickerOverlay.classList.contains('show')) closePicker();
-    });
+        // Show loading state in both panels
+        const sidebarList = document.getElementById('studio-sets-list');
+        const photosGrid = document.getElementById('studio-photos-grid');
+        const currentMeta = document.getElementById('studio-current-set-meta');
 
-    const loadPickerContent = async () => {
-        if (!pickerBody) return;
-        pickerBody.innerHTML = '<div style="color:#64748b;font-family:Inter,sans-serif;padding:2rem;">Loading sets…</div>';
+        if (sidebarList) {
+            sidebarList.innerHTML = `
+                <div style="padding: 2.5rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                    <div style="font-size: 1.4rem; margin-bottom: 0.6rem; animation: spin 1s linear infinite; display: inline-block; color: #c5a059;">✦</div>
+                    <p style="font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;">Loading sets & archives…</p>
+                </div>
+            `;
+        }
+        if (photosGrid) {
+            photosGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 4rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                    <div style="font-size: 1.8rem; margin-bottom: 0.8rem; animation: spin 1s linear infinite; display: inline-block; color: #c5a059;">✦</div>
+                    <p style="font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase;">Loading studio photoshoot archive…</p>
+                </div>
+            `;
+        }
+        if (currentMeta) currentMeta.textContent = 'Loading imagery…';
 
         try {
-            const setsSnap = await getDocs(collection(db, 'photo_sets'));
-            pickerBody.innerHTML = '';
-
-            if (setsSnap.empty) {
-                pickerBody.innerHTML = '<div style="color:#64748b;font-family:Inter,sans-serif;">No photoshoots found.</div>';
-                return;
-            }
-
-            setsSnap.forEach(setDoc => {
-                const data = setDoc.data();
-                const urls = data.urls || [];
-                if (!urls.length) return;
-                const setName = data.categoryName || 'Untitled Set';
-
-                const setDiv = document.createElement('div');
-                setDiv.className = 'picker-set';
-
-                const titleEl = document.createElement('div');
-                titleEl.className = 'picker-set-title';
-                titleEl.innerHTML = `<span class="toggle-icon">▶</span>${setName} <span style="color:#475569;font-weight:400;font-size:0.8rem;">${urls.length} photos</span>`;
-
-                const imagesDiv = document.createElement('div');
-                imagesDiv.className = 'picker-set-images';
-
-                // Toggle expand/collapse
-                titleEl.addEventListener('click', () => {
-                    titleEl.classList.toggle('expanded');
-                    imagesDiv.classList.toggle('show');
-                });
-
-                // Build thumbnails with origin set name (newest to oldest to match gallery display)
-                [...urls].reverse().forEach(url => {
-                    const wrap = createPickerThumb(url, setName);
-                    imagesDiv.appendChild(wrap);
-                });
-
-                setDiv.appendChild(titleEl);
-                setDiv.appendChild(imagesDiv);
-                pickerBody.appendChild(setDiv);
-            });
-
-            // Also add single shots section
-            const [singleSnap, orderDoc] = await Promise.all([
-                getDocs(collection(db, 'single_shots')),
+            const [setsSnap, singleSnap, orderDoc] = await Promise.all([
+                getDocs(collection(db, 'photo_sets')).catch(err => {
+                    console.warn('Could not fetch photo_sets for studio picker:', err);
+                    return { empty: true, forEach: () => {} };
+                }),
+                getDocs(collection(db, 'single_shots')).catch(err => {
+                    console.warn('Could not fetch single_shots for studio picker:', err);
+                    return { empty: true, forEach: () => {} };
+                }),
                 getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
             ]);
-            if (!singleSnap.empty) {
-                const setDiv = document.createElement('div');
-                setDiv.className = 'picker-set';
-                const titleEl = document.createElement('div');
-                titleEl.className = 'picker-set-title';
-                titleEl.innerHTML = `<span class="toggle-icon">▶</span>Single Shots`;
-                const imagesDiv = document.createElement('div');
-                imagesDiv.className = 'picker-set-images';
-                titleEl.addEventListener('click', () => {
-                    titleEl.classList.toggle('expanded');
-                    imagesDiv.classList.toggle('show');
+
+            const sets = [];
+
+            // 1. Process Photoshoot Sets (including archived sets & photos)
+            if (setsSnap && !setsSnap.empty) {
+                setsSnap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const rawUrls = Array.isArray(data.urls) ? data.urls.filter(Boolean) : [];
+                    if (rawUrls.length === 0) return;
+
+                    const archivedUrlsList = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
+                    const archivedUrlsSet = new Set(archivedUrlsList);
+                    const allPhotosArchived = rawUrls.length > 0 && rawUrls.every(u => archivedUrlsSet.has(u));
+                    const isSetArchived = Boolean(data.archived === true || allPhotosArchived);
+
+                    // Show newest to oldest
+                    const orderedUrls = [...rawUrls].reverse();
+                    const name = data.categoryName || data.title || docSnap.id || 'Photoshoot Set';
+                    const model = data.modelName && data.modelName !== 'Unknown' && data.modelName !== 'Mixed' && data.modelName !== '/' ? data.modelName.trim() : '';
+                    const theme = data.theme || '';
+                    const date = data.date || '';
+
+                    const archivedCount = isSetArchived ? orderedUrls.length : orderedUrls.filter(u => archivedUrlsSet.has(u)).length;
+
+                    sets.push({
+                        id: docSnap.id,
+                        name: name,
+                        model: model,
+                        theme: theme,
+                        date: date,
+                        urls: orderedUrls,
+                        archivedUrls: archivedUrlsSet,
+                        isArchived: isSetArchived,
+                        archivedCount: archivedCount,
+                        coverUrl: data.coverUrl || orderedUrls[0] || ''
+                    });
+                });
+            }
+
+            // 2. Process Single Shots (including archived single shots)
+            if (singleSnap && !singleSnap.empty) {
+                const singleItems = [];
+                const singleArchivedUrls = new Set();
+
+                singleSnap.forEach(docSnap => {
+                    const d = docSnap.data();
+                    if (d.url) {
+                        singleItems.push(d);
+                        if (d.archived === true) {
+                            singleArchivedUrls.add(d.url);
+                        }
+                    }
                 });
 
                 const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
                 const orderMap = new Map();
                 customOrder.forEach((url, idx) => orderMap.set(url, idx));
 
-                const singleDocs = [];
-                singleSnap.forEach(d => {
-                    if (d.data().url) singleDocs.push(d.data());
-                });
-
-                singleDocs.sort((a, b) => {
+                singleItems.sort((a, b) => {
                     const idxA = orderMap.has(a.url) ? orderMap.get(a.url) : -1;
                     const idxB = orderMap.has(b.url) ? orderMap.get(b.url) : -1;
                     if (idxA !== idxB) {
@@ -611,82 +657,508 @@ document.addEventListener('DOMContentLoaded', () => {
                     return new Date(b.date || 0) - new Date(a.date || 0);
                 });
 
-                singleDocs.forEach(d => {
-                    imagesDiv.appendChild(createPickerThumb(d.url, 'SINGLE SHOTS'));
-                });
-                setDiv.appendChild(titleEl);
-                setDiv.appendChild(imagesDiv);
-                pickerBody.appendChild(setDiv);
+                const singleUrls = singleItems.map(item => item.url).filter(Boolean);
+                if (singleUrls.length > 0) {
+                    sets.unshift({
+                        id: 'single_shots',
+                        name: 'Single Shots',
+                        model: 'Editorial Portraits',
+                        theme: 'Mixed',
+                        date: '',
+                        urls: singleUrls,
+                        archivedUrls: singleArchivedUrls,
+                        isArchived: false,
+                        archivedCount: singleArchivedUrls.size,
+                        coverUrl: singleUrls[0] || ''
+                    });
+                }
             }
 
+            // Fallbacks if no database items
+            if (sets.length === 0) {
+                sets.push(
+                    {
+                        id: 'fallback_editorial',
+                        name: 'Vogue Paris Editorial',
+                        model: 'Elena V.',
+                        theme: 'Haute Couture',
+                        date: '2026-08-14',
+                        urls: fallbackImages.slice(0, 4),
+                        archivedUrls: new Set(),
+                        isArchived: false,
+                        archivedCount: 0,
+                        coverUrl: fallbackImages[0] || ''
+                    },
+                    {
+                        id: 'fallback_archived_noir',
+                        name: 'Haute Couture Monochrome Noir (Archived)',
+                        model: 'Anastasia S.',
+                        theme: 'Monochrome Film',
+                        date: '2026-07-22',
+                        urls: fallbackImages.slice(4, 8),
+                        archivedUrls: new Set([fallbackImages[4], fallbackImages[5]]),
+                        isArchived: true,
+                        archivedCount: 4,
+                        coverUrl: fallbackImages[4] || ''
+                    }
+                );
+            }
+
+            cachedStudioPhotoSets = sets;
+            if (!activeStudioSetId) {
+                activeStudioSetId = 'all';
+            }
+            renderStudioLibraryUI(targetLabel);
         } catch (err) {
-            console.error('Failed to load picker content:', err);
-            pickerBody.innerHTML = '<div style="color:#f87171;font-family:Inter,sans-serif;">Error loading images.</div>';
+            console.error('Failed to load studio photo sets:', err);
+            if (photosGrid) {
+                photosGrid.innerHTML = `<div style="grid-column:1 / -1; padding:3rem; text-align:center; color:#f87171; font-family:'Inter',sans-serif;">Error connecting to photo library.</div>`;
+            }
         }
     };
 
-    const createPickerThumb = (url, setName = '') => {
-        const wrap = document.createElement('div');
-        wrap.className = 'picker-img-wrap';
+    function getAllArchivedPhotos() {
+        if (!cachedStudioPhotoSets) return [];
+        const archivedPhotos = [];
+        const seen = new Set();
+        cachedStudioPhotoSets.forEach(set => {
+            set.urls.forEach(url => {
+                if (!url || seen.has(url)) return;
+                const isArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(url));
+                if (isArchived) {
+                    seen.add(url);
+                    archivedPhotos.push({
+                        url: url,
+                        setName: set.name,
+                        isArchived: true
+                    });
+                }
+            });
+        });
+        return archivedPhotos;
+    }
 
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = '';
-        img.loading = 'lazy';
+    function renderStudioLibraryUI(targetLabel) {
+        if (!cachedStudioPhotoSets) return;
 
-        // Hold ring overlay
-        const ring = document.createElement('div');
-        ring.className = 'hold-ring';
-        ring.innerHTML = `
-            <div class="hold-overlay"></div>
-            <svg viewBox="0 0 48 48">
-                <circle class="ring-bg" cx="24" cy="24" r="22"/>
-                <circle class="ring-fill" cx="24" cy="24" r="22"/>
-            </svg>`;
+        const realSets = cachedStudioPhotoSets.filter(s => s.id !== 'single_shots');
+        const totalActiveSets = realSets.filter(s => !s.isArchived).length;
+        const totalArchivedSets = realSets.filter(s => s.isArchived).length;
+        const allArchivedPhotos = getAllArchivedPhotos();
+        const totalPhotos = cachedStudioPhotoSets.reduce((sum, s) => sum + (s.urls ? s.urls.length : 0), 0);
 
-        wrap.appendChild(img);
-        wrap.appendChild(ring);
+        const statsText = document.getElementById('studio-stats-text');
+        if (statsText) {
+            const prefix = targetLabel ? `Selecting: ${targetLabel} • ` : '';
+            statsText.textContent = `${prefix}${totalActiveSets} Active Sets • ${totalArchivedSets} Archived Sets • ${allArchivedPhotos.length} Archived Photos (${totalPhotos} Total)`;
+        }
 
-        // Long-press logic (mouse + touch)
-        let holdTimer = null;
-        let holdStarted = false;
+        renderStudioSidebar();
+        renderStudioPhotosCanvas();
+    }
 
-        const startHold = (e) => {
-            if (e.type === 'mousedown' && e.button !== 0) return;
-            e.preventDefault();
-            holdStarted = true;
+    window.setStudioArchiveFilter = function (filter) {
+        activeStudioArchiveFilter = filter || 'all';
 
-            // Reset and re-trigger animation cleanly without breaking DOM references
-            ring.classList.remove('active');
-            void ring.offsetWidth;
-            ring.classList.add('active');
+        // Update active tab buttons
+        document.querySelectorAll('.studio-filter-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.getAttribute('data-filter') === activeStudioArchiveFilter);
+        });
 
-            clearTimeout(holdTimer);
-            holdTimer = setTimeout(async () => {
-                if (!holdStarted) return;
-                ring.classList.remove('active');
-                await selectImage(url, setName);
-            }, 2000);
-        };
+        // Smart set switching when filter changes
+        if (activeStudioArchiveFilter === 'archived') {
+            const currentSet = cachedStudioPhotoSets?.find(s => s.id === activeStudioSetId);
+            const hasArchivedInCurrentSet = currentSet && (currentSet.isArchived || currentSet.archivedCount > 0);
+            if (!currentSet || !hasArchivedInCurrentSet) {
+                activeStudioSetId = 'all_archived';
+            }
+        } else if (activeStudioArchiveFilter === 'active') {
+            const currentSet = cachedStudioPhotoSets?.find(s => s.id === activeStudioSetId);
+            if ((currentSet && currentSet.isArchived) || activeStudioSetId === 'all_archived') {
+                activeStudioSetId = 'all';
+            }
+        }
 
-        const cancelHold = () => {
-            if (!holdStarted) return;
-            holdStarted = false;
-            clearTimeout(holdTimer);
-            ring.classList.remove('active');
-        };
-
-        wrap.addEventListener('mousedown', startHold);
-        wrap.addEventListener('mouseup', cancelHold);
-        wrap.addEventListener('mouseleave', cancelHold);
-        wrap.addEventListener('touchstart', startHold, { passive: false });
-        wrap.addEventListener('touchend', cancelHold);
-        wrap.addEventListener('touchcancel', cancelHold);
-        // Prevent context menu on long-press mobile
-        wrap.addEventListener('contextmenu', e => e.preventDefault());
-
-        return wrap;
+        renderStudioSidebar();
+        renderStudioPhotosCanvas();
     };
+
+    function renderStudioSidebar() {
+        const list = document.getElementById('studio-sets-list');
+        const countBadge = document.getElementById('studio-sidebar-set-count');
+        if (!list || !cachedStudioPhotoSets) return;
+
+        const query = activeStudioSearchQuery.toLowerCase();
+
+        // Filter sets by search and archive tab
+        const filteredSets = cachedStudioPhotoSets.filter(set => {
+            // Tab filter
+            if (activeStudioArchiveFilter === 'active' && set.isArchived) return false;
+            if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return false;
+
+            // Search query
+            if (!query) return true;
+            const matchesName = (set.name || '').toLowerCase().includes(query);
+            const matchesModel = (set.model || '').toLowerCase().includes(query);
+            const matchesTheme = (set.theme || '').toLowerCase().includes(query);
+            return matchesName || matchesModel || matchesTheme;
+        });
+
+        const allArchivedPhotos = getAllArchivedPhotos();
+
+        if (countBadge) {
+            if (activeStudioArchiveFilter === 'archived') {
+                countBadge.textContent = `${filteredSets.length} archived set${filteredSets.length === 1 ? '' : 's'}`;
+            } else if (activeStudioArchiveFilter === 'active') {
+                countBadge.textContent = `${filteredSets.length} active set${filteredSets.length === 1 ? '' : 's'}`;
+            } else {
+                countBadge.textContent = `${filteredSets.length} set${filteredSets.length === 1 ? '' : 's'}`;
+            }
+        }
+
+        const totalPhotos = cachedStudioPhotoSets.reduce((acc, s) => acc + s.urls.length, 0);
+
+        let html = '';
+
+        // Quick entry items (shown if no restrictive search query)
+        if (!query) {
+            if (activeStudioArchiveFilter === 'all' || activeStudioArchiveFilter === 'active') {
+                const isAllActive = activeStudioSetId === 'all';
+                html += `
+                    <div class="studio-set-item ${isAllActive ? 'is-active' : ''}" onclick="window.selectStudioSet('all')">
+                        <div class="studio-set-item-thumb icon-thumb">✦</div>
+                        <div class="studio-set-item-info">
+                            <div class="studio-set-item-title">All Studio Photos</div>
+                            <div class="studio-set-item-sub">Continuous Portfolio Stream</div>
+                        </div>
+                        <span class="studio-set-item-badge">${totalPhotos}</span>
+                    </div>
+                `;
+            }
+
+            // Show "All Archived Photos" vault item if archived photos exist
+            if (allArchivedPhotos.length > 0 && (activeStudioArchiveFilter === 'all' || activeStudioArchiveFilter === 'archived')) {
+                const isArchivedVaultActive = activeStudioSetId === 'all_archived';
+                html += `
+                    <div class="studio-set-item ${isArchivedVaultActive ? 'is-active' : ''}" onclick="window.selectStudioSet('all_archived')">
+                        <div class="studio-set-item-thumb icon-thumb" style="color:#fbbf24; background:rgba(217,119,6,0.12); border-color:rgba(245,158,11,0.35);">📦</div>
+                        <div class="studio-set-item-info">
+                            <div class="studio-set-item-title" style="${isArchivedVaultActive ? 'color:#fbbf24;' : ''}">All Archived Photos</div>
+                            <div class="studio-set-item-sub">Vault Collection (${allArchivedPhotos.length} photos)</div>
+                        </div>
+                        <span class="studio-set-item-badge badge-archived">${allArchivedPhotos.length}</span>
+                    </div>
+                `;
+            }
+        }
+
+        if (filteredSets.length === 0) {
+            html += `
+                <div style="padding: 2.5rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif; font-size: 0.72rem;">
+                    ${activeStudioArchiveFilter === 'archived' ? 'No archived photoshoot sets match this criteria.' : `No photoshoot sets match "${escapeHtml(activeStudioSearchQuery)}".`}
+                </div>
+            `;
+        } else {
+            filteredSets.forEach(set => {
+                const isActive = activeStudioSetId === set.id;
+                const displayName = (set.name && set.name.trim() !== '-' && set.name.trim() !== '') ? set.name : (set.model ? `Photoshoot • ${set.model}` : 'Editorial Set');
+                const modelPart = set.model ? `Model: ${escapeHtml(set.model)}` : (set.theme ? escapeHtml(set.theme) : `${set.urls.length} photos`);
+                const subtitle = set.isArchived ? `📦 Archived Set • ${modelPart}` : modelPart;
+
+                const badgeHtml = set.isArchived
+                    ? `<span class="studio-set-item-badge badge-archived">ARCHIVED (${set.urls.length})</span>`
+                    : (set.archivedCount > 0
+                        ? `<span class="studio-set-item-badge">${set.urls.length} (${set.archivedCount} 📦)</span>`
+                        : `<span class="studio-set-item-badge">${set.urls.length}</span>`);
+
+                html += `
+                    <div class="studio-set-item ${isActive ? 'is-active' : ''} ${set.isArchived ? 'is-archived-item' : ''}" onclick="window.selectStudioSet('${escapeHtml(set.id)}')">
+                        <img src="${escapeHtml(set.coverUrl || '/_images/theme_main.jpg')}" alt="${escapeHtml(displayName)}" class="studio-set-item-thumb" loading="lazy">
+                        <div class="studio-set-item-info">
+                            <div class="studio-set-item-title">${escapeHtml(displayName)}</div>
+                            <div class="studio-set-item-sub">${subtitle}</div>
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                `;
+            });
+        }
+
+        list.innerHTML = html;
+    }
+
+    function renderStudioPhotosCanvas() {
+        const grid = document.getElementById('studio-photos-grid');
+        const titleEl = document.getElementById('studio-current-set-title');
+        const metaEl = document.getElementById('studio-current-set-meta');
+        if (!grid || !cachedStudioPhotoSets) return;
+
+        // Apply grid density class
+        grid.className = `studio-photos-grid ${activeStudioGridDensity === 'compact' ? 'density-compact' : (activeStudioGridDensity === 'large' ? 'density-large' : '')}`;
+
+        let photosToDisplay = [];
+        let currentSetName = 'All Studio Photos';
+        let currentSetMeta = '';
+
+        const query = activeStudioSearchQuery.toLowerCase();
+
+        if (query) {
+            // When searching, find matching photos across all sets (respecting archive filter)
+            currentSetName = `Search: "${escapeHtml(activeStudioSearchQuery)}"`;
+            cachedStudioPhotoSets.forEach(set => {
+                if (activeStudioArchiveFilter === 'active' && set.isArchived) return;
+                if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return;
+                const matchesSet = (set.name || '').toLowerCase().includes(query) || (set.model || '').toLowerCase().includes(query) || (set.theme || '').toLowerCase().includes(query);
+                set.urls.forEach(u => {
+                    const isPhotoArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(u));
+                    if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                    if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                    if (matchesSet || u.toLowerCase().includes(query)) {
+                        photosToDisplay.push({
+                            url: u,
+                            setName: set.name,
+                            isArchived: isPhotoArchived
+                        });
+                    }
+                });
+            });
+            currentSetMeta = `${photosToDisplay.length} matching photos found across sets`;
+        } else if (activeStudioSetId === 'all_archived') {
+            currentSetName = 'All Archived Imagery';
+            photosToDisplay = getAllArchivedPhotos();
+            currentSetMeta = `Archived Vault • ${photosToDisplay.length} Total Hidden & Archived Photographs`;
+        } else if (activeStudioSetId === 'all') {
+            currentSetName = 'All Studio Photos';
+            cachedStudioPhotoSets.forEach(set => {
+                if (activeStudioArchiveFilter === 'active' && set.isArchived) return;
+                if (activeStudioArchiveFilter === 'archived' && !set.isArchived && set.archivedCount === 0) return;
+                set.urls.forEach(u => {
+                    const isPhotoArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(u));
+                    if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                    if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                    photosToDisplay.push({
+                        url: u,
+                        setName: set.name,
+                        isArchived: isPhotoArchived
+                    });
+                });
+            });
+            currentSetMeta = `Studio Archive • ${photosToDisplay.length} High-Resolution Photographs`;
+        } else {
+            const found = cachedStudioPhotoSets.find(s => s.id === activeStudioSetId);
+            if (found) {
+                currentSetName = (found.name && found.name.trim() !== '-' && found.name.trim() !== '') ? found.name : (found.model ? `Photoshoot • ${found.model}` : 'Editorial Set');
+                const modelPart = found.model ? `Model: ${found.model} • ` : '';
+                const themePart = found.theme ? `Theme: ${found.theme} • ` : '';
+                const archivePart = found.isArchived ? '📦 ARCHIVED SET • ' : '';
+
+                found.urls.forEach(u => {
+                    const isPhotoArchived = found.isArchived || (found.archivedUrls && found.archivedUrls.has(u));
+                    if (activeStudioArchiveFilter === 'active' && isPhotoArchived) return;
+                    if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
+                    photosToDisplay.push({
+                        url: u,
+                        setName: found.name,
+                        isArchived: isPhotoArchived
+                    });
+                });
+
+                currentSetMeta = `${archivePart}${modelPart}${themePart}${photosToDisplay.length} Photographs`;
+            } else {
+                currentSetName = 'Photoshoot Set';
+                currentSetMeta = 'No photos available';
+            }
+        }
+
+        if (titleEl) titleEl.textContent = currentSetName;
+        if (metaEl) metaEl.textContent = currentSetMeta;
+
+        if (photosToDisplay.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 4rem 1rem; text-align: center; color: #7e8ba3; font-family: 'Inter', sans-serif;">
+                    <p style="font-size: 0.85rem; margin-bottom: 0.5rem;">No photographs found in this collection.</p>
+                    <p style="font-size: 0.72rem; color: #64748b;">Try clearing your search query or selecting another set from the sidebar.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = photosToDisplay.map(({ url, setName, isArchived }) => {
+            const isSelected = activeStudioSelectedUrl === url;
+            return `
+                <div class="studio-photo-card ${isSelected ? 'is-selected' : ''} ${isArchived ? 'is-archived' : ''}"
+                     data-photo-url="${escapeHtml(url)}"
+                     data-photo-set="${escapeHtml(setName)}"
+                     data-photo-archived="${isArchived ? 'true' : 'false'}"
+                     onclick="window.chooseStudioPhoto('${escapeHtml(url)}', '${escapeHtml(setName)}', false)"
+                     ondblclick="window.chooseStudioPhoto('${escapeHtml(url)}', '${escapeHtml(setName)}', true)">
+                    <img src="${escapeHtml(url)}" alt="${escapeHtml(setName)}" loading="lazy">
+                    ${isArchived ? '<div class="studio-photo-card-archived-tag">📦 ARCHIVED</div>' : ''}
+                    <div class="studio-photo-card-check">✓</div>
+                    <div class="studio-photo-hover-tag">${isArchived ? '📦 Archived • Double-click to apply' : 'Double-click to apply'}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.selectStudioSet = function (setId) {
+        activeStudioSetId = setId;
+        renderStudioSidebar();
+        renderStudioPhotosCanvas();
+
+        // On mobile, switch view to canvas
+        const body = document.querySelector('.studio-picker-body');
+        if (body) body.classList.add('view-canvas');
+    };
+
+    window.switchStudioMobileView = function (view) {
+        const body = document.querySelector('.studio-picker-body');
+        if (body) {
+            if (view === 'sidebar') {
+                body.classList.remove('view-canvas');
+            } else {
+                body.classList.add('view-canvas');
+            }
+        }
+    };
+
+    window.filterStudioLibrarySets = function (query) {
+        activeStudioSearchQuery = query || '';
+        const clearBtn = document.getElementById('studio-search-clear-btn');
+        if (clearBtn) {
+            clearBtn.style.display = activeStudioSearchQuery ? 'block' : 'none';
+        }
+        renderStudioSidebar();
+        renderStudioPhotosCanvas();
+    };
+
+    window.clearStudioSearch = function () {
+        const searchInput = document.getElementById('studio-library-search');
+        if (searchInput) searchInput.value = '';
+        window.filterStudioLibrarySets('');
+    };
+
+    window.setStudioGridDensity = function (density) {
+        activeStudioGridDensity = density || 'normal';
+        document.querySelectorAll('.studio-density-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-density') === activeStudioGridDensity);
+        });
+        const grid = document.getElementById('studio-photos-grid');
+        if (grid) {
+            grid.className = `studio-photos-grid ${activeStudioGridDensity === 'compact' ? 'density-compact' : (activeStudioGridDensity === 'large' ? 'density-large' : '')}`;
+        }
+    };
+
+    window.chooseStudioPhoto = function (url, setName, isDoubleClick = false) {
+        activeStudioSelectedUrl = url;
+        activeStudioSelectedSetName = setName || '';
+
+        // Update active highlight on cards
+        document.querySelectorAll('.studio-photo-card').forEach(card => {
+            const cardUrl = card.getAttribute('data-photo-url');
+            card.classList.toggle('is-selected', cardUrl === url);
+        });
+
+        updateStudioFooterSelection();
+
+        if (isDoubleClick) {
+            window.confirmStudioSelection();
+        }
+    };
+
+    function updateStudioFooterSelection() {
+        const previewContainer = document.getElementById('studio-selected-preview');
+        const applyBtn = document.getElementById('studio-apply-selection-btn');
+        if (!previewContainer) return;
+
+        if (!activeStudioSelectedUrl) {
+            previewContainer.innerHTML = `<span class="studio-no-selection-hint">Click a photo to select • Double-click to apply immediately</span>`;
+            if (applyBtn) {
+                applyBtn.disabled = true;
+                applyBtn.style.opacity = '0.4';
+                applyBtn.style.cursor = 'not-allowed';
+            }
+            return;
+        }
+
+        const card = document.querySelector(`.studio-photo-card[data-photo-url="${activeStudioSelectedUrl}"]`);
+        const setName = activeStudioSelectedSetName || (card ? card.getAttribute('data-photo-set') : 'Studio Photo');
+        const isArchived = card ? card.getAttribute('data-photo-archived') === 'true' : false;
+
+        previewContainer.innerHTML = `
+            <img src="${escapeHtml(activeStudioSelectedUrl)}" alt="Selected preview" class="studio-selected-preview-img">
+            <div class="studio-selected-preview-info">
+                <div class="studio-selected-preview-title">
+                    Selected Photo from "${escapeHtml(setName)}"
+                    ${isArchived ? '<span style="color:#fbbf24; font-size:0.65rem; margin-left:0.35rem;">[📦 ARCHIVED]</span>' : ''}
+                </div>
+                <div class="studio-selected-preview-desc">Ready to apply to active element</div>
+            </div>
+        `;
+
+        if (applyBtn) {
+            applyBtn.disabled = false;
+            applyBtn.style.opacity = '1';
+            applyBtn.style.cursor = 'pointer';
+        }
+    }
+
+    window.confirmStudioSelection = function () {
+        if (!activeStudioSelectedUrl) return;
+        const url = activeStudioSelectedUrl;
+        const setName = activeStudioSelectedSetName;
+        selectImage(url, setName);
+    };
+
+    window.closeStudioGalleryModal = function () {
+        const modal = document.getElementById('studio-gallery-modal');
+        if (modal) modal.classList.remove('is-open');
+        document.body.classList.remove('picker-open');
+        document.body.style.overflow = '';
+        activeSlotIndex = -1;
+    };
+
+    window.handleModalImageUpload = function (event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const status = document.getElementById('upload-status-indicator');
+        if (status) status.textContent = 'Processing local image...';
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            activeStudioSelectedUrl = dataUrl;
+            activeStudioSelectedSetName = file.name || 'Local Upload';
+            if (status) status.textContent = '';
+            window.confirmStudioSelection();
+            showToast('Local image uploaded and applied ✓');
+        };
+        reader.onerror = () => {
+            if (status) status.textContent = 'Failed to load file';
+            showToast('Failed to read image file');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Close on Escape or Backdrop Click
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('studio-gallery-modal');
+            if (modal && modal.classList.contains('is-open')) {
+                window.closeStudioGalleryModal();
+            }
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('studio-picker-backdrop')) {
+            window.closeStudioGalleryModal();
+        }
+    });
+
+    window.openPicker = openPicker;
+    window.openStudioGalleryModal = openPicker;
 
     const selectImage = async (url, setName = '') => {
         if (activeSlotIndex === 'hero') {
@@ -695,14 +1167,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     heroImg.src = url;
                 }
                 setCachedData('home_hero_image', url);
-                closePicker();
+                window.closeStudioGalleryModal();
 
                 // Save to Firestore in settings/home_gallery
                 const settingsRef = doc(db, 'settings', 'home_gallery');
                 await setDoc(settingsRef, { heroImage: url }, { merge: true });
+                showToast('Hero cover image updated ✓');
             } catch (err) {
                 console.error('Failed to save hero image:', err);
-                alert('Error saving hero image. Please try again.');
+                showToast('Error saving hero image.');
             }
             return;
         }
@@ -713,14 +1186,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     profileImg.src = url;
                 }
                 setCachedData('home_profile_image', url);
-                closePicker();
+                window.closeStudioGalleryModal();
 
                 // Save to Firestore in settings/home_gallery
                 const settingsRef = doc(db, 'settings', 'home_gallery');
                 await setDoc(settingsRef, { profileImage: url }, { merge: true });
+                showToast('Profile photo updated ✓');
             } catch (err) {
                 console.error('Failed to save profile image:', err);
-                alert('Error saving profile image. Please try again.');
+                showToast('Error saving profile image.');
             }
             return;
         }
@@ -731,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallerySlots[activeSlotIndex].setName = setName || urlToSetNameMap.get(url) || 'CURATED SELECTION';
             setCachedData('home_gallery_slots', gallerySlots);
             renderGallerySlots();
-            closePicker();
+            window.closeStudioGalleryModal();
 
             // Save to Firestore
             const settingsRef = doc(db, 'settings', 'home_gallery');
@@ -741,9 +1215,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 await setDoc(settingsRef, { slots: gallerySlots });
             }
+            showToast(`Gallery slot #${activeSlotIndex + 1} updated ✓`);
         } catch (err) {
             console.error('Failed to save gallery slot:', err);
-            alert('Error saving image. Please try again.');
+            showToast('Error saving image.');
         }
     };
 

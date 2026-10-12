@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v62';
+const CACHE_NAME_STATIC = 'zhukov-static-v63';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
