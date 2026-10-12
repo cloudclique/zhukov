@@ -2164,10 +2164,36 @@ body.moodboard-body .vogue-header .brand-subtitle {
 
 .vogue-masthead-logo {
     display: inline-flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    text-align: left !important;
+    align-items: center !important;
+    justify-content: center !important;
     text-decoration: none;
+}
+
+/* SVG Brand Logo */
+.vogue-logo-img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    transition: opacity 0.2s ease;
+}
+
+.vogue-masthead-logo:hover .vogue-logo-img,
+.vogue-scrolled-logo:hover .vogue-logo-img {
+    opacity: 0.75;
+}
+
+.masthead-logo-img {
+    height: clamp(48px, 4.4vw, 66px);
+    width: auto;
+}
+
+.scrolled-logo-img {
+    height: 30px;
+    width: auto;
 }
 
 .vogue-masthead-logo .brand-name {
@@ -2196,8 +2222,8 @@ body.moodboard-body .vogue-header .brand-subtitle {
     top: 50%;
     transform: translateY(-50%) translateX(-15px);
     display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
     opacity: 0;
     pointer-events: none;
@@ -3206,11 +3232,15 @@ body.editorial-body .gallery-item:hover img {
     /* Logo placed on the left */
     .vogue-masthead-logo {
         display: inline-flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
         margin: 0 !important;
         text-decoration: none !important;
+    }
+
+    .masthead-logo-img {
+        height: 34px !important;
+        width: auto !important;
     }
 
     .vogue-masthead-logo .brand-name {

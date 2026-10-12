@@ -1803,24 +1803,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 };
 
-                const onWindowTouchEnd = async () => {
+                const onWindowTouchEnd = async (e) => {
+                    if (e && e.cancelable) e.preventDefault();
+
+                    let targetToDrop = activeDropTarget;
+                    if (!targetToDrop && e && e.changedTouches && e.changedTouches.length > 0) {
+                        const touch = e.changedTouches[0];
+                        const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const candidate = elem ? elem.closest('.masonry-item') : null;
+                        if (candidate && candidate !== sourceWrapper) {
+                            targetToDrop = candidate;
+                        }
+                    }
+
+                    const dropIndex = targetToDrop ? parseInt(targetToDrop.dataset.index, 10) : null;
+
                     cleanupTouchDrag();
                     lastTouchDragEndTime = Date.now();
 
-                    if (activeDropTarget) {
-                        activeDropTarget.classList.remove('drag-over');
-                        const dropIndex = parseInt(activeDropTarget.dataset.index, 10);
-                        activeDropTarget = null;
-
-                        if (!isNaN(dropIndex) && dropIndex !== sourceIndex) {
-                            await handleReorder(sourceIndex, dropIndex);
-                        }
+                    if (dropIndex !== null && !isNaN(dropIndex) && dropIndex !== sourceIndex) {
+                        await handleReorder(sourceIndex, dropIndex);
                     }
                     draggedIndex = null;
                 };
 
                 const cleanupTouchDrag = () => {
                     isTouchDragging = false;
+                    draggedIndex = null;
                     if (autoScrollRaf) {
                         cancelAnimationFrame(autoScrollRaf);
                         autoScrollRaf = null;
