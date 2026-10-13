@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v63';
+const CACHE_NAME_STATIC = 'zhukov-static-v80';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
@@ -128,7 +128,24 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 3. Static Assets & Pages: Stale-While-Revalidate
+    // 3. HTML Pages & Navigation: Network-First with Cache Fallback
+    if (request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname === '') {
+        event.respondWith(
+            fetch(request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const clone = networkResponse.clone();
+                    caches.open(CACHE_NAME_STATIC).then((cache) => cache.put(request, clone));
+                }
+                return networkResponse;
+            }).catch(async () => {
+                const cache = await caches.open(CACHE_NAME_STATIC);
+                return (await cache.match(request)) || (await cache.match('/index.html'));
+            })
+        );
+        return;
+    }
+
+    // 4. Other Static Assets: Stale-While-Revalidate
     if (url.origin === self.location.origin) {
         event.respondWith(
             caches.open(CACHE_NAME_STATIC).then(async (cache) => {

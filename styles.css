@@ -1,5 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600&display=swap');
 
+/* ── Cross-Document View Transitions (SPA-Style Persistent Header) ───────── */
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(site-header),
+::view-transition-new(site-header) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
 :root {
     --bg-color: #000000;
     --text-color: #f8fafc;
@@ -2781,6 +2792,32 @@ body.editorial-body main.vogue-main {
     width: 100%;
     background: #ffffff;
     display: block;
+    view-transition-name: site-header;
+}
+
+/* Immediate Auth State Enforcer (Prevents 0ms Button Layout Shift) */
+html.is-logged-in #login-btn-header {
+    display: none !important;
+}
+html.is-logged-in #logout-btn {
+    display: inline-flex !important;
+}
+html:not(.is-logged-in) #login-btn-header {
+    display: inline-flex !important;
+}
+html:not(.is-logged-in) #logout-btn {
+    display: none !important;
+}
+
+html.is-admin #upload-nav-link,
+html.is-admin #archived-nav-link,
+html.is-admin #promotion-nav-link {
+    display: inline-flex !important;
+}
+html:not(.is-admin) #upload-nav-link,
+html:not(.is-admin) #archived-nav-link,
+html:not(.is-admin) #promotion-nav-link {
+    display: none !important;
 }
 
 .vogue-header {
@@ -2834,15 +2871,18 @@ body.moodboard-body .vogue-header .brand-subtitle {
     width: auto;
     height: auto;
     max-width: 100%;
-    object-fit: contain;
+    color: #b32d2e;
+    fill: currentColor;
+    aspect-ratio: 1204.4 / 422.6;
     user-select: none;
     -webkit-user-drag: none;
-    transition: opacity 0.2s ease;
+    opacity: 1;
 }
 
 .vogue-masthead-logo:hover .vogue-logo-img,
 .vogue-scrolled-logo:hover .vogue-logo-img {
     opacity: 0.75;
+    transition: opacity 0.2s ease;
 }
 
 .masthead-logo-img {
@@ -3671,18 +3711,20 @@ body.editorial-body .gallery-item:hover img {
 .vogue-footer {
     background: #000000;
     color: #ffffff;
-    padding: 2.2rem 4vw 1.5rem 4vw;
+    padding: 2.8rem 4vw 2rem 4vw;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .vogue-footer-container {
     max-width: 1440px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .footer-columns-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2.5rem;
     padding-bottom: 2rem;
     border-bottom: 1px solid #222222;
@@ -3699,7 +3741,7 @@ body.editorial-body .gallery-item:hover img {
     letter-spacing: 0.22em;
     color: #b32d2e;
     text-transform: uppercase;
-    margin: 0 0 0.85rem 0;
+    margin: 0 0 0.9rem 0;
 }
 
 .footer-info-list,
@@ -3714,7 +3756,7 @@ body.editorial-body .gallery-item:hover img {
     font-size: 0.8rem;
     color: #999999;
     line-height: 1.6;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
 }
 
 .footer-info-list li strong {
@@ -3723,37 +3765,55 @@ body.editorial-body .gallery-item:hover img {
 }
 
 .footer-links-list li {
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
 }
 
 .footer-links-list a,
-.footer-links-list button {
-    color: #cccccc;
-    text-decoration: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 0.05em;
-    transition: color 0.25s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.footer-links-list a svg,
-.footer-links-list button svg {
-    flex-shrink: 0;
+.footer-links-list button,
+.footer-cookie-link {
+    color: #cccccc !important;
+    text-decoration: none !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.05em !important;
+    line-height: 1.5 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.55rem !important;
+    white-space: nowrap !important;
+    transition: color 0.25s ease !important;
 }
 
 .footer-links-list a:hover,
-.footer-links-list button:hover {
-    color: #ffffff;
+.footer-links-list button:hover,
+.footer-cookie-link:hover {
+    color: #ffffff !important;
+}
+
+.footer-links-list a svg,
+.footer-links-list button svg,
+.footer-links-list svg {
+    flex-shrink: 0 !important;
+    width: 14px !important;
+    height: 14px !important;
+    max-width: 14px !important;
+    max-height: 14px !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    color: inherit !important;
 }
 
 .footer-bottom-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 1.2rem;
+    padding-top: 1.4rem;
     font-family: 'Inter', sans-serif;
     font-size: 0.65rem;
     letter-spacing: 0.16em;
@@ -3815,18 +3875,19 @@ body.editorial-body .gallery-item:hover img {
     .disciplines-grid {
         grid-template-columns: 1fr;
         gap: 2rem;
-    }
+}
 
+@media (max-width: 860px) {
     .footer-columns-row {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 2rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 2.2rem 2rem !important;
     }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 520px) {
     .footer-columns-row {
-        grid-template-columns: 1fr;
-        gap: 2rem;
+        grid-template-columns: 1fr !important;
+        gap: 2rem !important;
     }
 }
 
@@ -3845,6 +3906,7 @@ body.editorial-body .gallery-item:hover img {
         background: #ffffff !important;
         transform: none !important;
         filter: none !important;
+        contain: none !important;
         overflow: visible !important;
     }
 
@@ -3858,6 +3920,7 @@ body.editorial-body .gallery-item:hover img {
         -webkit-backdrop-filter: none !important;
         filter: none !important;
         transform: none !important;
+        contain: none !important;
         border-bottom: 1px solid #e5e5e5 !important;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
         padding: 0 !important;
@@ -4093,6 +4156,10 @@ body.editorial-body .gallery-item:hover img {
 
     body.mobile-menu-open {
         overflow: hidden !important;
+    }
+
+    body.mobile-menu-open #site-header-slot {
+        z-index: 1000005 !important;
     }
 
     /* ── Mobile Homepage Refinements (Clarity, Pacing & Hierarchy) ── */
