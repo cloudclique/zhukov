@@ -31,3 +31,49 @@ try {
 }
 
 export const db = firestoreInstance;
+
+// Check whether a user has access to any moodboards (admin or shared collaborator)
+export async function checkUserHasMoodboards(user, currentIsAdmin) {
+    if (!user) {
+        localStorage.removeItem('zhukov_has_moodboards');
+        if (window.updateHeaderAuthState) window.updateHeaderAuthState(null, false, false);
+        return false;
+    }
+    if (currentIsAdmin) {
+        localStorage.setItem('zhukov_has_moodboards', 'true');
+        if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, true, true);
+        return true;
+    }
+    try {
+        const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        const snap = await getDocs(collection(db, 'moodboards'));
+        const userEmail = (user.email || '').toLowerCase();
+        let has = false;
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            const trusted = data.trustedUsers || [];
+            const emails = (data.trustedEmails || []).map(e => (e || '').toLowerCase());
+            if (trusted.includes(user.uid) || emails.includes(userEmail) || data.creatorUid === user.uid || (data.creatorEmail && data.creatorEmail.toLowerCase() === userEmail)) {
+                has = true;
+            }
+        });
+        if (has) {
+            localStorage.setItem('zhukov_has_moodboards', 'true');
+        } else {
+            localStorage.removeItem('zhukov_has_moodboards');
+        }
+        if (window.updateHeaderAuthState) {
+            window.updateHeaderAuthState(user, false, has);
+        }
+        return has;
+    } catch (e) {
+        console.warn("Could not check moodboard permissions:", e);
+        const cached = localStorage.getItem('zhukov_has_moodboards') === 'true';
+        if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, false, cached);
+        return cached;
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window.checkUserHasMoodboards = checkUserHasMoodboards;
+}

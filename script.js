@@ -1,6 +1,6 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { app, db } from "./firebase-config.js";
+import { app, db, checkUserHasMoodboards } from "./firebase-config.js";
 import { getCachedData, setCachedData, isDataEqual, registerSiteServiceWorker } from "./site-cache.js";
 
 // Initialize Firebase Auth
@@ -1243,13 +1243,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentIsAdmin = false;
                 localStorage.removeItem('zhukov_is_admin');
             }
+            if (checkUserHasMoodboards) {
+                checkUserHasMoodboards(user, currentIsAdmin);
+            } else if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(user, currentIsAdmin);
+            }
         } else {
             localStorage.removeItem('zhukov_logged_in');
             localStorage.removeItem('zhukov_is_admin');
+            localStorage.removeItem('zhukov_has_moodboards');
             currentIsAdmin = false;
-        }
-        if (window.updateHeaderAuthState) {
-            window.updateHeaderAuthState(user, currentIsAdmin);
+            if (window.updateHeaderAuthState) {
+                window.updateHeaderAuthState(null, false, false);
+            }
         }
         renderGallerySlots();
         if (heroEditBtn) {

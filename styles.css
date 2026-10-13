@@ -2811,12 +2811,17 @@ html:not(.is-logged-in) #logout-btn {
 
 html.is-admin #upload-nav-link,
 html.is-admin #archived-nav-link,
-html.is-admin #promotion-nav-link {
+html.is-admin #promotion-nav-link,
+html.is-admin #moodboard-nav-link,
+html.has-moodboards #moodboard-nav-link {
     display: inline-flex !important;
 }
 html:not(.is-admin) #upload-nav-link,
 html:not(.is-admin) #archived-nav-link,
 html:not(.is-admin) #promotion-nav-link {
+    display: none !important;
+}
+html:not(.is-admin):not(.has-moodboards) #moodboard-nav-link {
     display: none !important;
 }
 
@@ -3069,7 +3074,8 @@ body.moodboard-body .vogue-header .brand-subtitle {
 .vogue-nav-link.hidden,
 #upload-nav-link.hidden,
 #archived-nav-link.hidden,
-#promotion-nav-link.hidden {
+#promotion-nav-link.hidden,
+#moodboard-nav-link.hidden {
     display: none !important;
 }
 
@@ -4120,7 +4126,8 @@ body.editorial-body .gallery-item:hover img {
     .vogue-nav-link.hidden,
     #upload-nav-link.hidden,
     #archived-nav-link.hidden,
-    #promotion-nav-link.hidden {
+    #promotion-nav-link.hidden,
+    #moodboard-nav-link.hidden {
         display: none !important;
     }
 

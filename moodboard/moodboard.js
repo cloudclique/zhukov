@@ -313,13 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.updateHeaderAuthState(user, currentIsAdmin);
             }
 
-            if (currentIsAdmin) {
-                btnCreateBoard.classList.remove('hidden');
-            } else {
-                btnCreateBoard.classList.add('hidden');
+            if (btnCreateBoard) {
+                if (currentIsAdmin) {
+                    btnCreateBoard.classList.remove('hidden');
+                } else {
+                    btnCreateBoard.classList.add('hidden');
+                }
             }
 
-            authNotice.classList.add('hidden');
+            if (authNotice) authNotice.classList.add('hidden');
 
             // If a board is currently open, immediately re-sync permissions with resolved admin/collaborator state!
             if (activeBoardId && activeBoardData) {
@@ -327,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (targetBoardFromUrl && !activeBoardId) {
                 openMoodboard(targetBoardFromUrl);
             } else if (!activeBoardId) {
-                loadDashboardBoards();
+                exitBoardToDashboard();
             }
         } else {
             localStorage.removeItem('zhukov_logged_in');
@@ -337,12 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(null, false);
             }
-            btnCreateBoard.classList.add('hidden');
+            if (btnCreateBoard) btnCreateBoard.classList.add('hidden');
             
-            // Show auth notice on dashboard
-            boardsGrid.innerHTML = '';
-            authNotice.classList.remove('hidden');
-            emptyBoardsNotice.classList.add('hidden');
+            // Show auth notice on dashboard if dashboard elements present
+            if (boardsGrid) boardsGrid.innerHTML = '';
+            if (authNotice) authNotice.classList.remove('hidden');
+            if (emptyBoardsNotice) emptyBoardsNotice.classList.add('hidden');
 
             if (activeBoardId && activeBoardData) {
                 syncBoardPermissions();
@@ -1390,47 +1392,51 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Create Moodboard (Admin only) ---
-    btnCreateBoard.addEventListener('click', () => {
-        newBoardTitle.value = '';
-        newBoardDesc.value = '';
-        newBoardCollabs.value = '';
-        openModal(modalCreateBoard);
-    });
+    if (btnCreateBoard) {
+        btnCreateBoard.addEventListener('click', () => {
+            if (newBoardTitle) newBoardTitle.value = '';
+            if (newBoardDesc) newBoardDesc.value = '';
+            if (newBoardCollabs) newBoardCollabs.value = '';
+            if (modalCreateBoard) openModal(modalCreateBoard);
+        });
+    }
 
-    btnSubmitCreateBoard.addEventListener('click', async () => {
-        const title = newBoardTitle.value.trim();
-        if (!title) {
-            alert('Please enter a moodboard title.');
-            return;
-        }
+    if (btnSubmitCreateBoard) {
+        btnSubmitCreateBoard.addEventListener('click', async () => {
+            const title = newBoardTitle ? newBoardTitle.value.trim() : '';
+            if (!title) {
+                alert('Please enter a moodboard title.');
+                return;
+            }
 
-        const description = newBoardDesc.value.trim();
-        const emailsRaw = newBoardCollabs.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            const description = newBoardDesc ? newBoardDesc.value.trim() : '';
+            const emailsRaw = newBoardCollabs ? newBoardCollabs.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : [];
 
-        try {
-            invalidateCache('moodboard_');
-            const newDocRef = doc(collection(db, 'moodboards'));
-            await setDoc(newDocRef, {
-                title: title,
-                description: description,
-                creatorUid: currentUser ? currentUser.uid : 'admin',
-                creatorEmail: currentUser ? currentUser.email : '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                trustedUsers: currentUser ? [currentUser.uid] : [],
-                trustedEmails: emailsRaw,
-                elements: [],
-                drawingPaths: []
-            });
+            try {
+                invalidateCache('moodboard_');
+                const newDocRef = doc(collection(db, 'moodboards'));
+                await setDoc(newDocRef, {
+                    title: title,
+                    description: description,
+                    creatorUid: currentUser ? currentUser.uid : 'admin',
+                    creatorEmail: currentUser ? currentUser.email : '',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    trustedUsers: currentUser ? [currentUser.uid] : [],
+                    trustedEmails: emailsRaw,
+                    elements: [],
+                    drawingPaths: []
+                });
 
-            closeModal(modalCreateBoard);
-            showToast('Moodboard created!');
-            openMoodboard(newDocRef.id);
-        } catch (err) {
-            console.error("Error creating moodboard:", err);
-            showToast('Error creating moodboard.');
-        }
-    });
+                if (modalCreateBoard) closeModal(modalCreateBoard);
+                showToast('Moodboard created!');
+                openMoodboard(newDocRef.id);
+            } catch (err) {
+                console.error("Error creating moodboard:", err);
+                showToast('Error creating moodboard.');
+            }
+        });
+    }
 
     // --- Centralized Board Permissions Synchronizer ---
     function syncBoardPermissions() {
@@ -1539,8 +1545,8 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBoardCanEdit = false;
         isGroupsSidebarManuallyClosed = false;
         document.body.classList.add('inside-board');
-        dashboardView.style.display = 'none';
-        canvasView.style.display = 'flex';
+        if (dashboardView) dashboardView.style.display = 'none';
+        if (canvasView) canvasView.style.display = 'flex';
         undoStack = [];
         redoStack = [];
         selectedElementId = null;
@@ -1701,20 +1707,7 @@ document.addEventListener('DOMContentLoaded', () => {
             unsubscribeBoardSnapshot = null;
         }
         activeBoardCanEdit = false;
-        document.body.classList.remove('inside-board', 'is-viewer-mode');
-        canvasViewport.classList.remove('is-viewer-mode');
-        activeBoardId = null;
-        activeBoardData = null;
-        selectedElementIds.clear();
-        selectedElementId = null;
-        updateSelectionToolbar();
-        renderGroupTags();
-        canvasView.style.display = 'none';
-        dashboardView.style.display = 'flex';
-        history.pushState({}, '', '/moodboard/');
-        if (currentUser) {
-            loadDashboardBoards();
-        }
+        window.location.href = '/mood-dash/';
     };
 
     btnBackToDashboard.addEventListener('click', exitBoardToDashboard);

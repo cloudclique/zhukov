@@ -17,7 +17,7 @@ const BANNER_MOBILE_IMAGE_URL = '';
 const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOXWVRIXaCN';
 
 (function () {
-    const HEADER_CACHE_KEY = 'zhukov_cached_header_v35';
+    const HEADER_CACHE_KEY = 'zhukov_cached_header_v36';
     const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v50';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
     const THEME_KEY = 'zhukov_theme';
@@ -47,10 +47,13 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         localStorage.removeItem(THEME_KEY);
         const isLoggedIn = localStorage.getItem('zhukov_logged_in') === 'true';
         const isAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
+        const hasMoodboards = localStorage.getItem('zhukov_has_moodboards') === 'true';
         if (isLoggedIn) document.documentElement.classList.add('is-logged-in');
         else document.documentElement.classList.remove('is-logged-in');
         if (isAdmin) document.documentElement.classList.add('is-admin');
         else document.documentElement.classList.remove('is-admin');
+        if (isLoggedIn && (isAdmin || hasMoodboards)) document.documentElement.classList.add('has-moodboards');
+        else document.documentElement.classList.remove('has-moodboards');
     } catch (e) { }
     document.documentElement.setAttribute('data-theme', 'light');
     document.documentElement.classList.remove('theme-dark');
@@ -68,6 +71,9 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         '/photoshoots/archived.html': 'ARCHIVE',
         '/moodboard/': 'MOODBOARDS',
         '/moodboard/index.html': 'MOODBOARDS',
+        '/mood-dash/': 'MOODBOARDS',
+        '/mood-dash/index.html': 'MOODBOARDS',
+        '/mood-dash.html': 'MOODBOARDS',
         '/about/': 'ABOUT ME / WORKFLOW & GEAR',
         '/about/index.html': 'ABOUT ME / WORKFLOW & GEAR',
         '/contact/': 'CONTACT / BOOKING / IMPRESS',
@@ -85,6 +91,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         if (path.includes('/photoshoots/archived')) return 'archived';
         if (path.includes('/photoshoots/')) return 'photoshoots';
         if (path.includes('/moodboard/')) return 'moodboard';
+        if (path.includes('/mood-dash')) return 'moodboard';
         if (path.includes('/about/')) return 'about';
         if (path.includes('/contact/')) return 'contact';
         if (path.includes('/upload/')) return 'upload';
@@ -104,6 +111,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         const uploadLink = document.getElementById('upload-nav-link');
         const archivedLink = document.getElementById('archived-nav-link');
         const promotionLink = document.getElementById('promotion-nav-link');
+        const moodboardLink = document.getElementById('moodboard-nav-link');
 
         // Set Top Bar text for current page
         if (topBarCenter) {
@@ -462,12 +470,13 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
     }
 
     // Expose Global Auth Synchronizer for Page Scripts / Firebase Listeners
-    window.updateHeaderAuthState = function (user, isAdmin) {
+    window.updateHeaderAuthState = function (user, isAdmin, hasMoodboards) {
         const loginBtn = document.getElementById('login-btn-header');
         const logoutBtn = document.getElementById('logout-btn');
         const uploadLink = document.getElementById('upload-nav-link');
         const archivedLink = document.getElementById('archived-nav-link');
         const promotionLink = document.getElementById('promotion-nav-link');
+        const moodboardLink = document.getElementById('moodboard-nav-link');
 
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
@@ -476,6 +485,17 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
             document.documentElement.classList.add('is-logged-in');
             document.documentElement.classList.toggle('is-admin', !!isAdmin);
+
+            if (isAdmin) {
+                localStorage.setItem('zhukov_has_moodboards', 'true');
+            } else if (hasMoodboards !== undefined) {
+                if (hasMoodboards) localStorage.setItem('zhukov_has_moodboards', 'true');
+                else localStorage.removeItem('zhukov_has_moodboards');
+            } else if (typeof window.checkUserHasMoodboards === 'function') {
+                window.checkUserHasMoodboards(user, false);
+            }
+            const canAccessMoodboard = Boolean(isAdmin || (hasMoodboards !== undefined ? hasMoodboards : localStorage.getItem('zhukov_has_moodboards') === 'true'));
+            document.documentElement.classList.toggle('has-moodboards', canAccessMoodboard);
 
             if (loginBtn) loginBtn.classList.add('hidden');
             if (logoutBtn) logoutBtn.classList.remove('hidden');
@@ -491,15 +511,21 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                 if (isAdmin) promotionLink.classList.remove('hidden');
                 else promotionLink.classList.add('hidden');
             }
+            if (moodboardLink) {
+                if (canAccessMoodboard) moodboardLink.classList.remove('hidden');
+                else moodboardLink.classList.add('hidden');
+            }
         } else {
             localStorage.removeItem('zhukov_logged_in');
             localStorage.removeItem('zhukov_is_admin');
-            document.documentElement.classList.remove('is-logged-in', 'is-admin');
+            localStorage.removeItem('zhukov_has_moodboards');
+            document.documentElement.classList.remove('is-logged-in', 'is-admin', 'has-moodboards');
             if (loginBtn) loginBtn.classList.remove('hidden');
             if (logoutBtn) logoutBtn.classList.add('hidden');
             if (uploadLink) uploadLink.classList.add('hidden');
             if (archivedLink) archivedLink.classList.add('hidden');
             if (promotionLink) promotionLink.classList.add('hidden');
+            if (moodboardLink) moodboardLink.classList.add('hidden');
         }
     };
 
@@ -547,7 +573,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         <nav class="vogue-nav-links">
             <a href="/" class="vogue-nav-link" data-nav="home">Home</a>
             <a href="/photoshoots/" class="vogue-nav-link" data-nav="photoshoots">Photoshoots</a>
-            <a href="/moodboard/" class="vogue-nav-link" data-nav="moodboard">Moodboard</a>
+            <a href="/mood-dash/" id="moodboard-nav-link" class="vogue-nav-link hidden" data-nav="moodboard">Moodboard</a>
             <a href="/about/" class="vogue-nav-link" data-nav="about">About Me</a>
             <a href="/contact/" class="vogue-nav-link" data-nav="contact">Contact</a>
             <a href="/promotion/" id="promotion-nav-link" class="vogue-nav-link hidden" data-nav="promotion">Promotions</a>
@@ -651,8 +677,8 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             }
         );
 
-        // If on moodboard, strip banner from string
-        if (window.location.pathname.toLowerCase().includes('/moodboard')) {
+        // If on moodboard or mood-dash, strip banner from string
+        if (window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash')) {
             html = html.replace(/<div class="site-banner-container"[\s\S]*?<\/div>/gi, '');
         }
 
@@ -665,7 +691,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
     function relocateBannerToPageFlow() {
         const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
         if (!headerSlot) return;
-        const isMoodboard = window.location.pathname.toLowerCase().includes('/moodboard');
+        const isMoodboard = window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash');
         const banner = headerSlot.querySelector('.site-banner-container');
         if (banner) {
             if (isMoodboard) {
@@ -1059,8 +1085,8 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
     // Universal Header Banner Handler: applies BANNER_MOBILE_IMAGE_URL on mobile, BANNER_IMAGE_URL on mid/full
     function updateBannerSlots() {
-        // Exclude banner completely on moodboard page
-        if (window.location.pathname.toLowerCase().includes('/moodboard')) {
+        // Exclude banner completely on moodboard & mood-dash pages
+        if (window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash')) {
             document.querySelectorAll('.site-banner-container').forEach(container => {
                 container.style.display = 'none';
             });

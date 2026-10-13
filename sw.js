@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v80';
+const CACHE_NAME_STATIC = 'zhukov-static-v81';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
@@ -38,7 +38,11 @@ const PRECACHE_ASSETS = [
     '/moodboard/',
     '/moodboard/index.html',
     '/moodboard/moodboard.css',
-    '/moodboard/moodboard.js'
+    '/moodboard/moodboard.js',
+    '/mood-dash/',
+    '/mood-dash/index.html',
+    '/mood-dash/mood-dash.css',
+    '/mood-dash/mood-dash.js'
 ];
 
 // Install Event

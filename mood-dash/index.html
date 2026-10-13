@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZHUKOV.studio — Moodboards</title>
+    <link rel="stylesheet" href="/styles.css?v=65">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <script src="/site-components.js?v=40"></script>
+    <link rel="stylesheet" href="mood-dash.css?v=2">
+</head>
+
+<body class="editorial-body mood-dash-body">
+    <!-- Modular Shared Header Component -->
+    <div id="site-header-slot"></div>
+
+    <main id="app-content" class="mood-dash-main">
+        <div class="dashboard-hero vogue-dashboard-hero">
+            <div class="dashboard-controls">
+                <button id="btn-create-board" class="vogue-pill-btn hidden">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span>Create New Moodboard</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Boards Grid -->
+        <div id="boards-grid" class="boards-grid">
+            <!-- Dynamically injected board cards -->
+        </div>
+
+        <!-- Non-logged in state -->
+        <div id="auth-notice" class="auth-notice-card hidden">
+            <div class="editorial-section-tag">COLLABORATIVE ATELIER</div>
+            <h3>Sign In to Access Moodboards</h3>
+            <p>Sign in with your Google account to create persistent concept boards and collaborate with clients and models.</p>
+            <button id="btn-auth-notice-login" class="vogue-pill-btn">Sign In with Google</button>
+        </div>
+
+        <!-- Empty boards state for logged in user with 0 boards (Admin) -->
+        <div id="empty-boards-notice" class="auth-notice-card hidden">
+            <div class="editorial-section-tag">CURATION ARCHIVE</div>
+            <h3>No Moodboards Created</h3>
+            <p>You have no saved moodboards yet. Click "Create New Moodboard" to begin arranging your visual concepts.</p>
+        </div>
+
+        <!-- Access restricted state for logged in user with no shared boards -->
+        <div id="no-access-notice" class="auth-notice-card hidden">
+            <div class="editorial-section-tag">PRIVATE ATELIER</div>
+            <h3>No Shared Moodboards</h3>
+            <p>You currently do not have access to any moodboards. Access is granted when a moodboard is specifically shared with your account (<strong id="no-access-user-email"></strong>). If you are expecting access, please contact the studio.</p>
+            <a href="/" class="vogue-pill-btn" style="margin-top: 1.2rem;">Back to Home</a>
+        </div>
+    </main>
+
+    <!-- Dynamic Site Footer Slot -->
+    <div id="site-footer-slot"></div>
+
+    <!-- ==============================================
+         MODAL: Create New Moodboard (Admin only)
+         ============================================== -->
+    <div id="modal-create-board" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>Create New Moodboard</h3>
+                <button class="icon-btn-small modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-board-title">Moodboard Title</label>
+                    <input type="text" id="new-board-title" class="form-input" placeholder="e.g. Cyberpunk Editorial Concept 2026" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-board-desc">Description / Vision (Optional)</label>
+                    <textarea id="new-board-desc" class="form-textarea" rows="3" placeholder="Notes on styling, aesthetic references, lighting direction..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Trusted Collaborators (Emails)</label>
+                    <input type="text" id="new-board-collabs" class="form-input" placeholder="Type user emails separated by commas (e.g. user@gmail.com, model@studio.com)">
+                    <small style="color: #888; display: block; margin-top: 0.4rem;">Users with these emails will be able to view and edit this moodboard when logged in.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mb-btn-secondary modal-close-btn">Cancel</button>
+                <button id="btn-submit-create-board" class="mb-btn-primary">Create Moodboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="mb-toast" class="mb-toast"></div>
+
+    <!-- Main Moodboard Dashboard Script -->
+    <script type="module" src="mood-dash.js"></script>
+</body>
+
+</html>

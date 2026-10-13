@@ -20,6 +20,12 @@
                 return;
             }
 
+            // Route /mood-dash to /mood-dash/
+            if (pathname.match(/^\/mood-dash\/?$/)) {
+                window.location.replace('/mood-dash/' + search + hash);
+                return;
+            }
+
             // Route /promotion/<presetTitle>/ to /promotion/?preset=<presetTitle>
             var promoMatch = pathname.match(/\/promotion\/([^/]+)\/?$/);
             if (promoMatch && promoMatch[1] && promoMatch[1] !== 'index.html' && promoMatch[1] !== 'promotion') {

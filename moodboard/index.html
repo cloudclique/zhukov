@@ -14,14 +14,19 @@
         rel="stylesheet">
     <script src="/site-components.js?v=40"></script>
     <script>
-        // Immediately activate loader if opening board directly via ?id=
-        if (window.location.search && (window.location.search.includes('id=') || window.location.search.includes('board='))) {
+        // Immediately activate loader if opening board directly via ?id= or ?board=
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasBoard = urlParams.has('id') || urlParams.has('board') || (window.location.hash && window.location.hash.length > 2);
+        if (hasBoard) {
             document.documentElement.classList.add('moodboard-loading-direct');
+        } else {
+            // Redirect to dashboard if no board specified
+            window.location.replace('/mood-dash/');
         }
     </script>
 </head>
 
-<body class="moodboard-body">
+<body class="moodboard-body inside-board">
 
     <!-- ==============================================
          Moodboard Atelier Loading Screen
@@ -53,48 +58,9 @@
     <main class="moodboard-app-container">
 
         <!-- ==============================================
-             VIEW 1: Dashboard (List of boards / Create)
+             Infinite Canvas Workspace
              ============================================== -->
-        <div id="dashboard-view" class="dashboard-view">
-            <div class="dashboard-main-content">
-                <div class="dashboard-hero vogue-dashboard-hero">
-                    <div class="dashboard-controls">
-                        <button id="btn-create-board" class="vogue-pill-btn">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/></svg>
-                            <span>Create New Moodboard</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Boards Grid -->
-                <div id="boards-grid" class="boards-grid">
-                    <!-- Dynamically injected board cards -->
-                </div>
-
-                <!-- Non-logged in state -->
-                <div id="auth-notice" class="auth-notice-card hidden">
-                    <div class="editorial-section-tag">COLLABORATIVE ATELIER</div>
-                    <h3>Sign In to Access Moodboards</h3>
-                    <p>Sign in with your Google account to create persistent concept boards and collaborate with clients and models.</p>
-                    <button id="btn-auth-notice-login" class="vogue-pill-btn">Sign In with Google</button>
-                </div>
-
-                <!-- Empty boards state for logged in user with 0 boards -->
-                <div id="empty-boards-notice" class="auth-notice-card hidden">
-                    <div class="editorial-section-tag">CURATION ARCHIVE</div>
-                    <h3>No Moodboards Created</h3>
-                    <p>You have no saved moodboards yet. Click "Create New Moodboard" to begin arranging your visual concepts.</p>
-                </div>
-            </div>
-
-            <!-- Dynamic Site Footer Slot (Full Bleed at bottom of dashboard) -->
-            <div id="site-footer-slot"></div>
-        </div>
-
-        <!-- ==============================================
-             VIEW 2: Infinite Canvas Workspace
-             ============================================== -->
-        <div id="canvas-view" class="canvas-view">
+        <div id="canvas-view" class="canvas-view" style="display: flex;">
             <!-- In-Canvas Top Bar -->
             <div class="canvas-top-bar">
                 <div class="board-meta-bar">
@@ -280,36 +246,7 @@
 
     </main>
 
-    <!-- ==============================================
-         MODAL 1: Create New Moodboard (Admin only)
-         ============================================== -->
-    <div id="modal-create-board" class="modal-overlay">
-        <div class="modal-window">
-            <div class="modal-header">
-                <h3>Create New Moodboard</h3>
-                <button class="icon-btn-small modal-close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="new-board-title">Moodboard Title</label>
-                    <input type="text" id="new-board-title" class="form-input" placeholder="e.g. Cyberpunk Editorial Concept 2026" required>
-                </div>
-                <div class="form-group">
-                    <label for="new-board-desc">Description / Vision (Optional)</label>
-                    <textarea id="new-board-desc" class="form-textarea" rows="3" placeholder="Notes on styling, aesthetic references, lighting direction..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Trusted Collaborators (Emails)</label>
-                    <input type="text" id="new-board-collabs" class="form-input" placeholder="Type user emails separated by commas (e.g. user@gmail.com, model@studio.com)">
-                    <small style="color: var(--mb-text-muted); display: block; margin-top: 0.4rem;">Users with these emails will be able to view and edit this moodboard when logged in.</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="mb-btn-secondary modal-close-btn">Cancel</button>
-                <button id="btn-submit-create-board" class="mb-btn-primary">Create Moodboard</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- ==============================================
          MODAL 2: Moodboard Settings (Title, Description & Collaborators)
