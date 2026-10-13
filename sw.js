@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v82';
+const CACHE_NAME_STATIC = 'zhukov-static-v85';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
@@ -78,7 +78,6 @@ self.addEventListener('fetch', (event) => {
 
     // Bypass non-GET requests, Firebase APIs, Auth endpoints, and Firestore
     if (request.method !== 'GET') return;
-    if (url.searchParams.has('v')) return;
     if (url.hostname.includes('firestore.googleapis.com') ||
         url.hostname.includes('firebaseinstallations.googleapis.com') ||
         url.hostname.includes('identitytoolkit.googleapis.com') ||
@@ -143,17 +142,17 @@ self.addEventListener('fetch', (event) => {
                 return networkResponse;
             }).catch(async () => {
                 const cache = await caches.open(CACHE_NAME_STATIC);
-                return (await cache.match(request)) || (await cache.match('/index.html'));
+                return (await cache.match(request, { ignoreSearch: true })) || (await cache.match('/index.html'));
             })
         );
         return;
     }
 
-    // 4. Other Static Assets: Stale-While-Revalidate
+    // 4. Other Static Assets: Stale-While-Revalidate with query-param fallback
     if (url.origin === self.location.origin) {
         event.respondWith(
             caches.open(CACHE_NAME_STATIC).then(async (cache) => {
-                const cached = await cache.match(request);
+                const cached = (await cache.match(request)) || (await cache.match(request, { ignoreSearch: true }));
                 const fetchPromise = fetch(request).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         cache.put(request, networkResponse.clone());

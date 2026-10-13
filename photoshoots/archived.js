@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }, {
             root: null,
-            rootMargin: '600px 200px',
+            rootMargin: window.innerWidth <= 768 ? '200px 50px' : '500px 150px',
             threshold: 0
         });
 
@@ -943,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }, {
             root: null,
-            rootMargin: '600px 300px',
+            rootMargin: window.innerWidth <= 768 ? '200px 50px' : '500px 150px',
             threshold: 0
         });
 

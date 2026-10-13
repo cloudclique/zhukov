@@ -39,8 +39,9 @@ export const setRatio = (url, ratio) => {
 };
 
 // Resolves once ratios for the given URLs are known (or after timeoutMs).
-export const preloadRatios = (urls, timeoutMs = 2500) => {
-    const pending = urls.filter(u => u && !getRatio(u));
+// Non-blocking helper; capped at max 6 probes to never saturate mobile network.
+export const preloadRatios = (urls, timeoutMs = 600) => {
+    const pending = (urls || []).filter(u => u && !getRatio(u)).slice(0, 6);
     if (pending.length === 0) return Promise.resolve();
 
     const loads = pending.map(url => new Promise(resolve => {

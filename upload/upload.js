@@ -879,20 +879,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const processImage = async (file) => {
         const MAX_DIMENSION = 1920;
+        const MAX_THUMB_DIMENSION = 720;
 
-        const renderToBlob = async (source, srcWidth, srcHeight) => {
+        const renderToBlob = async (source, srcWidth, srcHeight, maxDim, quality) => {
             let width = srcWidth;
             let height = srcHeight;
 
             if (width > height) {
-                if (width > MAX_DIMENSION) {
-                    height = Math.round(height * (MAX_DIMENSION / width));
-                    width = MAX_DIMENSION;
+                if (width > maxDim) {
+                    height = Math.round(height * (maxDim / width));
+                    width = maxDim;
                 }
             } else {
-                if (height > MAX_DIMENSION) {
-                    width = Math.round(width * (MAX_DIMENSION / height));
-                    height = MAX_DIMENSION;
+                if (height > maxDim) {
+                    width = Math.round(width * (maxDim / height));
+                    height = maxDim;
                 }
             }
 
@@ -903,7 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sharedCanvas.height = height;
 
             const ctx = sharedCanvas.getContext('2d', { willReadFrequently: false });
-            // Fill white background to prevent any transparent alpha void
+            // Fill white background to prevent transparent alpha void
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, width, height);
             ctx.drawImage(source, 0, 0, width, height);
@@ -912,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sharedCanvas.toBlob((b) => {
                     if (b) resolve(b);
                     else reject(new Error('Canvas toBlob failed'));
-                }, 'image/webp', 0.85);
+                }, 'image/webp', quality);
             });
 
             // Purge canvas backing buffer immediately to reclaim GPU VRAM
@@ -922,16 +923,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return blob;
         };
 
+        const generateBlobs = async (source, srcWidth, srcHeight) => {
+            const ratio = Math.round((srcWidth / srcHeight) * 10000) / 10000;
+            const fullBlob = await renderToBlob(source, srcWidth, srcHeight, MAX_DIMENSION, 0.85);
+            const thumbBlob = await renderToBlob(source, srcWidth, srcHeight, MAX_THUMB_DIMENSION, 0.80);
+            return { fullBlob, thumbBlob, aspectRatio: ratio, width: srcWidth, height: srcHeight };
+        };
+
         // Strategy 1: Native createImageBitmap (off-main-thread decode, EXIF orientation aware, zero base64 memory overhead)
         if (typeof window.createImageBitmap === 'function') {
             try {
                 const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
                 try {
-                    const blob = await renderToBlob(bmp, bmp.width, bmp.height);
-                    if (blob && (blob.size > 12000 || file.size < 50000)) {
-                        return blob;
+                    const res = await generateBlobs(bmp, bmp.width, bmp.height);
+                    if (res.fullBlob && (res.fullBlob.size > 12000 || file.size < 50000)) {
+                        return res;
                     }
-                    console.warn(`createImageBitmap produced unexpectedly small blob (${blob ? blob.size : 0} bytes). Retrying via Image element...`);
+                    console.warn(`createImageBitmap produced unexpectedly small blob (${res.fullBlob ? res.fullBlob.size : 0} bytes). Retrying via Image element...`);
                 } finally {
                     bmp.close();
                 }
@@ -954,8 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            const blob = await renderToBlob(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
-            return blob;
+            return await generateBlobs(img, img.naturalWidth || img.width, img.naturalHeight || img.height);
         } finally {
             URL.revokeObjectURL(objectUrl);
         }
@@ -1053,31 +1060,34 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadBtn.disabled = true;
 
         try {
-            const uploadedUrls = [];
+            const uploadedItems = [];
             const workerUrl = CLOUDFLARE_WORKER_URL;
 
             // Process and Upload Sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
                 statusMsg.innerHTML = `<span style="color: #60a5fa;">Processing & Uploading ${i + 1} of ${selectedFiles.length}...</span>`;
 
-                // 1. Process Image to WebP
-                const webpBlob = await processImage(selectedFiles[i]);
+                // 1. Process Image to Full WebP & Thumbnail WebP
+                const processed = await processImage(selectedFiles[i]);
+                const { fullBlob, thumbBlob, aspectRatio } = processed;
 
-                if (!webpBlob || webpBlob.size === 0) {
+                if (!fullBlob || fullBlob.size === 0) {
                     throw new Error(`Failed to process image ${i + 1} (empty output)`);
                 }
 
-                // Safety validation: A 1920px photographic image compressed to WebP at 85% quality
-                // is never under 12KB. A ~4.5KB file indicates an empty/transparent canvas buffer.
-                if (webpBlob.size < 12000 && selectedFiles[i].size > 50000) {
-                    throw new Error(`Image ${i + 1} (${selectedFiles[i].name}) failed rendering to canvas (output size ${webpBlob.size} bytes). Upload aborted to prevent blank images.`);
+                // Safety validation
+                if (fullBlob.size < 12000 && selectedFiles[i].size > 50000) {
+                    throw new Error(`Image ${i + 1} (${selectedFiles[i].name}) failed rendering to canvas (output size ${fullBlob.size} bytes). Upload aborted to prevent blank images.`);
                 }
 
                 // 2. Upload to Cloudflare R2 via Worker
                 const safePrefix = category.replace(/[^a-zA-Z0-9_-]/g, '_');
-                const uniqueFileName = `${safePrefix}_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}.webp`;
+                const baseName = `${safePrefix}_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 7)}`;
+                const uniqueFileName = `${baseName}.webp`;
+                const uniqueThumbName = `${baseName}_thumb.webp`;
+
                 const formData = new FormData();
-                formData.append('image', webpBlob, uniqueFileName);
+                formData.append('image', fullBlob, uniqueFileName);
 
                 const uploadRes = await fetch(workerUrl, {
                     method: 'POST',
@@ -1090,7 +1100,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(uploadResult.error || `Failed to upload image ${i + 1}`);
                 }
 
-                uploadedUrls.push(uploadResult.data.url);
+                const fullUrl = uploadResult.data.url;
+                let thumbUrl = fullUrl;
+
+                // Upload 720px lightweight grid thumbnail
+                if (thumbBlob && thumbBlob.size > 0) {
+                    try {
+                        const thumbFormData = new FormData();
+                        thumbFormData.append('image', thumbBlob, uniqueThumbName);
+                        const thumbRes = await fetch(workerUrl, {
+                            method: 'POST',
+                            body: thumbFormData
+                        });
+                        const thumbResult = await thumbRes.json();
+                        if (thumbRes.ok && thumbResult.success && thumbResult.data && thumbResult.data.url) {
+                            thumbUrl = thumbResult.data.url;
+                        }
+                    } catch (thumbErr) {
+                        console.warn("Thumbnail upload warning (falling back to full URL):", thumbErr);
+                    }
+                }
+
+                uploadedItems.push({ url: fullUrl, thumbUrl, aspectRatio });
 
                 // Small yield to let browser run GC and event loop
                 await new Promise(r => setTimeout(r, 40));
@@ -1098,13 +1129,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving references to Firebase...</span>`;
 
+            const uploadedUrls = uploadedItems.map(item => item.url);
+
             // 3. Save to Firestore
             if (category === 'Single Shots') {
                 const singleShotsRef = collection(db, 'single_shots');
-                for (let j = 0; j < uploadedUrls.length; j++) {
-                    statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving reference ${j + 1} of ${uploadedUrls.length} to database...</span>`;
+                for (let j = 0; j < uploadedItems.length; j++) {
+                    statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving reference ${j + 1} of ${uploadedItems.length} to database...</span>`;
                     await addDoc(singleShotsRef, {
-                        url: uploadedUrls[j], modelName, theme, description, date,
+                        url: uploadedItems[j].url,
+                        thumbUrl: uploadedItems[j].thumbUrl,
+                        aspectRatio: uploadedItems[j].aspectRatio,
+                        modelName, theme, description, date,
                         isAdult: isAdult,
                         archived: isArchived,
                         uploadedAt: date,
@@ -1130,6 +1166,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Use the stable document ID (immutable; survives category renames)
                 const photoSetRef = doc(db, 'photo_sets', stableDocId);
 
+                // Build thumbnail and aspect ratio maps
+                const thumbMap = {};
+                const ratioMap = {};
+                uploadedItems.forEach(item => {
+                    if (item.thumbUrl) thumbMap[item.url] = item.thumbUrl;
+                    if (typeof item.aspectRatio === 'number') ratioMap[item.url] = item.aspectRatio;
+                });
+
                 // In photo sets, galleries display images using rawUrls.reverse() (newest to oldest).
                 // Reversing the uploaded batch before arrayUnion ensures that the first uploaded
                 // image is placed at index 0 (the top of the gallery), followed by subsequent images.
@@ -1139,7 +1183,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const baseData = {
                     categoryName: category,
                     uploadedAt: date,
-                    uploadedBy: auth.currentUser.uid
+                    uploadedBy: auth.currentUser.uid,
+                    thumbUrls: thumbMap,
+                    aspectRatios: ratioMap
                 };
 
                 // Model resolution: carry over / preserve
@@ -1189,7 +1235,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const chunk = reversedBatch.slice(c * CHUNK_SIZE, (c + 1) * CHUNK_SIZE);
                     statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving batch ${c + 1} of ${totalChunks} to database...</span>`;
                     const chunkUpdate = {
-                        urls: arrayUnion(...chunk)
+                        urls: arrayUnion(...chunk),
+                        thumbUrls: thumbMap,
+                        aspectRatios: ratioMap
                     };
                     if (isAdult) {
                         chunkUpdate.adultUrls = arrayUnion(...chunk);

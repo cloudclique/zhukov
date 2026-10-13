@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Data store
     let categoriesData = [];
     let photoModelMap = new Map();
+    let photoThumbMap = new Map();
     let isAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
     let showArchived = false; // "dont show is default"
     let hasInitialLoadStarted = false;
@@ -409,6 +410,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.url && data.modelName) {
                     photoModelMap.set(data.url, data.modelName.trim());
                 }
+                if (data.url && data.thumbUrl) {
+                    photoThumbMap.set(data.url, data.thumbUrl);
+                }
+                if (data.url && typeof data.aspectRatio === 'number') {
+                    setRatio(data.url, data.aspectRatio);
+                }
                 if (data.archived === true) {
                     archivedSingleUrls.add(data.url);
                     // Hide archived single shots when not admin or when admin toggle is off (default)
@@ -483,6 +490,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
 
+                    if (data.aspectRatios && typeof data.aspectRatios === 'object') {
+                        Object.entries(data.aspectRatios).forEach(([u, r]) => {
+                            if (typeof r === 'number') setRatio(u, r);
+                        });
+                    }
+                    if (data.thumbUrls && typeof data.thumbUrls === 'object') {
+                        Object.entries(data.thumbUrls).forEach(([u, t]) => {
+                            if (t) photoThumbMap.set(u, t);
+                        });
+                    }
+
                     loadedCategories.push({
                         categoryId: doc.id,
                         categoryName: data.categoryName || 'Unknown Photo set',
@@ -490,6 +508,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
                         urls: visibleUrls.reverse(), // Show newest to oldest
+                        thumbUrls: data.thumbUrls || {},
                         archivedUrls: [...archivedUrls].sort()
                     });
                 }
@@ -617,26 +636,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             invalidateCache('photoshoots');
             invalidateCache('gallery');
+            const cfUrlsToDelete = [photoUrl];
+
             if (categoryId === 'single-shots') {
                 const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                 const snap = await getDocs(q);
-                snap.forEach(async (d) => {
+                for (const d of snap.docs) {
+                    const data = d.data() || {};
+                    if (data.thumbUrl) cfUrlsToDelete.push(data.thumbUrl);
                     await deleteDoc(doc(db, 'single_shots', d.id));
-                });
+                }
+                const qThumb = query(collection(db, 'single_shots'), where('thumbUrl', '==', photoUrl));
+                const snapThumb = await getDocs(qThumb);
+                for (const d of snapThumb.docs) {
+                    const data = d.data() || {};
+                    if (data.url) cfUrlsToDelete.push(data.url);
+                    await deleteDoc(doc(db, 'single_shots', d.id));
+                }
                 try {
                     const orderRef = doc(db, 'settings', 'single_shots_order');
                     await updateDoc(orderRef, { order: arrayRemove(photoUrl) });
                 } catch (_) { }
             } else {
-                await updateDoc(doc(db, 'photo_sets', categoryId), {
-                    urls: arrayRemove(photoUrl),
-                    adultUrls: arrayRemove(photoUrl),
-                    archivedUrls: arrayRemove(photoUrl)
-                });
+                const setRef = doc(db, 'photo_sets', categoryId);
+                const setSnap = await getDoc(setRef);
+                if (setSnap.exists()) {
+                    const data = setSnap.data() || {};
+                    const thumbUrls = { ...(data.thumbUrls || {}) };
+                    const aspectRatios = { ...(data.aspectRatios || {}) };
+                    if (thumbUrls[photoUrl]) {
+                        cfUrlsToDelete.push(thumbUrls[photoUrl]);
+                        delete thumbUrls[photoUrl];
+                    }
+                    for (const [full, thumb] of Object.entries(thumbUrls)) {
+                        if (thumb === photoUrl) {
+                            cfUrlsToDelete.push(full);
+                            delete thumbUrls[full];
+                            delete aspectRatios[full];
+                        }
+                    }
+                    delete aspectRatios[photoUrl];
+
+                    await updateDoc(setRef, {
+                        urls: arrayRemove(photoUrl),
+                        adultUrls: arrayRemove(photoUrl),
+                        archivedUrls: arrayRemove(photoUrl),
+                        thumbUrls,
+                        aspectRatios
+                    });
+                } else {
+                    await updateDoc(setRef, {
+                        urls: arrayRemove(photoUrl),
+                        adultUrls: arrayRemove(photoUrl),
+                        archivedUrls: arrayRemove(photoUrl)
+                    }).catch(() => {});
+                }
             }
 
-            // Also delete from Cloudflare R2 bucket
-            await deleteFromCloudflare(photoUrl);
+            // Also delete from Cloudflare R2 bucket (both full-res and thumbnail)
+            await deleteFromCloudflare(cfUrlsToDelete);
 
             // Reload data
             await loadPhotos();
@@ -881,21 +939,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
-    const buildFlowCard = (url, cat) => {
+    const buildFlowCard = (url, cat, isPriority = false) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'masonry-item img-container';
         wrapper.dataset.url = url;
         wrapper.dataset.categoryId = cat.categoryId;
 
+        const thumbUrl = photoThumbMap.get(url) || (cat.thumbUrls && cat.thumbUrls[url]) || null;
+        const displaySrc = thumbUrl || url;
+
         const img = document.createElement('img');
         img.className = 'masonry-img';
         img.dataset.fullUrl = url;
-        img.dataset.src = url;
+        img.dataset.src = displaySrc;
         const flowRatio = getRatio(url) || 0.75;
         const flowSvgW = Math.round(1000 * flowRatio);
-        img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${flowSvgW} 1000'%3E%3C/svg%3E`;
-        img.loading = 'lazy';
-        img.decoding = 'async';
+
+        if (isPriority) {
+            img.src = displaySrc;
+            img.loading = 'eager';
+            img.decoding = 'async';
+            img.setAttribute('fetchpriority', 'high');
+            img.removeAttribute('data-src');
+        } else {
+            img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${flowSvgW} 1000'%3E%3C/svg%3E`;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.setAttribute('fetchpriority', 'low');
+        }
         img.alt = cat.categoryName || 'Editorial Photo';
 
         const handleImageReady = () => {
@@ -1087,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }, {
                 root: null,
-                rootMargin: '600px 200px',
+                rootMargin: window.innerWidth <= 768 ? '200px 50px' : '500px 150px',
                 threshold: 0
             });
         }
@@ -1120,14 +1191,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 3. Reconcile
         const newWrappersToObserve = [];
-        flowItems.forEach(({ url, cat }) => {
+        flowItems.forEach(({ url, cat }, index) => {
+            const isPriority = index < 4;
             if (existingCards.has(url)) {
                 const card = existingCards.get(url);
                 existingCards.delete(url);
                 updateFlowCardAdminState(card, cat, url);
                 flowContainer.appendChild(card);
             } else {
-                const newCard = buildFlowCard(url, cat);
+                const newCard = buildFlowCard(url, cat, isPriority);
                 flowContainer.appendChild(newCard);
                 newWrappersToObserve.push(newCard);
             }
@@ -1139,16 +1211,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.remove();
         });
 
-        // 5. Preload ratios and observe new items
+        // 5. Instantly schedule layout and observe new items without blocking on preloadRatios!
+        scheduleMasonryLayout();
         if (newWrappersToObserve.length > 0) {
-            preloadRatios(flowItems.slice(0, 16).map(i => i.url)).then(() => {
-                scheduleMasonryLayout();
-                newWrappersToObserve.forEach(w => {
-                    if (flowViewportObserver) flowViewportObserver.observe(w);
-                });
+            newWrappersToObserve.forEach(w => {
+                if (flowViewportObserver) flowViewportObserver.observe(w);
             });
-        } else {
-            scheduleMasonryLayout();
+            // Preload ratios for remaining early items in the background
+            preloadRatios(flowItems.slice(0, 8).map(i => i.url)).then(() => {
+                scheduleMasonryLayout();
+            });
         }
     };
 
@@ -1413,7 +1485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const imagesToShow = cat.urls.slice(0, limit);
         const hasMore = cat.urls.length > 5;
 
-        const createImgElem = (url) => {
+        const createImgElem = (url, isPriority = false) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'img-container';
             wrapper.dataset.url = url;
@@ -1424,21 +1496,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             // Retrieve known aspect ratio or default to standard editorial portrait (2:3 = 0.667)
-            // At standard height 270px, ratio 2/3 produces an initial width of 180px,
-            // matching the skeleton loading card exactly and preventing square jumping!
             const ratio = getRatio(url) || (2 / 3);
             const initialWidth = Math.round(270 * ratio);
             wrapper.style.width = `${initialWidth}px`;
             wrapper.style.aspectRatio = `${ratio}`;
 
+            const thumbUrl = photoThumbMap.get(url) || (cat.thumbUrls && cat.thumbUrls[url]) || null;
+            const displaySrc = thumbUrl || url;
+
             const img = document.createElement('img');
             img.className = 'row-img';
-            img.dataset.src = url;
             img.dataset.fullUrl = url;
+            img.dataset.src = displaySrc;
 
-            // SVG placeholder with proportional viewBox matching the ratio
-            const svgW = Math.round(1000 * ratio);
-            img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+            if (isPriority) {
+                img.src = displaySrc;
+                img.loading = 'eager';
+                img.decoding = 'async';
+                img.setAttribute('fetchpriority', 'high');
+                img.removeAttribute('data-src');
+            } else {
+                // SVG placeholder with proportional viewBox matching the ratio
+                const svgW = Math.round(1000 * ratio);
+                img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.setAttribute('fetchpriority', 'low');
+            }
             img.style.aspectRatio = `${ratio}`;
             img.draggable = false;
             img.setAttribute('draggable', 'false');
@@ -1546,8 +1630,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return wrapper;
         };
 
-        imagesToShow.forEach((url) => {
-            scrollRow.appendChild(createImgElem(url));
+        imagesToShow.forEach((url, idx) => {
+            scrollRow.appendChild(createImgElem(url, idx < 3));
         });
 
         // Luxury End-Card Tile (Never blocks images, fluidly accessible via scroll/swipe)
@@ -1700,16 +1784,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }, {
                 root: null,
-                rootMargin: '600px 300px',
+                rootMargin: window.innerWidth <= 768 ? '200px 50px' : '500px 150px',
                 threshold: 0
             });
         }
 
-        // Preload ratios for visible items so dimensions are exact immediately
+        // Background preload ratios for first items
         const visibleUrls = [];
-        categoriesData.slice(0, 5).forEach(cat => {
+        categoriesData.slice(0, 3).forEach(cat => {
             if (Array.isArray(cat.urls)) {
-                visibleUrls.push(...cat.urls.slice(0, 6));
+                visibleUrls.push(...cat.urls.slice(0, 3));
             }
         });
         if (visibleUrls.length > 0) {

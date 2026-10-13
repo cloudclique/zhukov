@@ -36,7 +36,13 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
 
     if (Array.isArray(extraUrls)) {
         extraUrls.forEach(u => {
-            if (typeof u === 'string' && u.trim()) urlsCollector.add(u.trim());
+            if (typeof u === 'string' && u.trim()) {
+                const s = u.trim();
+                urlsCollector.add(s);
+                if (s.endsWith('.webp') && !s.endsWith('_thumb.webp')) {
+                    urlsCollector.add(s.replace(/\.webp$/, '_thumb.webp'));
+                }
+            }
         });
     }
 
@@ -48,24 +54,41 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
 
         const collect = (val) => {
             if (!val) return;
-            if (typeof val === 'string' && val.trim()) {
-                urlsCollector.add(val.trim());
+            const addTarget = (target) => {
+                if (typeof target === 'string' && target.trim()) {
+                    const s = target.trim();
+                    urlsCollector.add(s);
+                    if (s.endsWith('.webp') && !s.endsWith('_thumb.webp')) {
+                        urlsCollector.add(s.replace(/\.webp$/, '_thumb.webp'));
+                    }
+                }
+            };
+
+            if (typeof val === 'string') {
+                addTarget(val);
             } else if (Array.isArray(val)) {
                 val.forEach(item => {
-                    if (typeof item === 'string' && item.trim()) {
-                        urlsCollector.add(item.trim());
+                    if (typeof item === 'string') {
+                        addTarget(item);
                     } else if (typeof item === 'object' && item !== null) {
-                        if (typeof item.url === 'string' && item.url.trim()) urlsCollector.add(item.url.trim());
-                        if (typeof item.src === 'string' && item.src.trim()) urlsCollector.add(item.src.trim());
+                        if (item.url) addTarget(item.url);
+                        if (item.thumbUrl) addTarget(item.thumbUrl);
+                        if (item.src) addTarget(item.src);
                     }
                 });
             } else if (typeof val === 'object' && val !== null) {
-                if (typeof val.url === 'string' && val.url.trim()) urlsCollector.add(val.url.trim());
-                if (typeof val.src === 'string' && val.src.trim()) urlsCollector.add(val.src.trim());
+                if (val.url) addTarget(val.url);
+                if (val.thumbUrl) addTarget(val.thumbUrl);
+                if (val.src) addTarget(val.src);
+                // Handle map of url -> thumbUrl
+                Object.values(val).forEach(v => {
+                    if (typeof v === 'string') addTarget(v);
+                });
             }
         };
 
         collect(data.urls);
+        collect(data.thumbUrls);
         collect(data.adultUrls);
         collect(data.archivedUrls);
         collect(data.archived_photos);
@@ -105,16 +128,34 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
     const remainingUrls = new Set();
     const collectRemaining = (val) => {
         if (!val) return;
-        if (typeof val === 'string' && val.trim()) {
-            remainingUrls.add(val.trim());
+        const addRemaining = (target) => {
+            if (typeof target === 'string' && target.trim()) {
+                const s = target.trim();
+                remainingUrls.add(s);
+                if (s.endsWith('.webp') && !s.endsWith('_thumb.webp')) {
+                    remainingUrls.add(s.replace(/\.webp$/, '_thumb.webp'));
+                }
+            }
+        };
+
+        if (typeof val === 'string') {
+            addRemaining(val);
         } else if (Array.isArray(val)) {
             val.forEach(item => {
-                if (typeof item === 'string' && item.trim()) {
-                    remainingUrls.add(item.trim());
+                if (typeof item === 'string') {
+                    addRemaining(item);
                 } else if (typeof item === 'object' && item !== null) {
-                    if (typeof item.url === 'string' && item.url.trim()) remainingUrls.add(item.url.trim());
-                    if (typeof item.src === 'string' && item.src.trim()) remainingUrls.add(item.src.trim());
+                    if (item.url) addRemaining(item.url);
+                    if (item.thumbUrl) addRemaining(item.thumbUrl);
+                    if (item.src) addRemaining(item.src);
                 }
+            });
+        } else if (typeof val === 'object' && val !== null) {
+            if (val.url) addRemaining(val.url);
+            if (val.thumbUrl) addRemaining(val.thumbUrl);
+            if (val.src) addRemaining(val.src);
+            Object.values(val).forEach(v => {
+                if (typeof v === 'string') addRemaining(v);
             });
         }
     };
@@ -123,6 +164,7 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
         if (docSnap.id === categoryId) return;
         const d = docSnap.data() || {};
         collectRemaining(d.urls);
+        collectRemaining(d.thumbUrls);
         collectRemaining(d.adultUrls);
         collectRemaining(d.archivedUrls);
         collectRemaining(d.archived_photos);
@@ -135,9 +177,8 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
 
     singlesSnap.forEach(docSnap => {
         const d = docSnap.data() || {};
-        if (typeof d.url === 'string' && d.url.trim()) {
-            remainingUrls.add(d.url.trim());
-        }
+        if (d.url) collectRemaining(d.url);
+        if (d.thumbUrl) collectRemaining(d.thumbUrl);
     });
 
     const urlsToDelete = Array.from(urlsCollector).filter(u => !remainingUrls.has(u));

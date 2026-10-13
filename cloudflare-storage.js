@@ -67,7 +67,15 @@ export function extractR2Key(urlOrKey) {
  */
 export async function deleteFromCloudflare(urlsOrKeys) {
     const list = Array.isArray(urlsOrKeys) ? urlsOrKeys : [urlsOrKeys];
-    const cfTargets = list.filter(isCloudflareUrl);
+    const expandedList = [];
+    list.forEach(item => {
+        if (!item) return;
+        expandedList.push(item);
+        if (typeof item === 'string' && item.endsWith('.webp') && !item.endsWith('_thumb.webp')) {
+            expandedList.push(item.replace(/\.webp$/, '_thumb.webp'));
+        }
+    });
+    const cfTargets = Array.from(new Set(expandedList)).filter(isCloudflareUrl);
 
     if (cfTargets.length === 0) {
         return { success: true, deletedCount: 0 };

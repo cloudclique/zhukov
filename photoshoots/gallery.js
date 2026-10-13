@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Data & Auth State
     let isAdmin = false;
     let photoModelMap = new Map();
+    let photoThumbMap = new Map();
     try {
         if (localStorage.getItem('zhukov_is_admin') === 'true') {
             isAdmin = true;
@@ -360,6 +361,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (d.url && d.modelName) {
                         photoModelMap.set(d.url, d.modelName.trim());
                     }
+                    if (d.url && d.thumbUrl) {
+                        photoThumbMap.set(d.url, d.thumbUrl);
+                    }
+                    if (d.url && typeof d.aspectRatio === 'number') {
+                        setRatio(d.url, d.aspectRatio);
+                    }
                     if (!isAdmin && d.archived === true) return; // Hide archived items from public
                     if (d.archived === true) archivedUrlsSet.add(d.url);
                     singleItems.push(d);
@@ -437,6 +444,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (!photoModelMap.has(u)) {
                                 photoModelMap.set(u, validSetModel);
                             }
+                        });
+                    }
+
+                    if (data.aspectRatios && typeof data.aspectRatios === 'object') {
+                        Object.entries(data.aspectRatios).forEach(([u, r]) => {
+                            if (typeof r === 'number') setRatio(u, r);
+                        });
+                    }
+                    if (data.thumbUrls && typeof data.thumbUrls === 'object') {
+                        Object.entries(data.thumbUrls).forEach(([u, t]) => {
+                            if (t) photoThumbMap.set(u, t);
                         });
                     }
 
@@ -728,34 +746,74 @@ document.addEventListener('DOMContentLoaded', async () => {
                     invalidateCache('photoshoots');
                     invalidateCache('gallery');
 
+                    const cfUrlsToDelete = [...urls];
+
                     if (categoryId === 'single-shots') {
                         for (const photoUrl of urls) {
                             const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                             const snap = await getDocs(q);
-                            snap.forEach(async (d) => {
+                            for (const d of snap.docs) {
+                                const data = d.data() || {};
+                                if (data.thumbUrl) cfUrlsToDelete.push(data.thumbUrl);
                                 await deleteDoc(doc(db, 'single_shots', d.id));
-                            });
+                            }
+                            const qThumb = query(collection(db, 'single_shots'), where('thumbUrl', '==', photoUrl));
+                            const snapThumb = await getDocs(qThumb);
+                            for (const d of snapThumb.docs) {
+                                const data = d.data() || {};
+                                if (data.url) cfUrlsToDelete.push(data.url);
+                                await deleteDoc(doc(db, 'single_shots', d.id));
+                            }
                         }
                         try {
                             const orderRef = doc(db, 'settings', 'single_shots_order');
                             await updateDoc(orderRef, { order: arrayRemove(...urls) });
                         } catch (_) { }
                     } else {
-                        await updateDoc(doc(db, 'photo_sets', categoryId), {
-                            urls: arrayRemove(...urls),
-                            adultUrls: arrayRemove(...urls),
-                            archivedUrls: arrayRemove(...urls)
-                        });
+                        const setRef = doc(db, 'photo_sets', categoryId);
+                        const setSnap = await getDoc(setRef);
+                        if (setSnap.exists()) {
+                            const data = setSnap.data() || {};
+                            const thumbUrls = { ...(data.thumbUrls || {}) };
+                            const aspectRatios = { ...(data.aspectRatios || {}) };
+                            urls.forEach(u => {
+                                if (thumbUrls[u]) {
+                                    cfUrlsToDelete.push(thumbUrls[u]);
+                                    delete thumbUrls[u];
+                                }
+                                for (const [full, thumb] of Object.entries(thumbUrls)) {
+                                    if (thumb === u) {
+                                        cfUrlsToDelete.push(full);
+                                        delete thumbUrls[full];
+                                        delete aspectRatios[full];
+                                    }
+                                }
+                                delete aspectRatios[u];
+                            });
+                            await updateDoc(setRef, {
+                                urls: arrayRemove(...urls),
+                                adultUrls: arrayRemove(...urls),
+                                archivedUrls: arrayRemove(...urls),
+                                thumbUrls,
+                                aspectRatios
+                            });
+                        } else {
+                            await updateDoc(setRef, {
+                                urls: arrayRemove(...urls),
+                                adultUrls: arrayRemove(...urls),
+                                archivedUrls: arrayRemove(...urls)
+                            }).catch(() => {});
+                        }
                     }
 
-                    // Also delete all affected images from Cloudflare R2 bucket
-                    await deleteFromCloudflare(urls);
+                    // Also delete all affected images (full-res and thumbnails) from Cloudflare R2 bucket
+                    await deleteFromCloudflare(cfUrlsToDelete);
 
                     // Animate out and remove matching wrappers in-place
                     const wrappersToRemove = [];
                     gridContainer.querySelectorAll('.masonry-item').forEach(item => {
                         const img = item.querySelector('img.masonry-img');
-                        if (img && urls.includes(img.dataset.fullUrl)) {
+                        if (img && (urls.includes(img.dataset.fullUrl) || urls.includes(img.src))) {
                             wrappersToRemove.push(item);
                         }
                     });
@@ -986,31 +1044,64 @@ document.addEventListener('DOMContentLoaded', async () => {
                     confirmBtn.innerText = 'Moving...';
 
                     try {
-                        // 1. Remove from source
+                        // 1. Gather metadata and remove from source
+                        const movedMeta = {}; // { [url]: { thumbUrl, aspectRatio } }
                         if (categoryId === 'single-shots') {
                             for (const photoUrl of urls) {
                                 const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                                 const qSnap = await getDocs(q);
-                                qSnap.forEach(async (d) => {
+                                for (const d of qSnap.docs) {
+                                    const dData = d.data() || {};
+                                    movedMeta[photoUrl] = {
+                                        thumbUrl: dData.thumbUrl || null,
+                                        aspectRatio: dData.aspectRatio || null
+                                    };
                                     await deleteDoc(doc(db, 'single_shots', d.id));
-                                });
+                                }
                             }
                         } else {
-                            await updateDoc(doc(db, 'photo_sets', categoryId), {
-                                urls: arrayRemove(...urls),
-                                adultUrls: arrayRemove(...urls),
-                                archivedUrls: arrayRemove(...urls)
-                            });
+                            const srcSetRef = doc(db, 'photo_sets', categoryId);
+                            const srcSnap = await getDoc(srcSetRef);
+                            if (srcSnap.exists()) {
+                                const srcData = srcSnap.data() || {};
+                                const srcThumbs = { ...(srcData.thumbUrls || {}) };
+                                const srcRatios = { ...(srcData.aspectRatios || {}) };
+                                urls.forEach(u => {
+                                    movedMeta[u] = {
+                                        thumbUrl: srcThumbs[u] || null,
+                                        aspectRatio: srcRatios[u] || null
+                                    };
+                                    delete srcThumbs[u];
+                                    delete srcRatios[u];
+                                });
+                                await updateDoc(srcSetRef, {
+                                    urls: arrayRemove(...urls),
+                                    adultUrls: arrayRemove(...urls),
+                                    archivedUrls: arrayRemove(...urls),
+                                    thumbUrls: srcThumbs,
+                                    aspectRatios: srcRatios
+                                });
+                            } else {
+                                await updateDoc(srcSetRef, {
+                                    urls: arrayRemove(...urls),
+                                    adultUrls: arrayRemove(...urls),
+                                    archivedUrls: arrayRemove(...urls)
+                                }).catch(() => {});
+                            }
                         }
 
-                        // 2. Add to destination
+                        // 2. Add to destination with preserved metadata
                         if (targetSetId === 'single-shots') {
                             for (const photoUrl of urls) {
-                                await addDoc(collection(db, 'single_shots'), {
+                                const meta = movedMeta[photoUrl] || {};
+                                const newDoc = {
                                     url: photoUrl,
                                     date: new Date().toISOString(),
                                     isAdult: false
-                                });
+                                };
+                                if (meta.thumbUrl) newDoc.thumbUrl = meta.thumbUrl;
+                                if (meta.aspectRatio) newDoc.aspectRatio = meta.aspectRatio;
+                                await addDoc(collection(db, 'single_shots'), newDoc);
                             }
                             try {
                                 const orderRef = doc(db, 'settings', 'single_shots_order');
@@ -1024,8 +1115,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 console.warn("Could not update single_shots_order on move:", orderErr);
                             }
                         } else {
-                            await updateDoc(doc(db, 'photo_sets', targetSetId), {
-                                urls: arrayUnion(...urls)
+                            const destSetRef = doc(db, 'photo_sets', targetSetId);
+                            const destSnap = await getDoc(destSetRef);
+                            const destData = destSnap.exists() ? destSnap.data() || {} : {};
+                            const destThumbs = { ...(destData.thumbUrls || {}) };
+                            const destRatios = { ...(destData.aspectRatios || {}) };
+                            urls.forEach(u => {
+                                const meta = movedMeta[u] || {};
+                                if (meta.thumbUrl) destThumbs[u] = meta.thumbUrl;
+                                if (meta.aspectRatio) destRatios[u] = meta.aspectRatio;
+                            });
+                            await updateDoc(destSetRef, {
+                                urls: arrayUnion(...urls),
+                                thumbUrls: destThumbs,
+                                aspectRatios: destRatios
                             });
                         }
 
@@ -1885,7 +1988,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }, {
                     root: null,
-                    rootMargin: '600px 200px',
+                    rootMargin: window.innerWidth <= 768 ? '200px 50px' : '500px 150px',
                     threshold: 0
                 });
 
@@ -1900,13 +2003,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wrapper.className = `masonry-item img-container ${selectedPhotoUrls.has(url) ? 'is-selected' : ''}`;
                     wrapper.dataset.index = index;
 
+                    const isPriority = index < 4;
+                    const thumbUrl = photoThumbMap.get(url) || null;
+                    const displaySrc = thumbUrl || url;
+
                     const img = document.createElement('img');
                     img.className = 'masonry-img';
                     img.dataset.fullUrl = url;
-                    img.dataset.src = url;
-                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
-                    img.loading = 'lazy';
-                    img.decoding = 'async';
+                    img.dataset.src = displaySrc;
+
+                    if (isPriority) {
+                        img.src = displaySrc;
+                        img.loading = 'eager';
+                        img.decoding = 'async';
+                        img.setAttribute('fetchpriority', 'high');
+                        img.removeAttribute('data-src');
+                    } else {
+                        img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
+                        img.loading = 'lazy';
+                        img.decoding = 'async';
+                        img.setAttribute('fetchpriority', 'low');
+                    }
 
                     const handleImageReady = () => {
                         if (img.naturalWidth && img.naturalHeight) {
@@ -2170,21 +2287,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     gridContainer.appendChild(wrapper);
                 });
 
-                // Resolve ratios of the first screens BEFORE layout so the grid is computed
-                // once with final geometry and images simply fade into place.
+                // Instantly reveal and observe cards without blocking on preloadRatios!
                 const observer = galleryViewportObserver;
                 const wrappers = Array.from(gridContainer.querySelectorAll('.masonry-item'));
-                const startReveal = () => {
-                    if (observer !== galleryViewportObserver) return; // superseded by a newer render
-                    if (currentRatioMode !== '1:1') {
-                        layoutMasonry();
-                    }
-                    wrappers.forEach(w => observer.observe(w));
-                };
-                if (currentRatioMode === '1:1') {
-                    startReveal();
-                } else {
-                    preloadRatios(currentUrls.slice(0, 16)).then(startReveal);
+                if (currentRatioMode !== '1:1') {
+                    layoutMasonry();
+                }
+                wrappers.forEach(w => observer.observe(w));
+
+                // Background preload of first few ratios if unknown, non-blocking
+                if (currentRatioMode !== '1:1') {
+                    preloadRatios(currentUrls.slice(0, 8)).then(() => {
+                        if (observer === galleryViewportObserver) {
+                            layoutMasonry();
+                        }
+                    });
                 }
             };
 
