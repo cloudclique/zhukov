@@ -1521,8 +1521,12 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                 // If visiting a specific photoshoot gallery (e.g. /photoshoots/gallery.html?id=XYZ):
                 if (isGalleryPage) {
                     const currentId = searchParams.get('id');
-                    if (currentId && targetGalleries.includes(currentId)) {
-                        return true;
+                    if (currentId) {
+                        if (targetGalleries.includes(currentId)) return true;
+                        if ((currentId === 'single-shots' || currentId === 'single_shots') &&
+                            (targetGalleries.includes('single-shots') || targetGalleries.includes('single_shots'))) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -1839,3 +1843,132 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         onDOMReady();
     }
 })();
+
+// ── Universal In-App Confirmation & Alert Modal System ──
+window.showConfirmModal = function ({
+    title = "Confirm Action",
+    message = "Are you sure you want to proceed?",
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    confirmVariant = "amber" // "amber" | "red" | "blue" | "gold"
+} = {}) {
+    return new Promise((resolve) => {
+        const existing = document.getElementById('zhukov-confirm-modal-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'zhukov-confirm-modal-overlay';
+        overlay.className = 'confirm-modal-overlay';
+
+        let iconSvg = '';
+        if (confirmVariant === 'red') {
+            iconSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
+        } else if (confirmVariant === 'amber') {
+            iconSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+        } else if (confirmVariant === 'gold') {
+            iconSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+        } else {
+            iconSvg = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+        }
+
+        let submitStyle = '';
+        if (confirmVariant === 'red') {
+            submitStyle = 'background: #dc2626; color: #ffffff; border-color: #ef4444;';
+        } else if (confirmVariant === 'amber') {
+            submitStyle = 'background: #d97706; color: #ffffff; border-color: #f59e0b;';
+        } else if (confirmVariant === 'gold') {
+            submitStyle = 'background: #c5a059; color: #111111; border-color: #d8b46e; font-weight: 600;';
+        } else {
+            submitStyle = 'background: #2563eb; color: #ffffff; border-color: #3b82f6;';
+        }
+
+        const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+        const showCancel = cancelText !== false && cancelText !== null && cancelText !== '';
+
+        overlay.innerHTML = `
+            <div class="confirm-modal-card" role="dialog" aria-modal="true">
+                <div class="confirm-modal-header">
+                    <div class="confirm-modal-icon confirm-icon-${confirmVariant}">
+                        ${iconSvg}
+                    </div>
+                    <h3 class="confirm-modal-title">${escapeHtml(title)}</h3>
+                </div>
+                <p class="confirm-modal-message">${escapeHtml(message)}</p>
+                <div class="confirm-modal-actions">
+                    ${showCancel ? `<button type="button" class="confirm-modal-btn confirm-modal-cancel" id="confirm-modal-cancel-btn">${escapeHtml(cancelText)}</button>` : ''}
+                    <button type="button" class="confirm-modal-btn confirm-modal-submit" id="confirm-modal-submit-btn" style="${submitStyle}">${escapeHtml(confirmText)}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('show'));
+
+        const cancelBtn = overlay.querySelector('#confirm-modal-cancel-btn');
+        const submitBtn = overlay.querySelector('#confirm-modal-submit-btn');
+
+        if (submitBtn) submitBtn.focus();
+
+        let resolved = false;
+        const close = (result) => {
+            if (resolved) return;
+            resolved = true;
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.remove(), 240);
+            document.removeEventListener('keydown', onKeyDown);
+            resolve(result);
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') close(false);
+            if (e.key === 'Enter' && e.target !== cancelBtn) {
+                e.preventDefault();
+                close(true);
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close(false);
+        });
+        if (cancelBtn) cancelBtn.addEventListener('click', () => close(false));
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                submitBtn.disabled = true;
+                close(true);
+            });
+        }
+    });
+};
+
+window.showAlertModal = function ({
+    title = "Notice",
+    message = "",
+    buttonText = "OK",
+    variant = "amber"
+} = {}) {
+    return window.showConfirmModal({
+        title,
+        message,
+        confirmText: buttonText,
+        cancelText: false,
+        confirmVariant: variant
+    });
+};
+
+// Global interceptor for alert() to replace native browser alert with custom modal popup
+const _nativeAlert = window.alert;
+window.alert = function (message) {
+    if (typeof window.showAlertModal === 'function') {
+        window.showAlertModal({
+            title: "Notice",
+            message: String(message || ''),
+            buttonText: "Dismiss",
+            variant: "amber"
+        });
+    } else if (_nativeAlert) {
+        _nativeAlert.call(window, message);
+    }
+};
+

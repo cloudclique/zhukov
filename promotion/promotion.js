@@ -910,11 +910,21 @@ function renderRow(row, rowIndex, isEditActive) {
         colHtml += renderColumn(col, row.id, colIndex, isEditActive, colWidths[colIndex], numCols);
     });
 
+    const hasTitle = (row.columns || []).some(col => (col.blocks || []).some(b => b.type === 'title'));
+    const isValignCenter = row.valign === 'center' || (hasTitle && row.valign !== 'stretch');
+    const valignClass = isValignCenter ? 'valign-center' : '';
+    const currentVDistance = typeof row.paddingTop === 'number' ? row.paddingTop : (row.spacing === 'compact' ? 28 : (row.spacing === 'medium' ? 56 : (row.spacing === 'spacious' ? 88 : 0)));
+
     const adminBar = isEditActive ? `
         <div class="row-admin-bar">
             <span style="font-size: 0.6rem; color: #a1a1aa; font-weight: 700; margin-right: 0.35rem;">ROW ${rowIndex + 1} (${numCols} COL${numCols > 1 ? 'S' : ''})</span>
             <button type="button" class="row-action-btn" title="Add Column to the Right" onclick="addColumnToRow('${row.id}', ${numCols - 1}, 'right')">+ Column</button>
             <button type="button" class="row-action-btn" title="Row Padding & Atmosphere" onclick="openRowSettingsModal('${row.id}')">📐 Padding &amp; Layout</button>
+            ${hasTitle ? `
+                <button type="button" class="row-action-btn" style="color:var(--pub-gold, #c5a059); border-color:rgba(197,160,89,0.4);" title="Adjust Title Row Distance & Centering" onclick="openRowSettingsModal('${row.id}')">
+                    ↕ Distance: ${currentVDistance}px ${isValignCenter ? '• Centered' : ''}
+                </button>
+            ` : ''}
             <button type="button" class="row-action-btn" title="Move Up" onclick="moveRow(${rowIndex}, -1)" ${rowIndex === 0 ? 'disabled style="opacity:0.3;"' : ''}>↑</button>
             <button type="button" class="row-action-btn" title="Move Down" onclick="moveRow(${rowIndex}, 1)" ${rowIndex === pageData.length - 1 ? 'disabled style="opacity:0.3;"' : ''}>↓</button>
             <button type="button" class="row-action-btn" title="Duplicate Row" onclick="duplicateRow('${row.id}')">⧉</button>
@@ -932,7 +942,7 @@ function renderRow(row, rowIndex, isEditActive) {
 
     return `
         ${addRowBefore}
-        <section class="pub-row spacing-${row.spacing || 'none'} bg-${row.bg || 'transparent'}" id="${row.id}" data-row-id="${row.id}" ${rowInlineStyle}>
+        <section class="pub-row spacing-${row.spacing || 'none'} bg-${row.bg || 'transparent'} ${valignClass}" id="${row.id}" data-row-id="${row.id}" ${rowInlineStyle}>
             ${adminBar}
             <div class="pub-row-inner" style="gap: ${colGap}px;">
                 ${colHtml}
@@ -1022,24 +1032,41 @@ function getHeroButtons(block) {
 function getHeroTitleWords(block) {
     if (!block) return [];
     if (Array.isArray(block.titleWords) && block.titleWords.length > 0) {
-        return block.titleWords.map(w => ({
+        return block.titleWords.map((w, idx) => ({
             text: typeof w === 'string' ? w : (w.text || ''),
-            style: typeof w === 'string' ? 'plain' : (w.style || 'plain')
+            style: typeof w === 'string' ? 'plain' : (w.style || 'plain'),
+            newRow: typeof w === 'object' && typeof w.newRow === 'boolean'
+                ? w.newRow
+                : (idx === 2 && block.titleWords.length === 3)
         }));
     }
     const words = [];
     const top = (block.titleTop !== undefined ? block.titleTop : 'CAPTURING').trim();
     const italic = (block.titleItalic !== undefined ? block.titleItalic : 'THE').trim();
     const plain = (block.titlePlain !== undefined ? block.titlePlain : 'UNSEEN').trim();
-    if (top) words.push({ text: top, style: 'plain' });
-    if (italic) words.push({ text: italic, style: 'italic' });
-    if (plain) words.push({ text: plain, style: 'plain' });
+    if (top) words.push({ text: top, style: 'plain', newRow: false });
+    if (italic) words.push({ text: italic, style: 'italic', newRow: false });
+    if (plain) words.push({ text: plain, style: 'plain', newRow: true });
     return words.length > 0 ? words : [
-        { text: 'CAPTURING', style: 'plain' },
-        { text: 'THE', style: 'italic' },
-        { text: 'UNSEEN', style: 'plain' }
+        { text: 'CAPTURING', style: 'plain', newRow: false },
+        { text: 'THE', style: 'italic', newRow: false },
+        { text: 'UNSEEN', style: 'plain', newRow: true }
     ];
 }
+
+window.toggleHeroWordNewRow = function (blockId, wordIdx) {
+    const block = findBlockById(blockId);
+    if (!block) return;
+    pushHistoryState();
+    const words = getHeroTitleWords(block);
+    if (words[wordIdx]) {
+        words[wordIdx].newRow = !words[wordIdx].newRow;
+        block.titleWords = words;
+        savePageData();
+        renderPage();
+        showToast(words[wordIdx].newRow ? `Word "${words[wordIdx].text}" moved to new row ↵` : `Word "${words[wordIdx].text}" kept on current row`);
+    }
+};
 
 window.changeHeroWordStyle = function (blockId, wordIdx, newStyle) {
     const block = findBlockById(blockId);
@@ -1116,10 +1143,33 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             ` : '';
 
             const heroWords = getHeroTitleWords(block);
+            const titleRowGap = typeof block.titleRowGap === 'number' ? block.titleRowGap : 20;
+            const titleLineHeight = block.titleLineHeight ? block.titleLineHeight : '1.02';
+            const titleVMargin = typeof block.titleVMargin === 'number' ? block.titleVMargin : 24;
+            const isTitleVCentered = block.titleVerticallyCentered !== false;
+            const titleAlign = block.titleAlign || 'left';
+
+            const heroTitleStyles = [
+                `row-gap: ${titleRowGap}px !important`,
+                `column-gap: 0.28em !important`,
+                `line-height: ${titleLineHeight} !important`,
+                `justify-content: ${titleAlign === 'center' ? 'center' : 'flex-start'} !important`,
+                `text-align: ${titleAlign} !important`
+            ];
+            if (isTitleVCentered) {
+                heroTitleStyles.push(`margin-top: ${titleVMargin}px !important`);
+                heroTitleStyles.push(`margin-bottom: ${titleVMargin}px !important`);
+            } else {
+                heroTitleStyles.push(`margin-top: 0px !important`);
+                heroTitleStyles.push(`margin-bottom: ${titleVMargin}px !important`);
+            }
+            const inlineHeroTitleStyle = `style="${heroTitleStyles.join('; ')};"`;
+
             const titleHtml = showTitle ? `
-                <div class="pub-hero-item-wrapper hero-elem-title">
-                    <h1 class="pub-hero-main-title hero-main-title single-line-title" data-hero-block-id="${block.id}">
+                <div class="pub-hero-item-wrapper hero-elem-title ${isTitleVCentered ? 'is-vertically-centered' : ''}">
+                    <h1 class="pub-hero-main-title hero-main-title single-line-title ${isTitleVCentered ? 'is-vertically-centered' : ''}" data-hero-block-id="${block.id}" ${inlineHeroTitleStyle}>
                         ${heroWords.map((word, wIdx) => `
+                            ${word.newRow ? `<span class="pub-hero-title-row-break" aria-hidden="true"></span>` : ''}
                             <span class="pub-hero-title-word word-style-${word.style || 'plain'}" data-word-idx="${wIdx}" data-block-id="${block.id}">
                                 <span class="pub-hero-word-text" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="heroTitleWordText" data-word-idx="${wIdx}" title="Click to edit text"` : ''}>${escapeHtml(word.text)}</span>
                                 ${isEditActive ? `
@@ -1131,15 +1181,23 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                                         <button type="button" class="hero-word-style-chip ${word.style === 'crimson' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'crimson')" title="Crimson Accent">Crimson</button>
                                         <button type="button" class="hero-word-style-chip ${word.style === 'sans' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'sans')" title="Modern Sans">Sans</button>
                                         <button type="button" class="hero-word-style-chip ${word.style === 'outline' ? 'active' : ''}" onclick="changeHeroWordStyle('${block.id}', ${wIdx}, 'outline')" title="Outline Serif">Outline</button>
+                                        ${wIdx > 0 ? `
+                                            <button type="button" class="hero-word-style-chip ${word.newRow ? 'active' : ''}" onclick="toggleHeroWordNewRow('${block.id}', ${wIdx})" title="Toggle breaking this word to a new row" style="color:var(--pub-gold, #c5a059); border-color:rgba(197,160,89,0.5);">
+                                                ↵ ${word.newRow ? 'Row 2+' : 'New Row'}
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 ` : ''}
                             </span>
                         `).join(' ')}
                     </h1>
                     ${isEditActive ? `
-                        <div style="display:flex; gap:0.35rem; align-items:center; margin-top:0.35rem;">
+                        <div style="display:flex; gap:0.35rem; align-items:center; margin-top:0.35rem; flex-wrap:wrap;">
                             <button type="button" class="pub-btn style-outline" onclick="openBlockSettingsModal('${block.id}')" style="font-size:0.65rem; padding:0.22rem 0.6rem; width:auto;">
                                 ✍️ Words &amp; Styling
+                            </button>
+                            <button type="button" class="pub-btn style-outline" onclick="openHeroTitleDistanceModal('${block.id}')" style="font-size:0.65rem; padding:0.22rem 0.6rem; width:auto; color:var(--pub-gold, #c5a059); border-color:rgba(197,160,89,0.4);" title="Adjust Hero Title Vertical Row Distance &amp; Centering">
+                                ↕ Row Distance: ${titleRowGap}px ${isTitleVCentered ? '• Centered' : ''}
                             </button>
                             <button type="button" class="hero-item-del-btn" style="position:static; opacity:1; pointer-events:auto;" onclick="removeHeroElement('${block.id}', 'title')" title="Remove Title">✕</button>
                         </div>
@@ -1231,8 +1289,19 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             break;
 
         case 'title':
+            const vPad = typeof block.verticalPadding === 'number' ? block.verticalPadding : 0;
+            const isVCentered = block.verticallyCentered !== false;
+            const titleCustomStyles = [];
+            if (vPad > 0) {
+                titleCustomStyles.push(`padding-top: ${vPad}px`);
+                titleCustomStyles.push(`padding-bottom: ${vPad}px`);
+            }
+            if (isVCentered) {
+                titleCustomStyles.push(`margin-bottom: 0 !important`);
+            }
+            const inlineTitleStyle = titleCustomStyles.length > 0 ? `style="${titleCustomStyles.join('; ')};"` : '';
             contentHtml = `
-                <${block.level || 'h2'} class="pub-title level-${block.level || 'h2'} ${alignClass}"
+                <${block.level || 'h2'} class="pub-title level-${block.level || 'h2'} ${alignClass} ${isVCentered ? 'is-vertically-centered' : ''}" ${inlineTitleStyle}
                     ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
                     ${block.text || 'Untitled Heading'}
                 </${block.level || 'h2'}>
@@ -1608,12 +1677,19 @@ window.addNewRow = function (insertAtIndex = null) {
     renderPage();
 };
 
-window.deleteRow = function (rowId) {
-    if (!confirm('Are you sure you want to delete this row and all its contents?')) return;
+window.deleteRow = async function (rowId) {
+    const confirmed = await window.showConfirmModal({
+        title: "Delete Section Row",
+        message: "Are you sure you want to delete this row and all its contents?",
+        confirmText: "Delete Row",
+        confirmVariant: "red"
+    });
+    if (!confirmed) return;
     pushHistoryState();
     pageData = pageData.filter(r => r.id !== rowId);
     savePageData();
     renderPage();
+    showToast('Row deleted ✓');
 };
 
 window.moveRow = function (index, direction) {
@@ -1670,13 +1746,19 @@ window.addColumnToRow = function (rowId, colIndex, side = 'right') {
     showToast(`Added column (${numCols} total) ✓`);
 };
 
-window.deleteColumnFromRow = function (rowId, colIndex) {
+window.deleteColumnFromRow = async function (rowId, colIndex) {
     const row = findRowById(rowId);
     if (!row || !row.columns || row.columns.length <= 1) return;
 
     const col = row.columns[colIndex];
     if (col && col.blocks && col.blocks.length > 0) {
-        if (!confirm(`Delete Column ${colIndex + 1} and its ${col.blocks.length} element(s)?`)) return;
+        const confirmed = await window.showConfirmModal({
+            title: `Delete Column ${colIndex + 1}`,
+            message: `Delete Column ${colIndex + 1} and its ${col.blocks.length} element(s)?`,
+            confirmText: "Delete Column",
+            confirmVariant: "red"
+        });
+        if (!confirmed) return;
     }
 
     pushHistoryState();
@@ -2184,11 +2266,108 @@ window.updateHeroModalTitlePreview = function () {
     wordItemEls.forEach(el => {
         const text = el.querySelector('.hero-modal-word-text')?.value || '';
         const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+        const newRow = el.querySelector('.hero-modal-word-newrow')?.checked || false;
         if (text.trim()) {
-            words.push({ text: text.trim(), style: style });
+            words.push({ text: text.trim(), style: style, newRow: !!newRow });
         }
     });
-    previewContainer.innerHTML = words.map(w => `<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span>`).join(' ') || '<span style="color:#aaa; font-style:italic;">(No words entered)</span>';
+
+    const rowGapInput = document.getElementById('hero-title-row-distance-num');
+    const rowGap = rowGapInput ? parseInt(rowGapInput.value, 10) : 20;
+    const lhSelect = document.getElementById('hero-title-line-height-select');
+    const lh = lhSelect ? lhSelect.value : '1.02';
+
+    previewContainer.style.rowGap = `${Math.max(0, Math.round((isNaN(rowGap) ? 20 : rowGap) * 0.45))}px`;
+    previewContainer.style.lineHeight = lh;
+
+    let previewHtml = '';
+    words.forEach(w => {
+        if (w.newRow) {
+            previewHtml += `<span style="flex-basis:100%; width:100%; height:0; display:block;"></span>`;
+        }
+        previewHtml += `<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span> `;
+    });
+    previewContainer.innerHTML = previewHtml || '<span style="color:#aaa; font-style:italic;">(No words entered)</span>';
+};
+
+window.applyHeroTitleRowGap = function (val) {
+    const num = parseInt(val, 10);
+    if (isNaN(num)) return;
+    const range = document.getElementById('hero-title-row-distance-range');
+    const numInput = document.getElementById('hero-title-row-distance-num');
+    if (range) range.value = num;
+    if (numInput) numInput.value = num;
+
+    const heroTitle = document.querySelector('.pub-hero-main-title');
+    if (heroTitle) {
+        heroTitle.style.setProperty('row-gap', `${num}px`, 'important');
+    }
+    const preview = document.getElementById('hero-modal-title-preview');
+    if (preview) {
+        preview.style.setProperty('row-gap', `${Math.max(0, Math.round(num * 0.45))}px`, 'important');
+    }
+};
+
+window.applyHeroTitleLineHeight = function (val) {
+    const select = document.getElementById('hero-title-line-height-select');
+    if (select) select.value = val;
+    const heroTitle = document.querySelector('.pub-hero-main-title');
+    if (heroTitle) {
+        heroTitle.style.setProperty('line-height', val, 'important');
+    }
+    const preview = document.getElementById('hero-modal-title-preview');
+    if (preview) {
+        preview.style.setProperty('line-height', val, 'important');
+    }
+};
+
+window.applyHeroTitleVMargin = function (val) {
+    const num = Math.max(0, parseInt(val, 10) || 0);
+    const numInput = document.getElementById('hero-title-v-margin-num');
+    if (numInput) numInput.value = num;
+    const isCentered = document.getElementById('hero-title-valign-center')?.checked !== false;
+    const heroTitle = document.querySelector('.pub-hero-main-title');
+    if (heroTitle) {
+        if (isCentered) {
+            heroTitle.style.setProperty('margin-top', `${num}px`, 'important');
+            heroTitle.style.setProperty('margin-bottom', `${num}px`, 'important');
+        } else {
+            heroTitle.style.setProperty('margin-top', '0px', 'important');
+            heroTitle.style.setProperty('margin-bottom', `${num}px`, 'important');
+        }
+    }
+};
+
+window.applyHeroTitleVCenter = function (isCentered) {
+    const vMargin = parseInt(document.getElementById('hero-title-v-margin-num')?.value || '24', 10);
+    const heroTitle = document.querySelector('.pub-hero-main-title');
+    if (heroTitle) {
+        if (isCentered) {
+            heroTitle.classList.add('is-vertically-centered');
+            heroTitle.style.setProperty('margin-top', `${vMargin}px`, 'important');
+            heroTitle.style.setProperty('margin-bottom', `${vMargin}px`, 'important');
+        } else {
+            heroTitle.classList.remove('is-vertically-centered');
+            heroTitle.style.setProperty('margin-top', '0px', 'important');
+            heroTitle.style.setProperty('margin-bottom', `${vMargin}px`, 'important');
+        }
+    }
+};
+
+window.openHeroTitleDistanceModal = function (blockId) {
+    openBlockSettingsModal(blockId);
+    setTimeout(() => {
+        const card = document.getElementById('hero-title-distance-control-card');
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+            card.style.boxShadow = '0 0 0 3px rgba(197, 160, 89, 0.45)';
+            card.style.borderColor = 'var(--pub-gold, #c5a059)';
+            setTimeout(() => {
+                card.style.boxShadow = '';
+            }, 1500);
+        }
+    }, 120);
 };
 
 window.addHeroTitleWordFromModal = function (blockId) {
@@ -2196,7 +2375,7 @@ window.addHeroTitleWordFromModal = function (blockId) {
     if (!block) return;
     syncHeroModalInputsToBlock(block);
     const words = getHeroTitleWords(block);
-    words.push({ text: 'EDITORIAL', style: 'plain' });
+    words.push({ text: 'EDITORIAL', style: 'plain', newRow: false });
     block.titleWords = words;
     window.openBlockSettingsModal(blockId);
 };
@@ -2238,11 +2417,18 @@ window.splitHeroTitleIntoWordsFromModal = function (blockId) {
         showToast('Please type a title to split into words');
         return;
     }
-    const parts = text.split(/\s+/).filter(Boolean);
-    const words = parts.map((part, idx) => ({
-        text: part.toUpperCase(),
-        style: idx === 1 ? 'italic' : 'plain'
-    }));
+    const lines = text.split(/\r?\n|\s*\/\s*/);
+    const words = [];
+    lines.forEach((line, lineIdx) => {
+        const lineParts = line.trim().split(/\s+/).filter(Boolean);
+        lineParts.forEach((part, partIdx) => {
+            words.push({
+                text: part.toUpperCase(),
+                style: (lineIdx === 0 && partIdx === 1) ? 'italic' : 'plain',
+                newRow: lineIdx > 0 && partIdx === 0
+            });
+        });
+    });
     block.titleWords = words;
     window.openBlockSettingsModal(blockId);
     showToast(`Converted title into ${words.length} words ✓`);
@@ -2265,14 +2451,24 @@ function syncHeroModalInputsToBlock(block) {
     const titleCheck = document.getElementById('edit-hero-show-title');
     if (titleCheck) block.showTitle = titleCheck.checked;
 
+    const rowGapInput = document.getElementById('hero-title-row-distance-num');
+    if (rowGapInput) block.titleRowGap = parseInt(rowGapInput.value, 10) || 0;
+    const lhSelect = document.getElementById('hero-title-line-height-select');
+    if (lhSelect) block.titleLineHeight = lhSelect.value;
+    const vMarginInput = document.getElementById('hero-title-v-margin-num');
+    if (vMarginInput) block.titleVMargin = parseInt(vMarginInput.value, 10) || 0;
+    const vCenterInput = document.getElementById('hero-title-valign-center');
+    if (vCenterInput) block.titleVerticallyCentered = vCenterInput.checked;
+
     const wordItemEls = document.querySelectorAll('#hero-modal-title-words-list .hero-modal-title-word-item');
     if (wordItemEls.length > 0) {
         const words = [];
         wordItemEls.forEach(el => {
             const text = el.querySelector('.hero-modal-word-text')?.value || '';
             const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+            const newRow = el.querySelector('.hero-modal-word-newrow')?.checked || false;
             if (text.trim()) {
-                words.push({ text: text.trim(), style: style });
+                words.push({ text: text.trim(), style: style, newRow: !!newRow });
             }
         });
         if (words.length > 0) {
@@ -2392,12 +2588,53 @@ window.openRowSettingsModal = function (rowId) {
     else if (row.spacing === 'medium') { defTop = 56; defBottom = 56; }
     else if (row.spacing === 'spacious') { defTop = 88; defBottom = 88; }
 
-    if (ptInput) ptInput.value = typeof row.paddingTop === 'number' ? row.paddingTop : defTop;
+    const curTop = typeof row.paddingTop === 'number' ? row.paddingTop : defTop;
+    const curBottom = typeof row.paddingBottom === 'number' ? row.paddingBottom : defBottom;
+
+    if (ptInput) ptInput.value = curTop;
     if (prInput) prInput.value = typeof row.paddingRight === 'number' ? row.paddingRight : 0;
-    if (pbInput) pbInput.value = typeof row.paddingBottom === 'number' ? row.paddingBottom : defBottom;
+    if (pbInput) pbInput.value = curBottom;
     if (plInput) plInput.value = typeof row.paddingLeft === 'number' ? row.paddingLeft : 0;
 
+    // Symmetric vertical distance slider & input
+    const vDistance = Math.round((curTop + curBottom) / 2) || curTop || 0;
+    const vRange = document.getElementById('row-v-distance-range');
+    const vNum = document.getElementById('row-v-distance-num');
+    if (vRange) vRange.value = vDistance;
+    if (vNum) vNum.value = vDistance;
+
+    // Check if row contains a title block or is single-column
+    const hasTitle = (row.columns || []).some(c => (c.blocks || []).some(b => b.type === 'title'));
+    const vAlignCheck = document.getElementById('row-valign-center');
+    if (vAlignCheck) {
+        if (typeof row.valign === 'string') {
+            vAlignCheck.checked = (row.valign === 'center');
+        } else {
+            vAlignCheck.checked = hasTitle || (row.columns && row.columns.length === 1);
+        }
+    }
+
     modal.classList.add('is-open');
+};
+
+window.applyRowVDistance = function (val) {
+    const num = Math.max(0, parseInt(val, 10) || 0);
+    const vRange = document.getElementById('row-v-distance-range');
+    const vNum = document.getElementById('row-v-distance-num');
+    const ptInput = document.getElementById('row-padding-top');
+    const pbInput = document.getElementById('row-padding-bottom');
+
+    if (vRange) vRange.value = num;
+    if (vNum) vNum.value = num;
+    if (ptInput) ptInput.value = num;
+    if (pbInput) pbInput.value = num;
+};
+
+window.applyTitleVDistancePreset = function (val) {
+    const range = document.getElementById('edit-title-v-distance-range');
+    const num = document.getElementById('edit-title-v-distance-num');
+    if (range) range.value = val;
+    if (num) num.value = val;
 };
 
 window.applyRowPaddingPreset = function (top, right, bottom, left) {
@@ -2409,6 +2646,12 @@ window.applyRowPaddingPreset = function (top, right, bottom, left) {
     if (prInput) prInput.value = right;
     if (pbInput) pbInput.value = bottom;
     if (plInput) plInput.value = left;
+
+    const vRange = document.getElementById('row-v-distance-range');
+    const vNum = document.getElementById('row-v-distance-num');
+    const avg = Math.round((top + bottom) / 2);
+    if (vRange) vRange.value = avg;
+    if (vNum) vNum.value = avg;
 };
 
 window.saveRowSettings = function () {
@@ -2427,12 +2670,15 @@ window.saveRowSettings = function () {
     const pb = parseInt(document.getElementById('row-padding-bottom')?.value || '0', 10);
     const pl = parseInt(document.getElementById('row-padding-left')?.value || '0', 10);
 
+    const vAlignCheck = document.getElementById('row-valign-center');
+
     row.colGap = isNaN(gap) ? 0 : gap;
     row.bg = bg;
     row.paddingTop = isNaN(pt) ? 0 : pt;
     row.paddingRight = isNaN(pr) ? 0 : pr;
     row.paddingBottom = isNaN(pb) ? 0 : pb;
     row.paddingLeft = isNaN(pl) ? 0 : pl;
+    row.valign = vAlignCheck && vAlignCheck.checked ? 'center' : 'stretch';
     row.spacing = 'custom';
 
     savePageData();
@@ -2479,10 +2725,6 @@ window.openBlockSettingsModal = function (blockId) {
                         <button type="button" class="pub-btn style-solid" onclick="openStudioGalleryModal()" style="font-size:0.72rem; padding:0.45rem 0.85rem; width:auto;">
                             <span>🖼️ Choose from Studio Photo Library</span>
                         </button>
-                        <label class="pub-btn style-outline" style="font-size:0.72rem; padding:0.45rem 0.85rem; cursor:pointer; width:auto; display:inline-flex; align-items:center;">
-                            <span>📤 Upload Local Photo</span>
-                            <input type="file" accept="image/*" style="display:none;" onchange="handleModalImageUpload(event)">
-                        </label>
                     </div>
                     <div id="block-settings-hero-img-preview" style="text-align:center; padding:0.5rem; background:rgba(0,0,0,0.04); border-radius:4px; margin-bottom:0.75rem;">
                         <img src="${escapeHtml(block.imageUrl || '/_images/theme_main.jpg')}" alt="Hero Preview" style="max-height:140px; border-radius:4px; object-fit:cover; border:1px solid rgba(197,160,89,0.3);">
@@ -2548,24 +2790,84 @@ window.openBlockSettingsModal = function (blockId) {
                         </div>
                     </div>
 
-                    <!-- Element 3: Main Title (1 Line & Individual Word Styling) -->
+                    <!-- Element 3: Main Title & Row Distance -->
                     <div style="border-bottom:1px solid rgba(0,0,0,0.06); padding-bottom:0.75rem; margin-bottom:0.75rem;">
                         <label class="builder-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                             <input type="checkbox" id="edit-hero-show-title" ${block.showTitle !== false ? 'checked' : ''} onchange="document.getElementById('edit-hero-title-fields').style.display = this.checked ? 'block' : 'none';">
-                            <span style="font-weight:600;">🔤 Main Editorial Title (1 Line &amp; Word Styling)</span>
+                            <span style="font-weight:600;">🔤 Main Editorial Title &amp; Row Distance</span>
                         </label>
                         <div id="edit-hero-title-fields" style="display:${block.showTitle !== false ? 'block' : 'none'}; margin-top:0.6rem;">
-                            <!-- Live 1-line preview -->
+
+                            <!-- DEDICATED HERO TITLE VERTICAL ROW DISTANCE & CENTERING CARD -->
+                            <div id="hero-title-distance-control-card" style="background:rgba(197,160,89,0.07); border:1px solid rgba(197,160,89,0.3); border-radius:6px; padding:0.85rem; margin-bottom:0.9rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.55rem;">
+                                    <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:700; font-size:0.75rem; margin:0; letter-spacing:0.06em;">
+                                        ↕ HERO TITLE VERTICAL ROW DISTANCE
+                                    </label>
+                                    <span style="font-size:0.68rem; color:#888;">Space between title lines</span>
+                                </div>
+
+                                <!-- Slider & Exact px Input -->
+                                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.65rem;">
+                                    <input type="range" id="hero-title-row-distance-range" min="-16" max="90" step="2" value="${typeof block.titleRowGap === 'number' ? block.titleRowGap : 20}" oninput="applyHeroTitleRowGap(this.value)" style="flex:1; accent-color:var(--pub-gold, #c5a059); cursor:pointer;">
+                                    <div style="display:flex; align-items:center; gap:0.25rem; width:80px;">
+                                        <input type="number" id="hero-title-row-distance-num" class="builder-input" min="-24" max="150" step="2" value="${typeof block.titleRowGap === 'number' ? block.titleRowGap : 20}" oninput="applyHeroTitleRowGap(this.value)" style="padding:0.35rem 0.5rem; font-size:0.8rem; text-align:center;">
+                                        <span style="font-size:0.72rem; color:#888;">px</span>
+                                    </div>
+                                </div>
+
+                                <!-- Quick 1-Click Row Distance Presets -->
+                                <div style="display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(-8)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Tucked (-8px)</button>
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(0)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Flush (0px)</button>
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(12)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Compact (12px)</button>
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(20)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Standard (20px)</button>
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(36)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Spacious (36px)</button>
+                                    <button type="button" class="pub-btn style-outline" onclick="applyHeroTitleRowGap(56)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">Airy (56px)</button>
+                                </div>
+
+                                <!-- Line Height & Vertical Spacing Row -->
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.65rem; margin-bottom:0.75rem; border-top:1px dashed rgba(197,160,89,0.22); padding-top:0.65rem;">
+                                    <div>
+                                        <label class="builder-label" style="font-size:0.68rem; margin-bottom:0.25rem;">Title Line Height</label>
+                                        <select id="hero-title-line-height-select" class="builder-select" onchange="applyHeroTitleLineHeight(this.value)" style="font-size:0.75rem;">
+                                            <option value="0.88" ${block.titleLineHeight === '0.88' ? 'selected' : ''}>0.88 (Condensed)</option>
+                                            <option value="0.94" ${block.titleLineHeight === '0.94' ? 'selected' : ''}>0.94 (Tight)</option>
+                                            <option value="1.00" ${block.titleLineHeight === '1.00' ? 'selected' : ''}>1.00 (Single)</option>
+                                            <option value="1.02" ${block.titleLineHeight === '1.02' || !block.titleLineHeight ? 'selected' : ''}>1.02 (Standard)</option>
+                                            <option value="1.12" ${block.titleLineHeight === '1.12' ? 'selected' : ''}>1.12 (Relaxed)</option>
+                                            <option value="1.25" ${block.titleLineHeight === '1.25' ? 'selected' : ''}>1.25 (Expanded)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="builder-label" style="font-size:0.68rem; margin-bottom:0.25rem;">Vertical Spacing (Top &amp; Bottom)</label>
+                                        <div style="display:flex; align-items:center; gap:0.25rem;">
+                                            <input type="number" id="hero-title-v-margin-num" class="builder-input" min="0" max="120" step="4" value="${typeof block.titleVMargin === 'number' ? block.titleVMargin : 24}" oninput="applyHeroTitleVMargin(this.value)" style="padding:0.35rem 0.5rem; font-size:0.75rem; text-align:center;">
+                                            <span style="font-size:0.72rem; color:#888;">px</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Vertical Centering Toggle -->
+                                <div style="padding-top:0.5rem; border-top:1px dashed rgba(197,160,89,0.22);">
+                                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; cursor:pointer;">
+                                        <input type="checkbox" id="hero-title-valign-center" ${block.titleVerticallyCentered !== false ? 'checked' : ''} onchange="applyHeroTitleVCenter(this.checked)">
+                                        <span style="font-weight:600; color:inherit;">☑️ Keep title vertically centered in hero section</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Live preview with row breaks and live row distance -->
                             <div style="background:rgba(0,0,0,0.04); border-radius:4px; padding:0.65rem; margin-bottom:0.6rem; text-align:left;">
-                                <span style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:0.25rem;">Live 1-Line Preview:</span>
-                                <div id="hero-modal-title-preview" style="display:flex; flex-wrap:wrap; align-items:baseline; gap:0.3em; font-size:1.25rem;">
-                                    ${getHeroTitleWords(block).map(w => `<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span>`).join(' ')}
+                                <span style="font-size:0.65rem; color:#888; text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:0.25rem;">Live Title Preview:</span>
+                                <div id="hero-modal-title-preview" style="display:flex; flex-wrap:wrap; align-items:baseline; column-gap:0.28em; row-gap:${Math.max(0, Math.round((typeof block.titleRowGap === 'number' ? block.titleRowGap : 20) * 0.45))}px; line-height:${block.titleLineHeight || '1.02'}; font-size:1.25rem;">
+                                    ${getHeroTitleWords(block).map(w => `${w.newRow ? '<span style="flex-basis:100%; width:100%; height:0; display:block;"></span>' : ''}<span class="pub-hero-title-word word-style-${w.style || 'plain'}">${escapeHtml(w.text)}</span>`).join(' ')}
                                 </div>
                             </div>
 
                             <!-- Quick Sentence Splitter -->
                             <div style="display:flex; gap:0.4rem; margin-bottom:0.75rem;">
-                                <input type="text" id="hero-modal-title-quick-input" class="builder-input" placeholder="Type or paste title (e.g. CAPTURING THE UNSEEN)..." style="font-size:0.75rem;">
+                                <input type="text" id="hero-modal-title-quick-input" class="builder-input" placeholder="Type title; use / or newlines for rows (e.g. CAPTURING THE / UNSEEN)..." style="font-size:0.75rem;">
                                 <button type="button" class="pub-btn style-outline" onclick="splitHeroTitleIntoWordsFromModal('${block.id}')" style="font-size:0.68rem; padding:0.35rem 0.65rem; width:auto; white-space:nowrap;">
                                     Split into Words
                                 </button>
@@ -2580,10 +2882,10 @@ window.openBlockSettingsModal = function (blockId) {
                             </div>
                             <div id="hero-modal-title-words-list" style="display:flex; flex-direction:column; gap:0.45rem;">
                                 ${getHeroTitleWords(block).map((word, wIdx, arr) => `
-                                    <div class="hero-modal-title-word-item" data-word-idx="${wIdx}" style="display:flex; gap:0.4rem; align-items:center; background:rgba(0,0,0,0.02); border:1px solid rgba(0,0,0,0.08); border-radius:4px; padding:0.4rem;">
+                                    <div class="hero-modal-title-word-item" data-word-idx="${wIdx}" style="display:flex; gap:0.4rem; align-items:center; background:rgba(0,0,0,0.02); border:1px solid rgba(0,0,0,0.08); border-radius:4px; padding:0.4rem; flex-wrap:wrap;">
                                         <span style="font-size:0.65rem; font-weight:700; color:var(--pub-gold, #c5a059); min-width:18px;">#${wIdx + 1}</span>
-                                        <input type="text" class="builder-input hero-modal-word-text" value="${escapeHtml(word.text)}" placeholder="Word" style="flex:2; font-size:0.75rem; padding:0.3rem 0.5rem;" oninput="updateHeroModalTitlePreview()">
-                                        <select class="builder-select hero-modal-word-style" style="flex:2; font-size:0.72rem; padding:0.3rem 0.4rem;" onchange="updateHeroModalTitlePreview()">
+                                        <input type="text" class="builder-input hero-modal-word-text" value="${escapeHtml(word.text)}" placeholder="Word" style="flex:2; min-width:90px; font-size:0.75rem; padding:0.3rem 0.5rem;" oninput="updateHeroModalTitlePreview()">
+                                        <select class="builder-select hero-modal-word-style" style="flex:2; min-width:110px; font-size:0.72rem; padding:0.3rem 0.4rem;" onchange="updateHeroModalTitlePreview()">
                                             <option value="plain" ${word.style === 'plain' || !word.style ? 'selected' : ''}>Serif (Standard)</option>
                                             <option value="italic" ${word.style === 'italic' ? 'selected' : ''}>Italic Serif (*The*)</option>
                                             <option value="gold" ${word.style === 'gold' ? 'selected' : ''}>Luxury Gold</option>
@@ -2592,6 +2894,10 @@ window.openBlockSettingsModal = function (blockId) {
                                             <option value="sans" ${word.style === 'sans' ? 'selected' : ''}>Modern Sans (Bold)</option>
                                             <option value="outline" ${word.style === 'outline' ? 'selected' : ''}>Outlined Serif</option>
                                         </select>
+                                        <label style="display:flex; align-items:center; gap:0.25rem; font-size:0.68rem; margin:0; cursor:pointer;" title="Break this word onto a new row">
+                                            <input type="checkbox" class="hero-modal-word-newrow" ${word.newRow ? 'checked' : ''} onchange="updateHeroModalTitlePreview()">
+                                            <span style="font-size:0.65rem; white-space:nowrap; color:var(--pub-gold, #c5a059); font-weight:600;">↵ New Row</span>
+                                        </label>
                                         <button type="button" class="row-action-btn" onclick="moveHeroTitleWordFromModal('${block.id}', ${wIdx}, -1)" ${wIdx === 0 ? 'disabled style="opacity:0.3;"' : ''} title="Move left">◀</button>
                                         <button type="button" class="row-action-btn" onclick="moveHeroTitleWordFromModal('${block.id}', ${wIdx}, 1)" ${wIdx === arr.length - 1 ? 'disabled style="opacity:0.3;"' : ''} title="Move right">▶</button>
                                         <button type="button" class="hero-item-del-btn" style="position:static; opacity:1; pointer-events:auto; width:20px; height:20px; font-size:0.65rem;" onclick="removeHeroTitleWordFromModal('${block.id}', ${wIdx})" title="Delete Word">✕</button>
@@ -2671,6 +2977,8 @@ window.openBlockSettingsModal = function (blockId) {
             break;
 
         case 'title':
+            const currentTitleVPad = typeof block.verticalPadding === 'number' ? block.verticalPadding : 0;
+            const isTitleVCentered = block.verticallyCentered !== false;
             fieldsHtml += `
                 <div class="builder-form-group">
                     <label class="builder-label">Title Text</label>
@@ -2683,6 +2991,31 @@ window.openBlockSettingsModal = function (blockId) {
                         <option value="h2" ${block.level === 'h2' ? 'selected' : ''}>H2 — Section Header (Medium)</option>
                         <option value="h3" ${block.level === 'h3' ? 'selected' : ''}>H3 — Subsection Header (Small)</option>
                     </select>
+                </div>
+                <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.25); border-radius:6px; padding:0.85rem; margin-top:0.75rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; flex-wrap:wrap; gap:0.4rem;">
+                        <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0; display:block; letter-spacing:0.08em; font-size:0.75rem;">
+                            ↕ TITLE VERTICAL DISTANCE &amp; CENTERING
+                        </label>
+                        <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+                            <button type="button" class="pub-btn style-outline" onclick="applyTitleVDistancePreset(0)" style="font-size:0.65rem; padding:0.2rem 0.45rem; width:auto;">0px</button>
+                            <button type="button" class="pub-btn style-outline" onclick="applyTitleVDistancePreset(20)" style="font-size:0.65rem; padding:0.2rem 0.45rem; width:auto;">20px</button>
+                            <button type="button" class="pub-btn style-outline" onclick="applyTitleVDistancePreset(40)" style="font-size:0.65rem; padding:0.2rem 0.45rem; width:auto;">40px</button>
+                            <button type="button" class="pub-btn style-outline" onclick="applyTitleVDistancePreset(60)" style="font-size:0.65rem; padding:0.2rem 0.45rem; width:auto;">60px</button>
+                            <button type="button" class="pub-btn style-outline" onclick="applyTitleVDistancePreset(90)" style="font-size:0.65rem; padding:0.2rem 0.45rem; width:auto;">90px</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.6rem;">
+                        <input type="range" id="edit-title-v-distance-range" min="0" max="160" step="4" value="${currentTitleVPad}" oninput="document.getElementById('edit-title-v-distance-num').value = this.value;" style="flex:1; accent-color:var(--pub-gold, #c5a059); cursor:pointer;">
+                        <div style="display:flex; align-items:center; gap:0.25rem; width:75px;">
+                            <input type="number" id="edit-title-v-distance-num" class="builder-input" min="0" max="250" step="4" value="${currentTitleVPad}" oninput="document.getElementById('edit-title-v-distance-range').value = this.value;" style="padding:0.35rem 0.5rem; font-size:0.8rem; text-align:center;">
+                            <span style="font-size:0.72rem; color:#888;">px</span>
+                        </div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; cursor:pointer;">
+                        <input type="checkbox" id="edit-title-vertically-centered" ${isTitleVCentered ? 'checked' : ''}>
+                        <span>Keep title vertically centered (removes bottom margin offset)</span>
+                    </label>
                 </div>
             `;
             break;
@@ -2722,10 +3055,6 @@ window.openBlockSettingsModal = function (blockId) {
                         <button type="button" class="pub-btn style-solid" onclick="openStudioGalleryModal()" style="font-size:0.72rem; padding:0.45rem 0.85rem; width:auto;">
                             <span>🖼️ Choose from Studio Photo Library</span>
                         </button>
-                        <label class="pub-btn style-outline" style="font-size:0.72rem; padding:0.45rem 0.85rem; cursor:pointer; width:auto; display:inline-flex; align-items:center;">
-                            <span>📤 Upload Local Photo</span>
-                            <input type="file" accept="image/*" style="display:none;" onchange="handleModalImageUpload(event)">
-                        </label>
                     </div>
                     <div id="block-settings-img-preview" style="text-align:center; padding:0.5rem; background:rgba(0,0,0,0.04); border-radius:4px; margin-bottom:0.75rem;">
                         <img src="${escapeHtml(block.url || '/_images/theme_main.jpg')}" alt="Preview" style="max-height:140px; border-radius:4px; object-fit:cover; border:1px solid rgba(197,160,89,0.3);">
@@ -3057,14 +3386,32 @@ window.saveBlockSettings = function () {
             block.badgeText = document.getElementById('edit-hero-badge-text')?.value || 'SPECIAL FEATURE';
             block.badgeColor = document.getElementById('edit-hero-badge-color')?.value || 'gold';
             block.showTitle = !!document.getElementById('edit-hero-show-title')?.checked;
+            const rowGapInput = document.getElementById('hero-title-row-distance-num');
+            if (rowGapInput) {
+                block.titleRowGap = parseInt(rowGapInput.value, 10) || 0;
+            }
+            const lhSelect = document.getElementById('hero-title-line-height-select');
+            if (lhSelect) {
+                block.titleLineHeight = lhSelect.value;
+            }
+            const vMarginInput = document.getElementById('hero-title-v-margin-num');
+            if (vMarginInput) {
+                block.titleVMargin = parseInt(vMarginInput.value, 10) || 0;
+            }
+            const vCenterInput = document.getElementById('hero-title-valign-center');
+            if (vCenterInput) {
+                block.titleVerticallyCentered = vCenterInput.checked;
+            }
+
             const wordItemEls = document.querySelectorAll('#hero-modal-title-words-list .hero-modal-title-word-item');
             if (wordItemEls.length > 0) {
                 const words = [];
                 wordItemEls.forEach(el => {
                     const text = el.querySelector('.hero-modal-word-text')?.value || '';
                     const style = el.querySelector('.hero-modal-word-style')?.value || 'plain';
+                    const newRow = el.querySelector('.hero-modal-word-newrow')?.checked || false;
                     if (text.trim()) {
-                        words.push({ text: text.trim(), style: style });
+                        words.push({ text: text.trim(), style: style, newRow: !!newRow });
                     }
                 });
                 if (words.length > 0) {
@@ -3117,6 +3464,14 @@ window.saveBlockSettings = function () {
         case 'title':
             block.text = document.getElementById('edit-block-text')?.value || '';
             block.level = document.getElementById('edit-block-level')?.value || 'h2';
+            const titleVPadInput = document.getElementById('edit-title-v-distance-num');
+            if (titleVPadInput) {
+                block.verticalPadding = parseInt(titleVPadInput.value || '0', 10);
+            }
+            const titleVCenterInput = document.getElementById('edit-title-vertically-centered');
+            if (titleVCenterInput) {
+                block.verticallyCentered = titleVCenterInput.checked;
+            }
             break;
         case 'subtitle':
             block.text = document.getElementById('edit-block-text')?.value || '';
@@ -3299,11 +3654,19 @@ window.toggleVisitorPreview = function () {
     showToast(isPreviewMode ? 'Switched to visitor preview mode' : 'Switched to visual editor');
 };
 
-window.clearEntirePage = function () {
-    if (!confirm('Are you sure you want to clear all rows on this page?')) return;
+window.clearEntirePage = async function () {
+    const confirmed = await window.showConfirmModal({
+        title: "Clear Entire Canvas",
+        message: "Are you sure you want to clear all rows on this page? All elements will be removed.",
+        confirmText: "Clear Canvas",
+        confirmVariant: "red"
+    });
+    if (!confirmed) return;
+    pushHistoryState();
     pageData = [];
     savePageData();
     renderPage();
+    showToast('Canvas cleared ✓');
 };
 
 // ── Preset Builder & Public URL Actions ──────────────────────────────────
@@ -3406,7 +3769,11 @@ window.createNewPresetFromCanvas = async function () {
 
     const title = titleInput ? titleInput.value.trim() : '';
     if (!title) {
-        alert('Please enter a preset title for your new build (e.g. Summer Special 2026).');
+        window.showAlertModal({
+            title: "Preset Title Required",
+            message: "Please enter a preset title for your new build (e.g. Summer Special 2026).",
+            variant: "amber"
+        });
         if (titleInput) titleInput.focus();
         return;
     }
@@ -3486,14 +3853,22 @@ window.updateSelectedOrActivePreset = async function () {
     }
 
     if (!targetPreset) {
-        alert('Please choose an existing preset to update from the dropdown, or click "Save as New Preset" to create a new one.');
+        window.showAlertModal({
+            title: "Choose Existing Preset",
+            message: "Please choose an existing preset to update from the dropdown, or click 'Save as New Preset' to create a new one.",
+            variant: "amber"
+        });
         if (selectEl) selectEl.focus();
         return;
     }
 
     const newTitle = titleInput ? titleInput.value.trim() : targetPreset.title;
     if (!newTitle) {
-        alert('Preset title cannot be empty.');
+        window.showAlertModal({
+            title: "Empty Preset Title",
+            message: "Preset title cannot be empty.",
+            variant: "amber"
+        });
         return;
     }
 
@@ -3539,11 +3914,17 @@ window.updateSelectedOrActivePreset = async function () {
 // Backwards compatibility alias
 window.saveCurrentBuildAsPreset = window.createNewPresetFromCanvas;
 
-window.loadPresetIntoBuilder = function (presetId) {
+window.loadPresetIntoBuilder = async function (presetId) {
     const preset = savedPresets.find(p => p.id === presetId);
     if (!preset) return;
 
-    if (!confirm(`Load preset "${preset.title}" into the builder? This will replace the canvas with this preset's build.`)) return;
+    const confirmed = await window.showConfirmModal({
+        title: "Load Preset",
+        message: `Load preset "${preset.title}" into the builder? This will replace the canvas with this preset's build.`,
+        confirmText: "Load Preset",
+        confirmVariant: "amber"
+    });
+    if (!confirmed) return;
 
     currentActivePreset = preset;
     pageData = JSON.parse(JSON.stringify(preset.pageData || []));
@@ -3584,7 +3965,13 @@ window.setPresetAsDefault = async function (presetId) {
 window.deleteCustomPreset = async function (presetId) {
     const p = savedPresets.find(x => x.id === presetId);
     if (!p) return;
-    if (!confirm(`Are you sure you want to delete preset "${p.title}"? Normal users will no longer be able to access /promotion/${p.slug}.`)) return;
+    const confirmed = await window.showConfirmModal({
+        title: "Delete Preset",
+        message: `Are you sure you want to delete preset "${p.title}"? Normal users will no longer be able to access /promotion/${p.slug}.`,
+        confirmText: "Delete Preset",
+        confirmVariant: "red"
+    });
+    if (!confirmed) return;
 
     savedPresets = savedPresets.filter(x => x.id !== presetId);
     try { localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(savedPresets)); } catch (_) {}
@@ -3723,8 +4110,14 @@ window.openTemplatesModal = function () {
     if (modal) modal.classList.add('is-open');
 };
 
-window.applyPresetTemplate = function (type) {
-    if (!confirm('Applying this preset will replace the current page content. Proceed?')) return;
+window.applyPresetTemplate = async function (type) {
+    const confirmed = await window.showConfirmModal({
+        title: "Apply Preset Template",
+        message: "Applying this preset will replace the current page content. Proceed?",
+        confirmText: "Apply Template",
+        confirmVariant: "amber"
+    });
+    if (!confirmed) return;
 
     if (type === 'default') {
         pageData = JSON.parse(JSON.stringify(DEFAULT_PAGE_DATA));
@@ -3862,10 +4255,18 @@ window.importJsonData = function () {
             closeAllModals();
             showToast('Page layout imported successfully!');
         } else {
-            alert('Invalid JSON: Must be an array of row objects.');
+            window.showAlertModal({
+                title: "Invalid JSON",
+                message: "Invalid JSON: Must be an array of row objects.",
+                variant: "red"
+            });
         }
     } catch (e) {
-        alert('Invalid JSON format: ' + e.message);
+        window.showAlertModal({
+            title: "Invalid JSON Format",
+            message: "Invalid JSON format: " + e.message,
+            variant: "red"
+        });
     }
 };
 
@@ -4838,11 +5239,55 @@ async function loadStudioPhotoSetsForBanners() {
         return cachedBannerPhotoSets;
     }
     try {
-        const snap = await getDocs(collection(db, 'photo_sets')).catch(err => {
-            console.warn("Could not fetch photo_sets for banner target selector:", err);
-            return null;
-        });
+        const [snap, singleSnap, orderDoc] = await Promise.all([
+            getDocs(collection(db, 'photo_sets')).catch(err => {
+                console.warn("Could not fetch photo_sets for banner target selector:", err);
+                return null;
+            }),
+            getDocs(collection(db, 'single_shots')).catch(err => {
+                console.warn("Could not fetch single_shots for banner target selector:", err);
+                return null;
+            }),
+            getDoc(doc(db, 'settings', 'single_shots_order')).catch(() => null)
+        ]);
+
         const sets = [];
+
+        // 1. Add Single Shots gallery set
+        if (singleSnap && !singleSnap.empty) {
+            const singlePhotos = [];
+            let latestDate = '';
+            singleSnap.forEach(dSnap => {
+                const d = dSnap.data();
+                if (d.url) {
+                    singlePhotos.push(d.url);
+                    if (d.date && (!latestDate || d.date > latestDate)) {
+                        latestDate = d.date;
+                    }
+                }
+            });
+
+            if (singlePhotos.length > 0) {
+                const singleName = (orderDoc && orderDoc.exists() && (orderDoc.data().categoryName || orderDoc.data().name))
+                    ? (orderDoc.data().categoryName || orderDoc.data().name)
+                    : 'Single Shots';
+                const customOrder = (orderDoc && orderDoc.exists() && Array.isArray(orderDoc.data().order)) ? orderDoc.data().order : [];
+                const cover = customOrder[0] || singlePhotos[0] || '';
+
+                sets.push({
+                    id: 'single-shots',
+                    name: singleName,
+                    model: 'Mixed Models',
+                    date: latestDate || '',
+                    photoCount: singlePhotos.length,
+                    coverUrl: cover,
+                    isArchived: false,
+                    isSingleShots: true
+                });
+            }
+        }
+
+        // 2. Add Photoshoot Sets
         if (snap && !snap.empty) {
             snap.forEach(docSnap => {
                 const d = docSnap.data();
@@ -4851,17 +5296,30 @@ async function loadStudioPhotoSetsForBanners() {
                 const model = d.modelName && d.modelName !== 'Unknown' && d.modelName !== 'Mixed' && d.modelName !== '/' ? d.modelName.trim() : '';
                 const date = d.date || '';
                 const cover = urls.length > 0 ? urls[urls.length - 1] : '';
+
+                // Check if set is archived: either marked archived: true or all photos archived
+                const archivedUrlsList = Array.isArray(d.archivedUrls) ? d.archivedUrls : (Array.isArray(d.archived_photos) ? d.archived_photos : []);
+                const isArchived = Boolean(d.archived === true || (urls.length > 0 && urls.every(u => archivedUrlsList.includes(u))));
+
                 sets.push({
                     id: docSnap.id,
                     name: name,
                     model: model,
                     date: date,
                     photoCount: urls.length,
-                    coverUrl: cover
+                    coverUrl: cover,
+                    isArchived: isArchived
                 });
             });
         }
-        sets.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name));
+
+        // Sort: single-shots at top, then newest to oldest
+        sets.sort((a, b) => {
+            if (a.isSingleShots) return -1;
+            if (b.isSingleShots) return 1;
+            return (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name);
+        });
+
         cachedBannerPhotoSets = sets;
         return sets;
     } catch (e) {
@@ -4996,14 +5454,17 @@ function renderPhotoSetsGridHtml(banner) {
     const targetGalleries = Array.isArray(banner.targetGalleries) ? banner.targetGalleries : [];
 
     return cachedBannerPhotoSets.map(s => {
-        const isChecked = targetGalleries.includes(s.id);
-        const searchText = `${s.name} ${s.model || ''}`.trim();
+        const isChecked = targetGalleries.includes(s.id) || (s.id === 'single-shots' && targetGalleries.includes('single_shots'));
+        const searchText = `${s.name} ${s.model || ''} ${s.isArchived ? 'archived' : ''}`.trim();
         return `
-            <label class="banner-gallery-checkbox-card ${isChecked ? 'is-checked' : ''}" data-banner-id="${banner.id}" data-gallery-id="${escapeHtml(s.id)}" data-search-text="${escapeHtml(searchText)}" title="${escapeHtml(s.name)} (${s.photoCount} photos)">
+            <label class="banner-gallery-checkbox-card ${isChecked ? 'is-checked' : ''} ${s.isArchived ? 'is-archived-card' : ''}" data-banner-id="${banner.id}" data-gallery-id="${escapeHtml(s.id)}" data-search-text="${escapeHtml(searchText)}" title="${escapeHtml(s.name)} (${s.photoCount} photos)${s.isArchived ? ' [Archived Set]' : ''}">
                 <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleBannerTargetGallery('${banner.id}', '${s.id}', this.checked)">
-                ${s.coverUrl ? `<img class="gallery-card-thumb" src="${escapeHtml(s.coverUrl)}" alt="Cover" loading="lazy">` : `<div class="gallery-card-icon">📷</div>`}
+                ${s.coverUrl ? `<img class="gallery-card-thumb" src="${escapeHtml(s.coverUrl)}" alt="Cover" loading="lazy">` : `<div class="gallery-card-icon">${s.isSingleShots ? '🖼️' : '📷'}</div>`}
                 <div class="gallery-card-info">
-                    <span class="gallery-card-name">${escapeHtml(s.name)}</span>
+                    <div class="gallery-card-title-row">
+                        <span class="gallery-card-name">${escapeHtml(s.name)}</span>
+                        ${s.isArchived ? `<span class="gallery-archived-badge" title="This photoshoot set is archived in the vault">📦 Archived</span>` : ''}
+                    </div>
                     <span class="gallery-card-sub">${escapeHtml(s.model ? `${s.model} • ` : '')}${s.photoCount} Photos</span>
                 </div>
             </label>
@@ -5072,7 +5533,7 @@ window.renderBannerSetsList = function () {
         const isSpecific = b.visibilityScope === 'specific';
         const hasPhotoshootsChecked = b.targetPages.includes('photoshoots');
         const isWhichGalleries = b.galleriesScope === 'specific';
-        const selectedGalleriesCount = b.targetGalleries.length;
+        const selectedGalleriesCount = b.targetGalleries.filter(g => g !== 'single_shots').length;
         const totalGalleriesAvailable = (cachedBannerPhotoSets || []).length + 1; // +1 for main_catalog
 
         html += `
@@ -5422,29 +5883,19 @@ window.addNewBannerSet = function () {
     showToast('+ Added new banner set');
 };
 
-window.requestDeleteBannerSet = function (id, event) {
+window.requestDeleteBannerSet = async function (id, event) {
     if (event && event.stopPropagation) event.stopPropagation();
-    const wrap = document.getElementById(`delete-action-wrap-${id}`);
-    if (!wrap) {
-        executeDeleteBannerSet(id, event);
-        return;
-    }
+    const idx = activeBannerSets.findIndex(b => b.id === id);
+    const title = idx !== -1 ? (activeBannerSets[idx].title || `Banner Set #${idx + 1}`) : 'Banner Set';
 
-    wrap.innerHTML = `
-        <div style="display:inline-flex; align-items:center; gap:0.35rem;">
-            <button type="button" class="banner-btn-icon btn-confirm-delete" onclick="executeDeleteBannerSet('${id}', event)" title="Confirm and permanently delete">
-                ⚠️ Confirm Delete?
-            </button>
-            <button type="button" class="banner-btn-icon btn-cancel-delete" onclick="cancelDeleteBannerSet('${id}', event)" title="Cancel">
-                ✕
-            </button>
-        </div>
-    `;
-
-    if (wrap._deleteTimeout) clearTimeout(wrap._deleteTimeout);
-    wrap._deleteTimeout = setTimeout(() => {
-        cancelDeleteBannerSet(id);
-    }, 6000);
+    const confirmed = await window.showConfirmModal({
+        title: "Delete Banner Set",
+        message: `Are you sure you want to permanently delete "${title}"? This cannot be undone.`,
+        confirmText: "Delete Set",
+        confirmVariant: "red"
+    });
+    if (!confirmed) return;
+    executeDeleteBannerSet(id, event);
 };
 
 window.cancelDeleteBannerSet = function (id, event) {
@@ -5502,8 +5953,8 @@ window.executeDeleteBannerSet = async function (id, event) {
     showToast(`🗑️ Deleted "${title}"`);
 };
 
-window.deleteBannerSet = function (id) {
-    executeDeleteBannerSet(id);
+window.deleteBannerSet = function (id, event) {
+    window.requestDeleteBannerSet(id, event);
 };
 
 window.moveBannerSet = function (id, direction) {
@@ -5593,8 +6044,18 @@ window.toggleBannerTargetGallery = function (id, galleryId, isChecked) {
     if (!Array.isArray(b.targetGalleries)) b.targetGalleries = [];
     if (isChecked) {
         if (!b.targetGalleries.includes(galleryId)) b.targetGalleries.push(galleryId);
+        if (galleryId === 'single-shots' && !b.targetGalleries.includes('single_shots')) {
+            b.targetGalleries.push('single_shots');
+        }
     } else {
-        b.targetGalleries = b.targetGalleries.filter(g => g !== galleryId);
+        b.targetGalleries = b.targetGalleries.filter(g => g !== galleryId && !(galleryId === 'single-shots' && g === 'single_shots'));
+    }
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
     }
 
     // Direct DOM update for snappy responsiveness
@@ -5607,7 +6068,8 @@ window.toggleBannerTargetGallery = function (id, galleryId, isChecked) {
     const countEl = document.getElementById(`galleries-count-${id}`);
     if (countEl) {
         const total = (cachedBannerPhotoSets || []).length + 1;
-        countEl.textContent = `${b.targetGalleries.length} of ${total} selected`;
+        const uniqueCount = b.targetGalleries.filter(g => g !== 'single_shots').length;
+        countEl.textContent = `${uniqueCount} of ${total} selected`;
     }
 };
 
@@ -5616,9 +6078,18 @@ window.selectAllGalleriesForBanner = function (id) {
     if (!b) return;
     const all = ['main_catalog'];
     if (Array.isArray(cachedBannerPhotoSets)) {
-        cachedBannerPhotoSets.forEach(s => all.push(s.id));
+        cachedBannerPhotoSets.forEach(s => {
+            all.push(s.id);
+            if (s.id === 'single-shots') all.push('single_shots');
+        });
     }
     b.targetGalleries = all;
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
     renderBannerSetsList();
 };
 
@@ -5626,6 +6097,12 @@ window.clearAllGalleriesForBanner = function (id) {
     const b = activeBannerSets.find(item => item.id === id);
     if (!b) return;
     b.targetGalleries = [];
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
     renderBannerSetsList();
 };
 

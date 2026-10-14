@@ -1328,7 +1328,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (deleteBtn) {
                     deleteBtn.addEventListener('click', async (e) => {
                         e.stopPropagation();
-                        if (confirm(`Are you sure you want to permanently delete the moodboard "${board.title}"?`)) {
+                        const confirmed = window.showConfirmModal ? await window.showConfirmModal({
+                            title: "Delete Moodboard",
+                            message: `Are you sure you want to permanently delete the moodboard "${board.title}"?`,
+                            confirmText: "Delete Moodboard",
+                            confirmVariant: "red"
+                        }) : confirm(`Are you sure you want to permanently delete the moodboard "${board.title}"?`);
+                        if (confirmed) {
                             try {
                                 invalidateCache('moodboard_');
                                 await deleteDoc(doc(db, 'moodboards', board.id));
@@ -2253,7 +2259,13 @@ document.addEventListener('DOMContentLoaded', () => {
             activeBoardId = activeBoardData.id;
         }
         if ((activeBoardData.drawingPaths || []).length === 0) return;
-        if (confirm('Clear all freehand ink sketches on this moodboard?')) {
+        const confirmed = window.showConfirmModal ? await window.showConfirmModal({
+            title: "Clear Sketches",
+            message: "Clear all freehand ink sketches on this moodboard?",
+            confirmText: "Clear Drawings",
+            confirmVariant: "red"
+        }) : confirm('Clear all freehand ink sketches on this moodboard?');
+        if (confirmed) {
             const cleared = [ ...(activeBoardData.drawingPaths || []) ];
             activeBoardData.drawingPaths = [];
             renderDrawingPaths([]);

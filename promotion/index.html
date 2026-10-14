@@ -151,21 +151,45 @@
                 </select>
             </div>
 
-            <!-- Individual Row Padding (Top, Right, Bottom, Left) -->
-            <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.22); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+            <!-- Vertical Distance & Centering (Symmetric Top & Bottom) -->
+            <div class="builder-form-group" style="background:rgba(197,160,89,0.06); border:1px solid rgba(197,160,89,0.25); border-radius:6px; padding:0.85rem; margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.65rem; flex-wrap:wrap; gap:0.4rem;">
                     <label class="builder-label" style="color:var(--pub-gold, #c5a059); font-weight:600; margin-bottom:0; display:block; letter-spacing:0.08em; font-size:0.75rem;">
-                        📐 INDIVIDUAL ROW PADDING
+                        ↕ TITLE &amp; ROW VERTICAL DISTANCE
                     </label>
-                    <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-                        <button type="button" class="pub-btn style-outline" onclick="applyRowPaddingPreset(0, 0, 0, 0)" style="font-size:0.65rem; padding:0.25rem 0.5rem; width:auto;">0px Flush</button>
-                        <button type="button" class="pub-btn style-outline" onclick="applyRowPaddingPreset(28, 20, 28, 20)" style="font-size:0.65rem; padding:0.25rem 0.5rem; width:auto;">Compact</button>
-                        <button type="button" class="pub-btn style-outline" onclick="applyRowPaddingPreset(56, 40, 56, 40)" style="font-size:0.65rem; padding:0.25rem 0.5rem; width:auto;">Standard</button>
-                        <button type="button" class="pub-btn style-outline" onclick="applyRowPaddingPreset(88, 60, 88, 60)" style="font-size:0.65rem; padding:0.25rem 0.5rem; width:auto;">Spacious</button>
+                    <div style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(0)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">0px Flush</button>
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(24)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">24px Compact</button>
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(48)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">48px Standard</button>
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(72)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">72px Spacious</button>
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(100)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">100px Atelier</button>
+                        <button type="button" class="pub-btn style-outline" onclick="applyRowVDistance(140)" style="font-size:0.65rem; padding:0.22rem 0.45rem; width:auto;">140px Luxe</button>
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.65rem;">
+                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.65rem;">
+                    <input type="range" id="row-v-distance-range" min="0" max="240" step="4" value="0" oninput="applyRowVDistance(this.value)" style="flex:1; accent-color:var(--pub-gold, #c5a059); cursor:pointer;">
+                    <div style="display:flex; align-items:center; gap:0.25rem; width:80px;">
+                        <input type="number" id="row-v-distance-num" class="builder-input" min="0" max="400" step="4" value="0" oninput="applyRowVDistance(this.value)" style="padding:0.35rem 0.5rem; font-size:0.8rem; text-align:center;">
+                        <span style="font-size:0.72rem; color:#888;">px</span>
+                    </div>
+                </div>
+
+                <div style="padding-top:0.4rem; border-top:1px dashed rgba(197,160,89,0.2);">
+                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; cursor:pointer;">
+                        <input type="checkbox" id="row-valign-center" checked>
+                        <span style="font-weight:600; color:inherit;">☑️ Vertically center content (Title remains vertically centered)</span>
+                    </label>
+                    <span style="font-size:0.67rem; color:#888; display:block; margin-left:1.4rem; margin-top:0.15rem;">Eliminates bottom margin offset and centers column items vertically.</span>
+                </div>
+            </div>
+
+            <!-- Detailed 4-Sided Padding (Advanced) -->
+            <details style="margin-bottom:1rem; border:1px solid rgba(0,0,0,0.08); border-radius:4px; padding:0.5rem 0.75rem; background:rgba(0,0,0,0.02);">
+                <summary style="font-size:0.72rem; color:#777; cursor:pointer; font-weight:600; user-select:none;">
+                    Advanced: Fine-tune 4-Sided Padding (Top, Right, Bottom, Left)
+                </summary>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.65rem; margin-top:0.65rem;">
                     <div>
                         <label class="builder-label" style="font-size:0.68rem; margin-bottom:0.25rem;">Top Padding</label>
                         <div style="display:flex; align-items:center; gap:0.35rem;">
@@ -195,7 +219,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <div class="builder-form-group">
                 <label class="builder-label" for="row-bg-select">Row Background Atmosphere</label>
