@@ -72,6 +72,168 @@
      Configure via BANNER_IMAGE_URL & BANNER_MOBILE_IMAGE_URL in /site-components.js.
      If both are empty, the banner stays completely hidden with zero spacing.
      ========================================================================= -->
+<style>
+/* Full Viewport Width Banner Stretch for All Screen Sizes */
+.site-banner-container {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 10;
+}
+.site-banner-single,
+.site-banner-slider {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    line-height: 0 !important;
+    box-sizing: border-box !important;
+}
+.site-banner-track {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+    box-sizing: border-box !important;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-banner-slide {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+.site-banner-link {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+.site-banner-img {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 560px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+}
+.site-banner-nav-btn {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50% !important;
+    background: rgba(15, 15, 18, 0.65) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+    z-index: 25 !important;
+    opacity: 0.85 !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+.site-banner-container:hover .site-banner-nav-btn,
+.site-banner-slider:hover .site-banner-nav-btn {
+    opacity: 1 !important;
+}
+.site-banner-nav-btn:hover {
+    background: rgba(15, 15, 18, 0.95) !important;
+    border-color: #c5a059 !important;
+    color: #c5a059 !important;
+    transform: translateY(-50%) scale(1.1) !important;
+}
+.site-banner-nav-btn.prev {
+    left: 1.5rem !important;
+}
+.site-banner-nav-btn.next {
+    right: 1.5rem !important;
+}
+.site-banner-dots {
+    position: absolute !important;
+    bottom: 14px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    z-index: 25 !important;
+    background: rgba(15, 15, 18, 0.5) !important;
+    padding: 6px 14px !important;
+    border-radius: 20px !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    pointer-events: auto !important;
+}
+.site-banner-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.site-banner-dot:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+}
+.site-banner-dot.active {
+    background: #c5a059 !important;
+    width: 24px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 0 10px rgba(197, 160, 89, 0.6) !important;
+}
+@media (max-width: 768px) {
+    .site-banner-nav-btn {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.15rem !important;
+        opacity: 0.75 !important;
+    }
+    .site-banner-nav-btn.prev { left: 0.5rem !important; }
+    .site-banner-nav-btn.next { right: 0.5rem !important; }
+    .site-banner-dots {
+        bottom: 8px !important;
+        padding: 4px 10px !important;
+        gap: 6px !important;
+    }
+    .site-banner-dot { width: 6px !important; height: 6px !important; }
+    .site-banner-dot.active { width: 16px !important; }
+}
+</style>
 <div class="site-banner-container" id="header-banner-container">
     <a class="site-banner-link" href="">
         <img class="site-banner-img" src="" alt="Banner" loading="eager">

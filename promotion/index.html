@@ -9,8 +9,8 @@
         content="Discover exclusive promotional rates and bespoke editorial packages by Stanislav Zhukov. High-fashion glamour, sensual portraiture, and creative cosplay photography in Germany and worldwide.">
     
     <!-- Design System & Typography -->
-    <link rel="stylesheet" href="/styles.css?v=63">
-    <link rel="stylesheet" href="promotion.css?v=2.7">
+    <link rel="stylesheet" href="/styles.css?v=69">
+    <link rel="stylesheet" href="promotion.css?v=3.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -18,7 +18,7 @@
         rel="stylesheet">
     
     <!-- Universal Modular Header & Footer Loader -->
-    <script src="/site-components.js?v=37"></script>
+    <script src="/site-components.js?v=46"></script>
 </head>
 
 <body class="editorial-body">
@@ -345,6 +345,61 @@
         </div>
     </div>
 
+    <!-- 5.5. Site Banners Manager Modal -->
+    <div class="builder-modal-backdrop" id="banner-manager-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="banner-manager-title">
+        <div class="builder-modal-card banner-manager-modal-card" style="max-width: 860px; width: 96%;">
+            <div class="builder-modal-header">
+                <div>
+                    <h3 class="builder-modal-title" id="banner-manager-title">SITE BANNERS MANAGER</h3>
+                    <p style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#777; margin:0.35rem 0 0 0; line-height: 1.45;">
+                        Configure site-wide promotional banners. Upload desktop &amp; mobile versions, choose link destinations, and run multiple sets that smoothly scroll sideways to replace one another.
+                    </p>
+                </div>
+                <button type="button" class="builder-modal-close" onclick="closeAllModals()" aria-label="Close modal">&times;</button>
+            </div>
+            
+            <!-- Quick Actions & Speed Setting -->
+            <div class="banner-manager-top-action">
+                <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+                    <span class="preset-count-badge" id="banner-sets-count-badge">0 Banner Sets</span>
+                    <div class="banner-setting-inline" style="display:flex; align-items:center; gap:0.45rem;">
+                        <label for="banner-auto-scroll-speed" style="font-size:0.72rem; color:#888; font-family:'Inter', sans-serif; font-weight:500;">
+                            Scroll Speed:
+                        </label>
+                        <select id="banner-auto-scroll-speed" class="builder-select" style="width:auto; padding:0.35rem 0.65rem; font-size:0.72rem;" onchange="onBannerAutoSpeedChange(this.value)">
+                            <option value="4000">Fast (4s)</option>
+                            <option value="6000" selected>Standard (6s)</option>
+                            <option value="8000">Slow (8s)</option>
+                            <option value="12000">Relaxed (12s)</option>
+                            <option value="0">Manual Only (No Auto)</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="builder-submit-btn" onclick="addNewBannerSet()" style="white-space:nowrap; padding: 0.55rem 1.15rem; font-size: 0.72rem;">
+                    + Add Banner Set
+                </button>
+            </div>
+
+            <!-- List of Banner Sets Container -->
+            <div id="banner-sets-list-container" class="banner-sets-list-container">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+            <!-- Modal Footer Action Row -->
+            <div class="builder-btn-row" style="margin-top: 1.75rem; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 1.25rem;">
+                <div style="font-size:0.72rem; color:#888; font-family:'Inter', sans-serif;">
+                    Changes publish instantly across all website pages and sync to Firestore.
+                </div>
+                <div style="display:flex; gap:0.65rem;">
+                    <button type="button" class="pub-btn style-outline" onclick="closeAllModals()">Cancel</button>
+                    <button type="button" class="builder-submit-btn" id="btn-save-banner-sets" onclick="saveSiteBannersFromModal()">
+                        ✓ Save &amp; Apply Banners
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 6. Move Element to Column / Row Modal -->
     <div class="builder-modal-backdrop" id="move-block-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="move-block-title">
         <div class="builder-modal-card" style="max-width: 480px;">
@@ -485,7 +540,7 @@
     </div>
 
     <!-- Promotion Page Builder Engine -->
-    <script type="module" src="promotion.js?v=2.7"></script>
+    <script type="module" src="promotion.js?v=2.9"></script>
 </body>
 
 </html>

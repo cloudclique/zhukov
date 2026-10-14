@@ -835,6 +835,17 @@ function renderPage() {
 
     let html = '';
 
+    if (isEditActive) {
+        html += `
+            <div class="promo-banner-admin-notice">
+                <span>✦ SITE PROMOTION BANNERS</span>
+                <button type="button" class="promo-quick-manage-banners-btn" onclick="openBannerManagerModal()">
+                    <span>🖼️ MANAGE SITE BANNERS</span>
+                </button>
+            </div>
+        `;
+    }
+
     pageData.forEach((row, rowIndex) => {
         html += renderRow(row, rowIndex, isEditActive);
     });
@@ -3265,6 +3276,9 @@ function setupAdminControls() {
         <button type="button" class="admin-bar-btn" onclick="openTemplatesModal()">
             <span>⚙️ Presets (${savedPresets.length})</span>
         </button>
+        <button type="button" class="admin-bar-btn btn-banners" id="btn-manage-banners" onclick="openBannerManagerModal()" title="Manage Site Banners (Desktop, Mobile, Links & Slider)">
+            <span>🖼️ Manage Banners</span>
+        </button>
         <button type="button" class="admin-bar-btn" onclick="openJsonModal()">
             <span>⇄ JSON</span>
         </button>
@@ -4501,6 +4515,15 @@ window.confirmStudioSelection = function () {
     if (!activeStudioSelectedUrl) return;
     const url = activeStudioSelectedUrl;
 
+    if (activeBannerImageTarget) {
+        updateBannerSetField(activeBannerImageTarget.id, activeBannerImageTarget.field, url);
+        renderBannerSetsList();
+        activeBannerImageTarget = null;
+        window.closeStudioGalleryModal();
+        showToast('Applied studio photo to banner ✓');
+        return;
+    }
+
     const heroUrlInput = document.getElementById('edit-block-hero-img');
     const urlInput = document.getElementById('edit-block-url');
 
@@ -4746,3 +4769,1137 @@ function showToast(message) {
         toast.style.transform = 'translateX(-50%) translateY(20px)';
     }, 2800);
 }
+
+// ==========================================================================
+// 13. Site Banners Manager (Multiple Sets, Desktop & Mobile, Sliding Carousel, Links)
+// ==========================================================================
+
+let activeBannerSets = [];
+let bannerAutoScrollSpeed = 6000;
+let activeBannerImageTarget = null;
+
+async function loadBannerSets() {
+    // 1. Try reading from localStorage for 0ms initial load
+    let loadedFromStorageOrCloud = false;
+    try {
+        const raw = localStorage.getItem('zhukov_site_banners');
+        if (raw !== null) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                activeBannerSets = parsed;
+                loadedFromStorageOrCloud = true;
+            }
+        }
+        const rawSpeed = localStorage.getItem('zhukov_site_banner_speed');
+        if (rawSpeed !== null) {
+            bannerAutoScrollSpeed = parseInt(rawSpeed, 10) || 6000;
+        }
+    } catch (_) { }
+
+    // 2. Fetch from Firestore doc(db, 'settings', 'site_banners')
+    try {
+        const snap = await getDoc(doc(db, 'settings', 'site_banners'));
+        if (snap.exists() && Array.isArray(snap.data()?.banners)) {
+            activeBannerSets = snap.data().banners;
+            loadedFromStorageOrCloud = true;
+            if (typeof snap.data()?.autoScrollInterval === 'number') {
+                bannerAutoScrollSpeed = snap.data().autoScrollInterval;
+            }
+            localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+            localStorage.setItem('zhukov_site_banner_speed', String(bannerAutoScrollSpeed));
+        }
+    } catch (err) {
+        console.warn("Could not load banners from Firestore, using local:", err);
+    }
+
+    // Default starter banner set ONLY if never initialized in storage or cloud
+    if (!loadedFromStorageOrCloud && (!activeBannerSets || activeBannerSets.length === 0)) {
+        activeBannerSets = [
+            {
+                id: 'banner_' + Date.now(),
+                title: 'Editorial Showcase Banner',
+                desktopUrl: '/_images/theme_main.jpg',
+                mobileUrl: '',
+                linkEnabled: true,
+                linkUrl: '/promotion/',
+                openInNewTab: false,
+                altText: 'Stanislav Zhukov Photography Promotion',
+                active: true,
+                createdAt: new Date().toISOString()
+            }
+        ];
+    }
+}
+
+let cachedBannerPhotoSets = null;
+
+async function loadStudioPhotoSetsForBanners() {
+    if (cachedBannerPhotoSets && cachedBannerPhotoSets.length > 0) {
+        return cachedBannerPhotoSets;
+    }
+    try {
+        const snap = await getDocs(collection(db, 'photo_sets')).catch(err => {
+            console.warn("Could not fetch photo_sets for banner target selector:", err);
+            return null;
+        });
+        const sets = [];
+        if (snap && !snap.empty) {
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                const urls = Array.isArray(d.urls) ? d.urls.filter(Boolean) : [];
+                const name = d.categoryName || d.title || docSnap.id || 'Photoshoot Set';
+                const model = d.modelName && d.modelName !== 'Unknown' && d.modelName !== 'Mixed' && d.modelName !== '/' ? d.modelName.trim() : '';
+                const date = d.date || '';
+                const cover = urls.length > 0 ? urls[urls.length - 1] : '';
+                sets.push({
+                    id: docSnap.id,
+                    name: name,
+                    model: model,
+                    date: date,
+                    photoCount: urls.length,
+                    coverUrl: cover
+                });
+            });
+        }
+        sets.sort((a, b) => (b.date || '').localeCompare(a.date || '') || a.name.localeCompare(b.name));
+        cachedBannerPhotoSets = sets;
+        return sets;
+    } catch (e) {
+        console.warn("Error loading studio photo sets for banners:", e);
+        return [];
+    }
+}
+
+function getBannerVisibilityBadge(b) {
+    if (!b.visibilityScope || b.visibilityScope === 'all') return '🌐 All Pages';
+    const p = Array.isArray(b.targetPages) ? b.targetPages : [];
+    if (p.length === 0) return '⚠️ No Pages Selected';
+    if (p.length === 5 && (!b.galleriesScope || b.galleriesScope === 'all')) return '🌐 All Pages';
+    let label = `${p.length} Page${p.length > 1 ? 's' : ''}`;
+    if (p.includes('photoshoots')) {
+        if (b.galleriesScope === 'specific') {
+            const g = Array.isArray(b.targetGalleries) ? b.targetGalleries : [];
+            label += ` (${g.length} galler${g.length === 1 ? 'y' : 'ies'})`;
+        }
+    }
+    return `🎯 ${label}`;
+}
+
+// ── Schedule & Time Window Helpers (strictly UTC+0) ──
+function parseUtcDateTime(str) {
+    if (!str || typeof str !== 'string' || !str.trim()) return null;
+    const clean = str.trim();
+    const utcStr = clean.endsWith('Z') ? clean : (clean.includes('T') ? (clean.length === 16 ? clean + ':00Z' : clean + 'Z') : clean + 'T00:00:00Z');
+    const t = Date.parse(utcStr);
+    return isNaN(t) ? null : t;
+}
+
+function getUtcFormattedNow() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+}
+
+function formatUtcDisplay(str) {
+    if (!str) return '';
+    const ms = parseUtcDateTime(str);
+    if (!ms) return str;
+    const d = new Date(ms);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+}
+
+function getNowUtcInputString(offsetMinutes = 0) {
+    const d = new Date(Date.now() + offsetMinutes * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
+function getTomorrowZeroUtcInputString() {
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T00:00`;
+}
+
+function getEndOfMonthUtcInputString() {
+    const d = new Date();
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth();
+    const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 0));
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${lastDay.getUTCFullYear()}-${pad(lastDay.getUTCMonth() + 1)}-${pad(lastDay.getUTCDate())}T23:59`;
+}
+
+function getBannerScheduleStatus(b) {
+    if (!b || !b.scheduleEnabled) {
+        return {
+            status: 'always',
+            badgeHtml: '● Always Visible',
+            badgeClass: 'is-always',
+            summaryText: 'Active continuously without time cutoff'
+        };
+    }
+
+    const nowMs = Date.now();
+    const startMs = parseUtcDateTime(b.scheduleStart);
+    const endMs = parseUtcDateTime(b.scheduleEnd);
+
+    if (startMs !== null && nowMs < startMs) {
+        const diffHours = Math.round((startMs - nowMs) / (1000 * 60 * 60));
+        const timeText = diffHours < 48 ? `in ${diffHours}h` : `in ${Math.round(diffHours / 24)}d`;
+        return {
+            status: 'upcoming',
+            badgeHtml: `⏳ Upcoming (${timeText})`,
+            badgeClass: 'is-upcoming',
+            summaryText: `Starts on ${formatUtcDisplay(b.scheduleStart)}`
+        };
+    }
+
+    if (endMs !== null && nowMs > endMs) {
+        return {
+            status: 'expired',
+            badgeHtml: '⛔ Expired',
+            badgeClass: 'is-expired',
+            summaryText: `Expired on ${formatUtcDisplay(b.scheduleEnd)} (Hidden from site)`
+        };
+    }
+
+    if (endMs !== null) {
+        const remainingHours = Math.round((endMs - nowMs) / (1000 * 60 * 60));
+        const timeText = remainingHours < 48 ? `${remainingHours}h remaining` : `${Math.round(remainingHours / 24)}d remaining`;
+        return {
+            status: 'active',
+            badgeHtml: `🟢 Active (${timeText})`,
+            badgeClass: 'is-active-window',
+            summaryText: `Runs until ${formatUtcDisplay(b.scheduleEnd)}`
+        };
+    }
+
+    return {
+        status: 'active',
+        badgeHtml: '🟢 Active (Open-Ended)',
+        badgeClass: 'is-active-window',
+        summaryText: b.scheduleStart ? `Started on ${formatUtcDisplay(b.scheduleStart)} (Runs indefinitely)` : 'Active now'
+    };
+}
+
+
+function renderPhotoSetsGridHtml(banner) {
+    if (!cachedBannerPhotoSets || cachedBannerPhotoSets.length === 0) {
+        return `
+            <div style="grid-column: 1/-1; text-align:center; padding:1.2rem; color:#888; font-size:0.72rem;">
+                No photoshoot galleries found in database.
+            </div>
+        `;
+    }
+    const targetGalleries = Array.isArray(banner.targetGalleries) ? banner.targetGalleries : [];
+
+    return cachedBannerPhotoSets.map(s => {
+        const isChecked = targetGalleries.includes(s.id);
+        const searchText = `${s.name} ${s.model || ''}`.trim();
+        return `
+            <label class="banner-gallery-checkbox-card ${isChecked ? 'is-checked' : ''}" data-banner-id="${banner.id}" data-gallery-id="${escapeHtml(s.id)}" data-search-text="${escapeHtml(searchText)}" title="${escapeHtml(s.name)} (${s.photoCount} photos)">
+                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleBannerTargetGallery('${banner.id}', '${s.id}', this.checked)">
+                ${s.coverUrl ? `<img class="gallery-card-thumb" src="${escapeHtml(s.coverUrl)}" alt="Cover" loading="lazy">` : `<div class="gallery-card-icon">📷</div>`}
+                <div class="gallery-card-info">
+                    <span class="gallery-card-name">${escapeHtml(s.name)}</span>
+                    <span class="gallery-card-sub">${escapeHtml(s.model ? `${s.model} • ` : '')}${s.photoCount} Photos</span>
+                </div>
+            </label>
+        `;
+    }).join('');
+}
+
+window.openBannerManagerModal = async function () {
+    const templatesModal = document.getElementById('templates-modal');
+    if (templatesModal) templatesModal.classList.remove('is-open');
+
+    await Promise.all([loadBannerSets(), loadStudioPhotoSetsForBanners()]);
+    renderBannerSetsList();
+
+    const speedSelect = document.getElementById('banner-auto-scroll-speed');
+    if (speedSelect) {
+        speedSelect.value = String(bannerAutoScrollSpeed);
+    }
+
+    const modal = document.getElementById('banner-manager-modal');
+    if (modal) {
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+};
+
+window.renderBannerSetsList = function () {
+    const container = document.getElementById('banner-sets-list-container');
+    const countBadge = document.getElementById('banner-sets-count-badge');
+    if (!container) return;
+
+    if (countBadge) {
+        countBadge.textContent = `${activeBannerSets.length} Banner Set${activeBannerSets.length === 1 ? '' : 's'}`;
+    }
+
+    if (activeBannerSets.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding:2rem 1rem; color:#888; font-size:0.8rem;">
+                No banner sets configured yet. Click "+ Add Banner Set" to upload your first desktop &amp; mobile site banner.
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    activeBannerSets.forEach((b, idx) => {
+        const isActive = b.active !== false;
+
+        // Ensure defaults for page targeting
+        if (!b.visibilityScope) b.visibilityScope = 'all';
+        if (!Array.isArray(b.targetPages) || b.targetPages.length === 0) {
+            b.targetPages = ['home', 'promotion', 'photoshoots', 'about', 'contact'];
+        }
+        if (!b.galleriesScope) b.galleriesScope = 'all';
+        if (!Array.isArray(b.targetGalleries)) {
+            b.targetGalleries = ['main_catalog'];
+        }
+
+        // Schedule defaults
+        if (typeof b.scheduleEnabled !== 'boolean') b.scheduleEnabled = false;
+        if (typeof b.scheduleStart !== 'string') b.scheduleStart = '';
+        if (typeof b.scheduleEnd !== 'string') b.scheduleEnd = '';
+        const scheduleStatus = getBannerScheduleStatus(b);
+        const currentUtcFormatted = getUtcFormattedNow();
+
+        const isSpecific = b.visibilityScope === 'specific';
+        const hasPhotoshootsChecked = b.targetPages.includes('photoshoots');
+        const isWhichGalleries = b.galleriesScope === 'specific';
+        const selectedGalleriesCount = b.targetGalleries.length;
+        const totalGalleriesAvailable = (cachedBannerPhotoSets || []).length + 1; // +1 for main_catalog
+
+        html += `
+            <div class="banner-set-card ${!isActive ? 'is-inactive' : ''}" data-banner-id="${escapeHtml(b.id)}">
+                <!-- Header: Set number, title, active toggle, reorder, delete -->
+                <div class="banner-set-header">
+                    <div class="banner-set-title-group">
+                        <span class="banner-set-badge">SET #${idx + 1}</span>
+                        ${b.scheduleEnabled ? `<span class="banner-schedule-status-badge ${scheduleStatus.badgeClass}" style="margin-left:0.35rem; font-size:0.6rem; padding:0.15rem 0.45rem;">${scheduleStatus.badgeHtml}</span>` : ''}
+                        <input type="text" class="banner-set-title-input" value="${escapeHtml(b.title || `Promotion Banner Set ${idx + 1}`)}" placeholder="Banner Set Title..." oninput="updateBannerSetField('${b.id}', 'title', this.value)" title="Click to rename banner set">
+                    </div>
+                    <div class="banner-set-header-actions">
+                        <button type="button" class="banner-btn-icon ${isActive ? 'is-active-toggle' : 'is-inactive-toggle'}" onclick="toggleBannerSetActive('${b.id}')" title="Toggle active status on site">
+                            ${isActive ? '● Active' : '○ Paused'}
+                        </button>
+                        ${idx > 0 ? `<button type="button" class="banner-btn-icon" onclick="moveBannerSet('${b.id}', -1)" title="Move up in slide sequence">▲ Up</button>` : ''}
+                        ${idx < activeBannerSets.length - 1 ? `<button type="button" class="banner-btn-icon" onclick="moveBannerSet('${b.id}', 1)" title="Move down in slide sequence">▼ Down</button>` : ''}
+                        <div class="banner-delete-action-wrap" id="delete-action-wrap-${escapeHtml(b.id)}">
+                            <button type="button" class="banner-btn-icon btn-delete-set" onclick="requestDeleteBannerSet('${escapeHtml(b.id)}', event)" title="Delete this entire banner set">
+                                🗑️ Delete Set
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-Column: Desktop Banner & Mobile Banner -->
+                <div class="banner-images-grid">
+                    <!-- Column 1: Desktop Banner -->
+                    <div class="banner-image-col">
+                        <div class="banner-image-col-header">
+                            <span class="banner-image-col-title">🖥️ Desktop Banner (Widescreen)</span>
+                            <span style="font-size:0.65rem; color:#888;">> 768px</span>
+                        </div>
+                        <div class="banner-preview-box" id="preview-desktop-${b.id}">
+                            ${b.desktopUrl ? `
+                                <img src="${escapeHtml(b.desktopUrl)}" alt="Desktop Banner Preview" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'banner-preview-empty\\'>⚠️ Image failed to load</div>';">
+                            ` : `
+                                <div class="banner-preview-empty">
+                                    No Desktop Image Uploaded<br>
+                                    <span style="font-size:0.64rem; color:#aaa;">Recommend: 1920×400 - 2560×500 px</span>
+                                </div>
+                            `}
+                        </div>
+                        <div class="banner-img-actions-row">
+                            <label class="pub-btn style-solid" style="cursor:pointer;" title="Upload local image from computer">
+                                <span>📤 Upload Local</span>
+                                <input type="file" accept="image/*" style="display:none;" onchange="handleBannerFileUpload('${b.id}', 'desktopUrl', event)">
+                            </label>
+                            <button type="button" class="pub-btn style-outline" onclick="openStudioForBanner('${b.id}', 'desktopUrl')" title="Select from studio archive library">
+                                <span>🖼️ Studio Library</span>
+                            </button>
+                            ${b.desktopUrl ? `
+                                <button type="button" class="pub-btn style-outline" style="color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="clearBannerImage('${b.id}', 'desktopUrl')" title="Remove this image">
+                                    <span>✕ Clear</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="banner-url-input-wrap">
+                            <input type="text" class="builder-input" value="${escapeHtml(b.desktopUrl || '')}" placeholder="Paste image URL (https://... or /_images/...)" oninput="updateBannerSetField('${b.id}', 'desktopUrl', this.value); refreshBannerPreview('${b.id}', 'desktopUrl', this.value);" style="font-size:0.72rem; padding:0.35rem 0.6rem;">
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Mobile Banner -->
+                    <div class="banner-image-col">
+                        <div class="banner-image-col-header">
+                            <span class="banner-image-col-title">📱 Mobile Banner (Phone)</span>
+                            <span style="font-size:0.65rem; color:#888;">≤ 768px</span>
+                        </div>
+                        <div class="banner-preview-box" id="preview-mobile-${b.id}">
+                            ${b.mobileUrl ? `
+                                <img src="${escapeHtml(b.mobileUrl)}" alt="Mobile Banner Preview" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'banner-preview-empty\\'>⚠️ Image failed to load</div>';">
+                            ` : `
+                                <div class="banner-preview-empty">
+                                    No Mobile Image<br>
+                                    <span style="font-size:0.64rem; color:#aaa;">(Optional — Desktop banner displays as fallback)</span>
+                                </div>
+                            `}
+                        </div>
+                        <div class="banner-img-actions-row">
+                            <label class="pub-btn style-solid" style="cursor:pointer;" title="Upload mobile-optimized image">
+                                <span>📤 Upload Local</span>
+                                <input type="file" accept="image/*" style="display:none;" onchange="handleBannerFileUpload('${b.id}', 'mobileUrl', event)">
+                            </label>
+                            <button type="button" class="pub-btn style-outline" onclick="openStudioForBanner('${b.id}', 'mobileUrl')" title="Select from studio archive library">
+                                <span>🖼️ Studio Library</span>
+                            </button>
+                            ${b.mobileUrl ? `
+                                <button type="button" class="pub-btn style-outline" style="color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="clearBannerImage('${b.id}', 'mobileUrl')" title="Remove mobile image">
+                                    <span>✕ Clear</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="banner-url-input-wrap">
+                            <input type="text" class="builder-input" value="${escapeHtml(b.mobileUrl || '')}" placeholder="Paste mobile image URL (optional)" oninput="updateBannerSetField('${b.id}', 'mobileUrl', this.value); refreshBannerPreview('${b.id}', 'mobileUrl', this.value);" style="font-size:0.72rem; padding:0.35rem 0.6rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Destination Box -->
+                <div class="banner-link-settings-box">
+                    <label class="banner-link-toggle-label">
+                        <input type="checkbox" ${b.linkEnabled ? 'checked' : ''} onchange="updateBannerSetField('${b.id}', 'linkEnabled', this.checked); renderBannerSetsList();">
+                        <span>🔗 Make this banner clickable (link to destination page)</span>
+                    </label>
+
+                    ${b.linkEnabled ? `
+                        <div class="banner-link-details">
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <input type="text" class="builder-input" value="${escapeHtml(b.linkUrl || '')}" placeholder="Destination URL (e.g. /promotion/ or /photoshoots/ or https://...)" oninput="updateBannerSetField('${b.id}', 'linkUrl', this.value)" style="font-size:0.76rem; padding:0.4rem 0.65rem;">
+                                <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.7rem; color:#666; white-space:nowrap; cursor:pointer;" title="Open in new browser tab">
+                                    <input type="checkbox" ${b.openInNewTab ? 'checked' : ''} onchange="updateBannerSetField('${b.id}', 'openInNewTab', this.checked)">
+                                    <span>New Tab</span>
+                                </label>
+                            </div>
+                            <div class="banner-link-quick-presets">
+                                <span style="font-size:0.65rem; color:#888; align-self:center;">Quick links:</span>
+                                <button type="button" class="banner-link-preset-chip" onclick="applyBannerLinkPreset('${b.id}', '/promotion/')">/promotion/</button>
+                                <button type="button" class="banner-link-preset-chip" onclick="applyBannerLinkPreset('${b.id}', '/photoshoots/')">/photoshoots/</button>
+                                <button type="button" class="banner-link-preset-chip" onclick="applyBannerLinkPreset('${b.id}', '/contact/')">/contact/</button>
+                                <button type="button" class="banner-link-preset-chip" onclick="applyBannerLinkPreset('${b.id}', '/about/')">/about/</button>
+                                <button type="button" class="banner-link-preset-chip" onclick="applyBannerLinkPreset('${b.id}', '/mood-dash/')">/mood-dash/</button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="font-size:0.7rem; color:#888; margin-top:0.35rem; font-family:'Inter', sans-serif;">
+                            This banner is display-only. Visitors clicking it will not be redirected.
+                        </div>
+                    `}
+                </div>
+
+                <!-- Page Visibility & Targeting Settings -->
+                <div class="banner-visibility-settings-box">
+                    <div class="banner-visibility-header">
+                        <span class="banner-visibility-title">👁️ Page Visibility &amp; Targeting</span>
+                        <span class="banner-visibility-badge">${getBannerVisibilityBadge(b)}</span>
+                    </div>
+
+                    <!-- Scope Toggle: All Pages vs Specific Pages -->
+                    <div class="banner-scope-toggle-row">
+                        <label class="banner-scope-radio-label ${!isSpecific ? 'is-selected' : ''}">
+                            <input type="radio" name="visibilityScope_${b.id}" value="all" ${!isSpecific ? 'checked' : ''} onchange="setBannerVisibilityScope('${b.id}', 'all')">
+                            <span>🌐 All Pages</span>
+                        </label>
+                        <label class="banner-scope-radio-label ${isSpecific ? 'is-selected' : ''}">
+                            <input type="radio" name="visibilityScope_${b.id}" value="specific" ${isSpecific ? 'checked' : ''} onchange="setBannerVisibilityScope('${b.id}', 'specific')">
+                            <span>🎯 Choose Specific Pages</span>
+                        </label>
+                    </div>
+
+                    ${isSpecific ? `
+                        <div class="banner-pages-checklist-wrap">
+                            <div class="banner-pages-checklist-title">Select which pages this promotion banner will appear on:</div>
+                            <div class="banner-pages-checklist">
+                                <label class="banner-page-check-item ${b.targetPages.includes('home') ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${b.targetPages.includes('home') ? 'checked' : ''} onchange="toggleBannerTargetPage('${b.id}', 'home', this.checked)">
+                                    <span class="page-name">🏠 Home Page</span>
+                                    <span class="page-url">/</span>
+                                </label>
+                                <label class="banner-page-check-item ${b.targetPages.includes('promotion') ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${b.targetPages.includes('promotion') ? 'checked' : ''} onchange="toggleBannerTargetPage('${b.id}', 'promotion', this.checked)">
+                                    <span class="page-name">✦ Promotions Page</span>
+                                    <span class="page-url">/promotion/</span>
+                                </label>
+                                <label class="banner-page-check-item ${b.targetPages.includes('photoshoots') ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${b.targetPages.includes('photoshoots') ? 'checked' : ''} onchange="toggleBannerTargetPage('${b.id}', 'photoshoots', this.checked)">
+                                    <span class="page-name">📷 Galleries &amp; Photoshoots</span>
+                                    <span class="page-url">/photoshoots/</span>
+                                </label>
+                                <label class="banner-page-check-item ${b.targetPages.includes('about') ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${b.targetPages.includes('about') ? 'checked' : ''} onchange="toggleBannerTargetPage('${b.id}', 'about', this.checked)">
+                                    <span class="page-name">👤 About Me</span>
+                                    <span class="page-url">/about/</span>
+                                </label>
+                                <label class="banner-page-check-item ${b.targetPages.includes('contact') ? 'is-checked' : ''}">
+                                    <input type="checkbox" ${b.targetPages.includes('contact') ? 'checked' : ''} onchange="toggleBannerTargetPage('${b.id}', 'contact', this.checked)">
+                                    <span class="page-name">✉️ Contact &amp; Booking</span>
+                                    <span class="page-url">/contact/</span>
+                                </label>
+                            </div>
+
+                            ${hasPhotoshootsChecked ? `
+                                <!-- Galleries Sub-Selector (All Galleries vs Which Galleries) -->
+                                <div class="banner-galleries-subselector">
+                                    <div class="banner-galleries-subselector-header">
+                                        <span class="subselector-title">GALLERY DISPLAY SCOPE:</span>
+                                        <div class="banner-galleries-scope-radios">
+                                            <label class="galleries-scope-radio ${!isWhichGalleries ? 'is-active' : ''}">
+                                                <input type="radio" name="galleriesScope_${b.id}" value="all" ${!isWhichGalleries ? 'checked' : ''} onchange="setBannerGalleriesScope('${b.id}', 'all')">
+                                                <span>All Galleries</span>
+                                            </label>
+                                            <label class="galleries-scope-radio ${isWhichGalleries ? 'is-active' : ''}">
+                                                <input type="radio" name="galleriesScope_${b.id}" value="specific" ${isWhichGalleries ? 'checked' : ''} onchange="setBannerGalleriesScope('${b.id}', 'specific')">
+                                                <span>Choose Which Galleries</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    ${isWhichGalleries ? `
+                                        <div class="banner-specific-galleries-panel">
+                                            <!-- Quick Actions & Search Bar -->
+                                            <div class="banner-galleries-toolbar">
+                                                <div class="galleries-toolbar-left">
+                                                    <button type="button" class="galleries-tool-btn" onclick="selectAllGalleriesForBanner('${b.id}')">✓ Select All</button>
+                                                    <button type="button" class="galleries-tool-btn" onclick="clearAllGalleriesForBanner('${b.id}')">✕ Clear All</button>
+                                                    <span class="galleries-selected-count" id="galleries-count-${b.id}">${selectedGalleriesCount} of ${totalGalleriesAvailable} selected</span>
+                                                </div>
+                                                <div class="galleries-toolbar-right">
+                                                    <input type="text" class="galleries-search-input" placeholder="🔍 Search galleries or models..." oninput="filterGalleriesGrid('${b.id}', this.value)">
+                                                </div>
+                                            </div>
+
+                                            <!-- Main Catalog Checkbox -->
+                                            <div class="banner-main-catalog-check">
+                                                <label class="banner-gallery-checkbox-card is-main-catalog ${b.targetGalleries.includes('main_catalog') ? 'is-checked' : ''}" data-banner-id="${b.id}" data-gallery-id="main_catalog" data-search-text="main photoshoots catalog overview" title="Main Photoshoots Overview Catalog (/photoshoots/)">
+                                                    <input type="checkbox" ${b.targetGalleries.includes('main_catalog') ? 'checked' : ''} onchange="toggleBannerTargetGallery('${b.id}', 'main_catalog', this.checked)">
+                                                    <div class="gallery-card-icon">📂</div>
+                                                    <div class="gallery-card-info">
+                                                        <span class="gallery-card-name">Main Photoshoots Overview Catalog</span>
+                                                        <span class="gallery-card-sub">/photoshoots/ (Main Grid &amp; Category View)</span>
+                                                    </div>
+                                                </label>
+                                            </div>
+
+                                            <!-- Dynamic Grid of Photoshoot Sets -->
+                                            <div class="banner-photo-sets-grid" id="banner-photo-sets-grid-${b.id}">
+                                                ${renderPhotoSetsGridHtml(b)}
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <div class="banner-galleries-all-notice">
+                                            ✓ Visible on main photoshoots catalog and every photoshoot gallery.
+                                        </div>
+                                    `}
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Schedule & Time Window Settings (UTC+0) -->
+                <div class="banner-schedule-settings-box">
+                    <div class="banner-schedule-header">
+                        <div class="banner-schedule-header-left">
+                            <span class="banner-schedule-title">📅 Time Period &amp; Scheduling</span>
+                            <span class="banner-utc-pill" title="Time reference is strictly +0 UTC">UTC+0</span>
+                        </div>
+                        <div class="banner-schedule-status-badge ${scheduleStatus.badgeClass}">
+                            ${scheduleStatus.badgeHtml}
+                        </div>
+                    </div>
+
+                    <!-- Mode Selection: Always Visible vs Scheduled Window -->
+                    <div class="banner-scope-toggle-row">
+                        <label class="banner-scope-radio-label ${!b.scheduleEnabled ? 'is-selected' : ''}">
+                            <input type="radio" name="scheduleEnabled_${b.id}" value="always" ${!b.scheduleEnabled ? 'checked' : ''} onchange="setBannerScheduleMode('${b.id}', false)">
+                            <span>♾️ Always Visible (No Expiration)</span>
+                        </label>
+                        <label class="banner-scope-radio-label ${b.scheduleEnabled ? 'is-selected' : ''}">
+                            <input type="radio" name="scheduleEnabled_${b.id}" value="scheduled" ${b.scheduleEnabled ? 'checked' : ''} onchange="setBannerScheduleMode('${b.id}', true)">
+                            <span>⏱️ Specific Time Window (UTC)</span>
+                        </label>
+                    </div>
+
+                    ${b.scheduleEnabled ? `
+                        <div class="banner-schedule-fields-wrap">
+                            <div class="banner-schedule-info-row">
+                                <span class="banner-clock-indicator">🕒 Current UTC: <strong>${currentUtcFormatted}</strong></span>
+                                <span class="banner-schedule-helper-text">${scheduleStatus.summaryText}</span>
+                            </div>
+
+                            <div class="banner-schedule-inputs-grid">
+                                <!-- Start Date & Time (UTC) -->
+                                <div class="banner-schedule-field-col">
+                                    <div class="banner-schedule-field-label">
+                                        <span>▶ Start Date &amp; Time (UTC)</span>
+                                        ${b.scheduleStart ? `<button type="button" class="banner-time-clear-btn" onclick="applyBannerSchedulePreset('${b.id}', 'clearStart')">Clear</button>` : ''}
+                                    </div>
+                                    <input type="datetime-local" class="builder-input banner-time-input" value="${escapeHtml(b.scheduleStart || '')}" onchange="updateBannerScheduleField('${b.id}', 'scheduleStart', this.value)">
+                                    <div class="banner-schedule-presets-row">
+                                        <span class="banner-preset-hint">Set to:</span>
+                                        <button type="button" class="banner-link-preset-chip" onclick="applyBannerSchedulePreset('${b.id}', 'startNow')">Now</button>
+                                        <button type="button" class="banner-link-preset-chip" onclick="applyBannerSchedulePreset('${b.id}', 'startTomorrow')">Tomorrow 00:00</button>
+                                    </div>
+                                </div>
+
+                                <!-- End Date & Time (UTC) -->
+                                <div class="banner-schedule-field-col">
+                                    <div class="banner-schedule-field-label">
+                                        <span>⏹ End Date &amp; Time (UTC)</span>
+                                        ${b.scheduleEnd ? `<button type="button" class="banner-time-clear-btn" onclick="applyBannerSchedulePreset('${b.id}', 'clearEnd')">Clear</button>` : ''}
+                                    </div>
+                                    <input type="datetime-local" class="builder-input banner-time-input" value="${escapeHtml(b.scheduleEnd || '')}" onchange="updateBannerScheduleField('${b.id}', 'scheduleEnd', this.value)">
+                                    <div class="banner-schedule-presets-row">
+                                        <span class="banner-preset-hint">Quick end:</span>
+                                        <button type="button" class="banner-link-preset-chip" onclick="applyBannerSchedulePreset('${b.id}', 'plus24h')">+24 Hours</button>
+                                        <button type="button" class="banner-link-preset-chip" onclick="applyBannerSchedulePreset('${b.id}', 'plus7d')">+7 Days</button>
+                                        <button type="button" class="banner-link-preset-chip" onclick="applyBannerSchedulePreset('${b.id}', 'endOfMonth')">End of Month</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="banner-schedule-note">
+                                💡 Leave <strong>Start</strong> empty to begin immediately. Leave <strong>End</strong> empty to run indefinitely until paused or removed. All timestamps reference universal <strong>+0 UTC</strong>.
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="font-size:0.7rem; color:#888; margin-top:0.35rem; font-family:'Inter', sans-serif;">
+                            This banner is set to display continuously while active with no scheduled start or expiration cutoff.
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+};
+
+window.addNewBannerSet = function () {
+    const newSet = {
+        id: 'banner_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        title: `Promotion Banner Set ${activeBannerSets.length + 1}`,
+        desktopUrl: '',
+        mobileUrl: '',
+        linkEnabled: true,
+        linkUrl: '/promotion/',
+        openInNewTab: false,
+        altText: 'Promotional Banner',
+        active: true,
+        visibilityScope: 'all',
+        targetPages: ['home', 'promotion', 'photoshoots', 'about', 'contact'],
+        galleriesScope: 'all',
+        targetGalleries: ['main_catalog'],
+        scheduleEnabled: false,
+        scheduleStart: '',
+        scheduleEnd: '',
+        createdAt: new Date().toISOString()
+    };
+    activeBannerSets.push(newSet);
+    renderBannerSetsList();
+
+    // Scroll to bottom of list
+    const container = document.getElementById('banner-sets-list-container');
+    if (container) {
+        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+    }
+    showToast('+ Added new banner set');
+};
+
+window.requestDeleteBannerSet = function (id, event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    const wrap = document.getElementById(`delete-action-wrap-${id}`);
+    if (!wrap) {
+        executeDeleteBannerSet(id, event);
+        return;
+    }
+
+    wrap.innerHTML = `
+        <div style="display:inline-flex; align-items:center; gap:0.35rem;">
+            <button type="button" class="banner-btn-icon btn-confirm-delete" onclick="executeDeleteBannerSet('${id}', event)" title="Confirm and permanently delete">
+                ⚠️ Confirm Delete?
+            </button>
+            <button type="button" class="banner-btn-icon btn-cancel-delete" onclick="cancelDeleteBannerSet('${id}', event)" title="Cancel">
+                ✕
+            </button>
+        </div>
+    `;
+
+    if (wrap._deleteTimeout) clearTimeout(wrap._deleteTimeout);
+    wrap._deleteTimeout = setTimeout(() => {
+        cancelDeleteBannerSet(id);
+    }, 6000);
+};
+
+window.cancelDeleteBannerSet = function (id, event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    const wrap = document.getElementById(`delete-action-wrap-${id}`);
+    if (!wrap) return;
+    if (wrap._deleteTimeout) clearTimeout(wrap._deleteTimeout);
+    wrap.innerHTML = `
+        <button type="button" class="banner-btn-icon btn-delete-set" onclick="requestDeleteBannerSet('${id}', event)" title="Delete this entire banner set">
+            🗑️ Delete Set
+        </button>
+    `;
+};
+
+window.executeDeleteBannerSet = async function (id, event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    const idx = activeBannerSets.findIndex(b => b.id === id);
+    if (idx === -1) return;
+
+    const removed = activeBannerSets[idx];
+    const title = removed.title || `Banner Set #${idx + 1}`;
+
+    // 1. Remove from in-memory active sets
+    activeBannerSets.splice(idx, 1);
+
+    // 2. Persist immediately to localStorage
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+        localStorage.setItem('zhukov_site_banner_speed', String(bannerAutoScrollSpeed));
+    } catch (_) { }
+
+    // 3. Immediately update live carousel across current page
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    } else if (window.updateSiteBannerSlots) {
+        window.updateSiteBannerSlots();
+    }
+
+    // 4. Re-render list in modal
+    renderBannerSetsList();
+
+    // 5. Cloud sync to Firestore in background
+    try {
+        setDoc(doc(db, 'settings', 'site_banners'), {
+            banners: activeBannerSets,
+            bannersJson: JSON.stringify(activeBannerSets),
+            autoScrollInterval: bannerAutoScrollSpeed,
+            updatedAt: new Date().toISOString(),
+            updatedBy: auth.currentUser?.email || (checkIsAdmin() ? 'admin' : 'unknown')
+        }, { merge: true }).catch(err => {
+            console.warn("Could not sync deletion to Firestore in background:", err);
+        });
+    } catch (_) { }
+
+    showToast(`🗑️ Deleted "${title}"`);
+};
+
+window.deleteBannerSet = function (id) {
+    executeDeleteBannerSet(id);
+};
+
+window.moveBannerSet = function (id, direction) {
+    const idx = activeBannerSets.findIndex(b => b.id === id);
+    if (idx === -1) return;
+
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= activeBannerSets.length) return;
+
+    const item = activeBannerSets.splice(idx, 1)[0];
+    activeBannerSets.splice(targetIdx, 0, item);
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
+
+    renderBannerSetsList();
+};
+
+window.toggleBannerSetActive = function (id) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+
+    b.active = b.active === false ? true : false;
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
+
+    renderBannerSetsList();
+    showToast(b.active ? 'Banner set enabled' : 'Banner set paused');
+};
+
+window.updateBannerSetField = function (id, field, value) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+
+    b[field] = value;
+};
+
+window.applyBannerLinkPreset = function (id, url) {
+    updateBannerSetField(id, 'linkUrl', url);
+    renderBannerSetsList();
+};
+
+window.setBannerVisibilityScope = function (id, scope) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    b.visibilityScope = scope;
+    if (scope === 'specific' && (!Array.isArray(b.targetPages) || b.targetPages.length === 0)) {
+        b.targetPages = ['home', 'promotion', 'photoshoots', 'about', 'contact'];
+    }
+    renderBannerSetsList();
+};
+
+window.toggleBannerTargetPage = function (id, pageKey, isChecked) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    if (!Array.isArray(b.targetPages)) b.targetPages = [];
+    if (isChecked) {
+        if (!b.targetPages.includes(pageKey)) b.targetPages.push(pageKey);
+    } else {
+        b.targetPages = b.targetPages.filter(p => p !== pageKey);
+    }
+    renderBannerSetsList();
+};
+
+window.setBannerGalleriesScope = function (id, scope) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    b.galleriesScope = scope;
+    if (scope === 'specific' && (!Array.isArray(b.targetGalleries) || b.targetGalleries.length === 0)) {
+        b.targetGalleries = ['main_catalog'];
+    }
+    renderBannerSetsList();
+};
+
+window.toggleBannerTargetGallery = function (id, galleryId, isChecked) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    if (!Array.isArray(b.targetGalleries)) b.targetGalleries = [];
+    if (isChecked) {
+        if (!b.targetGalleries.includes(galleryId)) b.targetGalleries.push(galleryId);
+    } else {
+        b.targetGalleries = b.targetGalleries.filter(g => g !== galleryId);
+    }
+
+    // Direct DOM update for snappy responsiveness
+    const card = document.querySelector(`.banner-gallery-checkbox-card[data-banner-id="${id}"][data-gallery-id="${galleryId}"]`);
+    if (card) {
+        card.classList.toggle('is-checked', isChecked);
+        const input = card.querySelector('input[type="checkbox"]');
+        if (input) input.checked = isChecked;
+    }
+    const countEl = document.getElementById(`galleries-count-${id}`);
+    if (countEl) {
+        const total = (cachedBannerPhotoSets || []).length + 1;
+        countEl.textContent = `${b.targetGalleries.length} of ${total} selected`;
+    }
+};
+
+window.selectAllGalleriesForBanner = function (id) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    const all = ['main_catalog'];
+    if (Array.isArray(cachedBannerPhotoSets)) {
+        cachedBannerPhotoSets.forEach(s => all.push(s.id));
+    }
+    b.targetGalleries = all;
+    renderBannerSetsList();
+};
+
+window.clearAllGalleriesForBanner = function (id) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+    b.targetGalleries = [];
+    renderBannerSetsList();
+};
+
+window.setBannerScheduleMode = function (id, isScheduled) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+
+    b.scheduleEnabled = isScheduled;
+    if (isScheduled && !b.scheduleStart) {
+        b.scheduleStart = getNowUtcInputString(0);
+    }
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
+    renderBannerSetsList();
+    showToast(isScheduled ? 'Enabled scheduled window (UTC+0)' : 'Set to always visible');
+};
+
+window.updateBannerScheduleField = function (id, field, value) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+
+    b[field] = (value || '').trim();
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
+    renderBannerSetsList();
+};
+
+window.applyBannerSchedulePreset = function (id, preset) {
+    const b = activeBannerSets.find(item => item.id === id);
+    if (!b) return;
+
+    if (preset === 'startNow') {
+        b.scheduleStart = getNowUtcInputString(0);
+    } else if (preset === 'startTomorrow') {
+        b.scheduleStart = getTomorrowZeroUtcInputString();
+    } else if (preset === 'clearStart') {
+        b.scheduleStart = '';
+    } else if (preset === 'plus24h') {
+        b.scheduleEnd = getNowUtcInputString(24 * 60);
+    } else if (preset === 'plus7d') {
+        b.scheduleEnd = getNowUtcInputString(7 * 24 * 60);
+    } else if (preset === 'endOfMonth') {
+        b.scheduleEnd = getEndOfMonthUtcInputString();
+    } else if (preset === 'clearEnd') {
+        b.scheduleEnd = '';
+    }
+
+    try {
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+    } catch (_) { }
+    if (window.updateSiteBanners) {
+        window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+    }
+    renderBannerSetsList();
+    showToast('Updated schedule preset');
+};
+
+window.filterGalleriesGrid = function (id, query) {
+    const grid = document.getElementById(`banner-photo-sets-grid-${id}`);
+    if (!grid) return;
+    const q = (query || '').toLowerCase().trim();
+    grid.querySelectorAll('.banner-gallery-checkbox-card').forEach(card => {
+        const text = (card.getAttribute('data-search-text') || '').toLowerCase();
+        card.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+    });
+};
+
+window.refreshBannerPreview = function (id, field, url) {
+    const boxId = field === 'desktopUrl' ? `preview-desktop-${id}` : `preview-mobile-${id}`;
+    const box = document.getElementById(boxId);
+    if (!box) return;
+
+    if (url && url.trim()) {
+        box.innerHTML = `<img src="${escapeHtml(url.trim())}" alt="Banner Preview" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'banner-preview-empty\\'>⚠️ Image failed to load</div>';">`;
+    } else {
+        box.innerHTML = field === 'desktopUrl'
+            ? `<div class="banner-preview-empty">No Desktop Image Uploaded<br><span style="font-size:0.64rem; color:#aaa;">Recommend: 1920×400 - 2560×500 px</span></div>`
+            : `<div class="banner-preview-empty">No Mobile Image<br><span style="font-size:0.64rem; color:#aaa;">(Optional — Desktop banner displays as fallback)</span></div>`;
+    }
+};
+
+window.clearBannerImage = function (id, field) {
+    updateBannerSetField(id, field, '');
+    renderBannerSetsList();
+    showToast(`Cleared ${field === 'desktopUrl' ? 'desktop' : 'mobile'} image`);
+};
+
+window.openStudioForBanner = function (id, field) {
+    activeBannerImageTarget = { id, field };
+    window.openStudioGalleryModal();
+};
+
+// Save uploaded banner image into an archived photo set called PROMO_BANNERS in Firestore
+async function saveBannerToArchivedPromoSet(imageUrl) {
+    if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.startsWith('http')) return;
+
+    try {
+        let targetDocRef = null;
+        let existingUrls = [];
+        let existingData = {};
+
+        // 1. Check if a set named PROMO_BANNERS already exists in photo_sets
+        const allSetsSnap = await getDocs(collection(db, 'photo_sets')).catch(err => {
+            console.warn("Could not query photo_sets for PROMO_BANNERS:", err);
+            return null;
+        });
+
+        if (allSetsSnap && !allSetsSnap.empty) {
+            for (const s of allSetsSnap.docs) {
+                const d = s.data() || {};
+                const cName = (d.categoryName || d.title || '').trim().toUpperCase();
+                if (cName === 'PROMO_BANNERS' || s.id.toUpperCase() === 'PROMO_BANNERS') {
+                    targetDocRef = doc(db, 'photo_sets', s.id);
+                    existingUrls = Array.isArray(d.urls) ? [...d.urls] : [];
+                    existingData = d;
+                    break;
+                }
+            }
+        }
+
+        // 2. If no existing set found, default to document ID 'promo_banners'
+        if (!targetDocRef) {
+            targetDocRef = doc(db, 'photo_sets', 'promo_banners');
+            const snap = await getDoc(targetDocRef).catch(() => null);
+            if (snap && snap.exists()) {
+                existingData = snap.data() || {};
+                existingUrls = Array.isArray(existingData.urls) ? [...existingData.urls] : [];
+            }
+        }
+
+        // 3. Add the uploaded image URL if not already present
+        if (!existingUrls.includes(imageUrl)) {
+            existingUrls.push(imageUrl);
+        }
+
+        const nowIso = new Date().toISOString();
+        const todayDate = nowIso.split('T')[0];
+
+        // 4. Save/update Firestore doc with archived: true
+        await setDoc(targetDocRef, {
+            ...existingData,
+            categoryName: 'PROMO_BANNERS',
+            title: 'PROMO_BANNERS',
+            archived: true,
+            urls: existingUrls,
+            modelName: existingData.modelName || 'Promo Banners',
+            theme: existingData.theme || 'Site Banners Archive',
+            date: existingData.date || todayDate,
+            uploadedAt: existingData.uploadedAt || nowIso,
+            updatedAt: nowIso
+        }, { merge: true });
+
+        // 5. Invalidate caches so the Studio Picker and photo sets lists refresh
+        cachedBannerPhotoSets = null;
+        if (typeof cachedStudioPhotoSets !== 'undefined') {
+            cachedStudioPhotoSets = null;
+        }
+
+        console.log(`✓ Saved banner image to archived set PROMO_BANNERS in photo_sets:`, imageUrl);
+    } catch (err) {
+        console.warn("Error saving banner image to archived set PROMO_BANNERS:", err);
+    }
+}
+
+window.handleBannerFileUpload = async function (id, field, event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 1. Instant local FileReader preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        updateBannerSetField(id, field, e.target.result);
+        renderBannerSetsList();
+    };
+    reader.readAsDataURL(file);
+
+    showToast('Uploading banner to Cloudflare storage...');
+
+    // 2. Upload to Cloudflare Worker
+    try {
+        const safeExt = file.name.split('.').pop() || 'webp';
+        const safeName = `site_banner_${field}_${Date.now()}.${safeExt}`;
+        const formData = new FormData();
+        formData.append('image', file, safeName);
+
+        const res = await fetch('https://zhukov-studio.dener4826.workers.dev', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.data?.url) {
+                const uploadedUrl = data.data.url;
+                updateBannerSetField(id, field, uploadedUrl);
+
+                // Auto-save local changes & update live banner
+                try {
+                    localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+                } catch (_) { }
+                if (window.updateSiteBanners) {
+                    window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+                }
+                renderBannerSetsList();
+
+                // Save to archived photoshoot set PROMO_BANNERS in Firestore
+                await saveBannerToArchivedPromoSet(uploadedUrl);
+
+                showToast(`${field === 'desktopUrl' ? 'Desktop' : 'Mobile'} banner uploaded & saved to PROMO_BANNERS archive ✓`);
+                return;
+            }
+        }
+        showToast('Kept local preview (Worker returned non-success)');
+    } catch (err) {
+        console.warn("Cloudflare worker upload failed, keeping local preview:", err);
+        showToast('Kept local preview (cloud worker unreachable)');
+    }
+};
+
+window.onBannerAutoSpeedChange = function (speed) {
+    bannerAutoScrollSpeed = parseInt(speed, 10) || 0;
+};
+
+window.saveSiteBannersFromModal = async function () {
+    const btn = document.getElementById('btn-save-banner-sets');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Publishing...';
+    }
+
+    try {
+        // 1. Instant local persistence
+        localStorage.setItem('zhukov_site_banners', JSON.stringify(activeBannerSets));
+        localStorage.setItem('zhukov_site_banner_speed', String(bannerAutoScrollSpeed));
+
+        // 2. Sync to Firestore settings/site_banners
+        await setDoc(doc(db, 'settings', 'site_banners'), {
+            banners: activeBannerSets,
+            bannersJson: JSON.stringify(activeBannerSets),
+            autoScrollInterval: bannerAutoScrollSpeed,
+            updatedAt: new Date().toISOString(),
+            updatedBy: auth.currentUser?.email || (checkIsAdmin() ? 'admin' : 'unknown')
+        }, { merge: true });
+
+        // 3. Immediately update active page banner slots
+        if (window.updateSiteBanners) {
+            window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+        } else if (window.updateSiteBannerSlots) {
+            window.updateSiteBannerSlots();
+        }
+
+        showToast('Site banners saved & published live across site ✓');
+        closeAllModals();
+    } catch (err) {
+        console.error("Error saving site banners to Firestore:", err);
+        if (window.updateSiteBanners) {
+            window.updateSiteBanners(activeBannerSets, bannerAutoScrollSpeed);
+        }
+        showToast('Saved locally and applied ✓');
+        closeAllModals();
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '✓ Save & Apply Banners';
+        }
+    }
+};

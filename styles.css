@@ -3881,6 +3881,7 @@ body.editorial-body .gallery-item:hover img {
     .disciplines-grid {
         grid-template-columns: 1fr;
         gap: 2rem;
+    }
 }
 
 @media (max-width: 860px) {
@@ -4846,9 +4847,11 @@ html[data-theme="dark"] .cookie-toast {
    ========================================================================= */
 
 .site-banner-container {
-    width: 100%;
-    margin: 0;
-    padding: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     line-height: 0;
     overflow: hidden;
     position: relative;
@@ -4866,8 +4869,13 @@ html[data-theme="dark"] .site-banner-container {
 /* Hide container completely when image has no src or empty src, or on moodboard page */
 body.moodboard-body .site-banner-container,
 .inside-board .site-banner-container,
-.site-banner-container:not(:has(.site-banner-img[src]:not([src=""]))) {
+.site-banner-container:not(.is-active-visible):not(:has(.site-banner-img[src]:not([src=""]))) {
     display: none !important;
+}
+
+.site-banner-container.is-active-visible {
+    display: block !important;
+    visibility: visible !important;
 }
 
 .site-banner-img[src=""],
@@ -4875,30 +4883,223 @@ body.moodboard-body .site-banner-container,
     display: none !important;
 }
 
+.site-banner-single {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 0;
+    overflow: hidden;
+}
+
 .site-banner-link {
-    display: block;
-    width: 100%;
-    margin: 0;
-    padding: 0;
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     line-height: 0;
     text-decoration: none;
+    overflow: hidden;
 }
 
 .site-banner-link:not([href]),
 .site-banner-link[href=""],
-.site-banner-link[href="#"] {
-    cursor: default;
-    pointer-events: none;
+.site-banner-link[href="#"],
+.site-banner-link.is-inert {
+    cursor: default !important;
+    pointer-events: none !important;
 }
 
 .site-banner-img {
-    width: 100%;
-    height: auto;
-    max-height: 420px;
-    object-fit: cover;
-    display: block;
-    margin: 0 auto;
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 560px;
+    object-fit: cover !important;
+    object-position: center !important;
+    margin: 0 auto !important;
     border-bottom: 1px solid #ebebeb;
+}
+
+/* ── Site Banner Slider / Carousel (Multiple Sets Scrolling) ── */
+.site-banner-slider {
+    position: relative;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden;
+    line-height: 0;
+    user-select: none;
+}
+
+.site-banner-track {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+    touch-action: pan-y pinch-zoom;
+}
+
+.site-banner-slide {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    position: relative;
+    box-sizing: border-box;
+    line-height: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.site-banner-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(15, 15, 18, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    z-index: 25;
+    opacity: 0;
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.site-banner-container:hover .site-banner-nav-btn,
+.site-banner-slider:hover .site-banner-nav-btn {
+    opacity: 0.88;
+}
+
+.site-banner-nav-btn:hover {
+    opacity: 1 !important;
+    background: rgba(15, 15, 18, 0.88);
+    border-color: #c5a059;
+    color: #c5a059;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.site-banner-nav-btn.prev {
+    left: 1.25rem;
+}
+
+.site-banner-nav-btn.next {
+    right: 1.25rem;
+}
+
+.site-banner-dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    z-index: 25;
+    background: rgba(15, 15, 18, 0.45);
+    padding: 5px 12px;
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    pointer-events: auto;
+}
+
+.site-banner-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.site-banner-dot:hover {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.site-banner-dot.active {
+    background: #c5a059;
+    width: 22px;
+    border-radius: 10px;
+    box-shadow: 0 0 8px rgba(197, 160, 89, 0.5);
+}
+
+/* Quick admin manage pill on promotion page */
+.promo-quick-manage-banners-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(197, 160, 89, 0.12);
+    border: 1px solid rgba(197, 160, 89, 0.35);
+    color: #c5a059;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.95rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.promo-quick-manage-banners-btn:hover {
+    background: #c5a059;
+    color: #000000;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
+}
+
+@media (max-width: 768px) {
+    .site-banner-nav-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1.15rem;
+        opacity: 0.65;
+    }
+    .site-banner-nav-btn.prev {
+        left: 0.5rem;
+    }
+    .site-banner-nav-btn.next {
+        right: 0.5rem;
+    }
+    .site-banner-dots {
+        bottom: 8px;
+        padding: 4px 9px;
+        gap: 5px;
+    }
+    .site-banner-dot {
+        width: 6px;
+        height: 6px;
+    }
+    .site-banner-dot.active {
+        width: 16px;
+    }
 }
 
 /* ==========================================================================

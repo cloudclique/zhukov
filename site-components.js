@@ -17,10 +17,192 @@ const BANNER_MOBILE_IMAGE_URL = '';
 const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOXWVRIXaCN';
 
 (function () {
-    const HEADER_CACHE_KEY = 'zhukov_cached_header_v36';
+    const HEADER_CACHE_KEY = 'zhukov_cached_header_v41';
     const FOOTER_CACHE_KEY = 'zhukov_cached_footer_v50';
     const COOKIE_CONSENT_KEY = 'zhukov_cookies_consent';
     const THEME_KEY = 'zhukov_theme';
+
+    function ensureBannerFullWidthStyles() {
+        if (document.getElementById('zhukov-banner-fullwidth-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'zhukov-banner-fullwidth-styles';
+        style.textContent = `
+            .site-banner-container {
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+                z-index: 10;
+            }
+            .site-banner-container.is-active-visible {
+                display: block !important;
+                visibility: visible !important;
+            }
+            .site-banner-single,
+            .site-banner-slider {
+                position: relative !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
+                box-sizing: border-box !important;
+            }
+            .site-banner-track {
+                display: flex !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                list-style: none !important;
+                box-sizing: border-box !important;
+                transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+            .site-banner-slide {
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 0 !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+            .site-banner-link {
+                display: block !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 0 !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+            }
+            .site-banner-img {
+                display: block !important;
+                width: 100% !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                max-height: 560px !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                margin: 0 auto !important;
+                box-sizing: border-box !important;
+            }
+            .site-banner-nav-btn {
+                position: absolute !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                width: 42px !important;
+                height: 42px !important;
+                border-radius: 50% !important;
+                background: rgba(15, 15, 18, 0.65) !important;
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                color: #ffffff !important;
+                border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                cursor: pointer !important;
+                font-size: 1.5rem !important;
+                line-height: 1 !important;
+                z-index: 25 !important;
+                opacity: 0.85 !important;
+                transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+            }
+            .site-banner-container:hover .site-banner-nav-btn,
+            .site-banner-slider:hover .site-banner-nav-btn {
+                opacity: 1 !important;
+            }
+            .site-banner-nav-btn:hover {
+                background: rgba(15, 15, 18, 0.95) !important;
+                border-color: #c5a059 !important;
+                color: #c5a059 !important;
+                transform: translateY(-50%) scale(1.1) !important;
+            }
+            .site-banner-nav-btn.prev {
+                left: 1.5rem !important;
+            }
+            .site-banner-nav-btn.next {
+                right: 1.5rem !important;
+            }
+            .site-banner-dots {
+                position: absolute !important;
+                bottom: 14px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                z-index: 25 !important;
+                background: rgba(15, 15, 18, 0.5) !important;
+                padding: 6px 14px !important;
+                border-radius: 20px !important;
+                backdrop-filter: blur(8px) !important;
+                -webkit-backdrop-filter: blur(8px) !important;
+                border: 1px solid rgba(255, 255, 255, 0.15) !important;
+                pointer-events: auto !important;
+            }
+            .site-banner-dot {
+                width: 8px !important;
+                height: 8px !important;
+                border-radius: 50% !important;
+                background: rgba(255, 255, 255, 0.5) !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                cursor: pointer !important;
+                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            .site-banner-dot:hover {
+                background: rgba(255, 255, 255, 0.9) !important;
+            }
+            .site-banner-dot.active {
+                background: #c5a059 !important;
+                width: 24px !important;
+                border-radius: 10px !important;
+                box-shadow: 0 0 10px rgba(197, 160, 89, 0.6) !important;
+            }
+            @media (max-width: 768px) {
+                .site-banner-nav-btn {
+                    width: 32px !important;
+                    height: 32px !important;
+                    font-size: 1.15rem !important;
+                    opacity: 0.75 !important;
+                }
+                .site-banner-nav-btn.prev { left: 0.5rem !important; }
+                .site-banner-nav-btn.next { right: 0.5rem !important; }
+                .site-banner-dots {
+                    bottom: 8px !important;
+                    padding: 4px 10px !important;
+                    gap: 6px !important;
+                }
+                .site-banner-dot { width: 6px !important; height: 6px !important; }
+                .site-banner-dot.active { width: 16px !important; }
+            }
+        `;
+        if (document.head) {
+            document.head.appendChild(style);
+        } else {
+            document.addEventListener('DOMContentLoaded', () => {
+                if (!document.getElementById('zhukov-banner-fullwidth-styles') && document.head) {
+                    document.head.appendChild(style);
+                }
+            });
+        }
+    }
+    ensureBannerFullWidthStyles();
 
     // Purge legacy cache keys
     try {
@@ -586,6 +768,31 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         </div>
     </div>
 </header>
+<style>
+.site-banner-container { width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; box-sizing: border-box !important; position: relative !important; z-index: 10; }
+.site-banner-single, .site-banner-slider { position: relative !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; line-height: 0 !important; box-sizing: border-box !important; }
+.site-banner-track { display: flex !important; width: 100% !important; min-width: 100% !important; margin: 0 !important; padding: 0 !important; list-style: none !important; box-sizing: border-box !important; transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1); }
+.site-banner-slide { flex: 0 0 100% !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; line-height: 0 !important; overflow: hidden !important; box-sizing: border-box !important; }
+.site-banner-link { display: block !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; line-height: 0 !important; overflow: hidden !important; box-sizing: border-box !important; }
+.site-banner-img { display: block !important; width: 100% !important; min-width: 100% !important; max-width: 100% !important; height: auto !important; max-height: 560px !important; object-fit: cover !important; object-position: center !important; margin: 0 auto !important; box-sizing: border-box !important; }
+.site-banner-nav-btn { position: absolute !important; top: 50% !important; transform: translateY(-50%) !important; width: 42px !important; height: 42px !important; border-radius: 50% !important; background: rgba(15, 15, 18, 0.65) !important; backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important; color: #ffffff !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; font-size: 1.5rem !important; line-height: 1 !important; z-index: 25 !important; opacity: 0.85 !important; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important; }
+.site-banner-container:hover .site-banner-nav-btn, .site-banner-slider:hover .site-banner-nav-btn { opacity: 1 !important; }
+.site-banner-nav-btn:hover { background: rgba(15, 15, 18, 0.95) !important; border-color: #c5a059 !important; color: #c5a059 !important; transform: translateY(-50%) scale(1.1) !important; }
+.site-banner-nav-btn.prev { left: 1.5rem !important; }
+.site-banner-nav-btn.next { right: 1.5rem !important; }
+.site-banner-dots { position: absolute !important; bottom: 14px !important; left: 50% !important; transform: translateX(-50%) !important; display: flex !important; align-items: center !important; gap: 8px !important; z-index: 25 !important; background: rgba(15, 15, 18, 0.5) !important; padding: 6px 14px !important; border-radius: 20px !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; pointer-events: auto !important; }
+.site-banner-dot { width: 8px !important; height: 8px !important; border-radius: 50% !important; background: rgba(255, 255, 255, 0.5) !important; border: none !important; padding: 0 !important; margin: 0 !important; cursor: pointer !important; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; }
+.site-banner-dot:hover { background: rgba(255, 255, 255, 0.9) !important; }
+.site-banner-dot.active { background: #c5a059 !important; width: 24px !important; border-radius: 10px !important; box-shadow: 0 0 10px rgba(197, 160, 89, 0.6) !important; }
+@media (max-width: 768px) {
+    .site-banner-nav-btn { width: 32px !important; height: 32px !important; font-size: 1.15rem !important; opacity: 0.75 !important; }
+    .site-banner-nav-btn.prev { left: 0.5rem !important; }
+    .site-banner-nav-btn.next { right: 0.5rem !important; }
+    .site-banner-dots { bottom: 8px !important; padding: 4px 10px !important; gap: 6px !important; }
+    .site-banner-dot { width: 6px !important; height: 6px !important; }
+    .site-banner-dot.active { width: 16px !important; }
+}
+</style>
 <div class="site-banner-container" id="header-banner-container">
     <a class="site-banner-link" href="">
         <img class="site-banner-img" src="" alt="Banner" loading="eager">
@@ -688,19 +895,57 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
     let headerMounted = false;
     let footerMounted = false;
 
+    function ensureSiteBannerContainer() {
+        const isExcludedPage = window.location.pathname.toLowerCase().includes('/moodboard') ||
+            window.location.pathname.toLowerCase().includes('/mood-dash');
+        if (isExcludedPage) {
+            document.querySelectorAll('.site-banner-container').forEach(el => el.remove());
+            return null;
+        }
+
+        let container = document.getElementById('header-banner-container') || document.querySelector('.site-banner-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'site-banner-container';
+            container.id = 'header-banner-container';
+            container.style.display = 'none';
+
+            const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
+            if (headerSlot && headerSlot.parentNode) {
+                headerSlot.parentNode.insertBefore(container, headerSlot.nextSibling);
+            } else {
+                const header = document.getElementById('vogue-header');
+                if (header && header.parentNode) {
+                    header.parentNode.insertBefore(container, header.nextSibling);
+                } else if (document.body) {
+                    document.body.insertBefore(container, document.body.firstChild);
+                }
+            }
+        } else {
+            // Ensure container stays right after the header slot in standard document flow
+            const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
+            if (headerSlot && headerSlot.parentNode && headerSlot.contains(container)) {
+                headerSlot.parentNode.insertBefore(container, headerSlot.nextSibling);
+            }
+        }
+        return container;
+    }
+
     function relocateBannerToPageFlow() {
+        const isMoodboard = window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash');
+        if (isMoodboard) {
+            document.querySelectorAll('.site-banner-container').forEach(el => el.remove());
+            return;
+        }
+
         const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
         if (!headerSlot) return;
-        const isMoodboard = window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash');
-        const banner = headerSlot.querySelector('.site-banner-container');
-        if (banner) {
-            if (isMoodboard) {
-                banner.remove();
-                return;
-            }
-            if (headerSlot.parentNode && headerSlot.nextSibling !== banner) {
-                headerSlot.parentNode.insertBefore(banner, headerSlot.nextSibling);
-            }
+
+        let banner = headerSlot.querySelector('.site-banner-container') || document.getElementById('header-banner-container') || document.querySelector('.site-banner-container');
+        if (!banner) {
+            banner = ensureSiteBannerContainer();
+        } else if (headerSlot.parentNode && headerSlot.contains(banner)) {
+            headerSlot.parentNode.insertBefore(banner, headerSlot.nextSibling);
         }
     }
 
@@ -714,8 +959,8 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
         if (headerSlot.children.length === 0) {
             let raw = localStorage.getItem(HEADER_CACHE_KEY) || sessionStorage.getItem(HEADER_CACHE_KEY);
-            // Integrity check: Ensure cached template contains all required standard links
-            if (!raw || !raw.includes('data-nav="about"') || !raw.includes('data-nav="contact"')) {
+            // Integrity check: Ensure cached template contains all required standard links and site-banner-container
+            if (!raw || !raw.includes('data-nav="about"') || !raw.includes('data-nav="contact"') || !raw.includes('site-banner-container')) {
                 raw = DEFAULT_HEADER_TEMPLATE;
                 try {
                     localStorage.setItem(HEADER_CACHE_KEY, DEFAULT_HEADER_TEMPLATE);
@@ -727,6 +972,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
         relocateBannerToPageFlow();
         initHeaderBehavior();
+        updateBannerSlots();
     }
 
     function initFooterBehavior() {
@@ -774,9 +1020,16 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             if (resH.ok) {
                 const textH = await resH.text();
                 // Validate completeness before updating cache
-                if (textH.includes('data-nav="about"') && textH.includes('data-nav="contact"')) {
+                if (textH.includes('data-nav="about"') && textH.includes('data-nav="contact"') && textH.includes('site-banner-container')) {
                     localStorage.setItem(HEADER_CACHE_KEY, textH);
                     sessionStorage.setItem(HEADER_CACHE_KEY, textH);
+                    const headerSlot = document.getElementById('site-header-slot') || document.getElementById('site-header');
+                    if (headerSlot && (!document.querySelector('.site-banner-container') || !headerSlot.querySelector('.vogue-header'))) {
+                        headerSlot.innerHTML = getPreparedHeaderHtml(textH);
+                        relocateBannerToPageFlow();
+                        initHeaderBehavior();
+                        updateBannerSlots();
+                    }
                 }
             }
         } catch (e) { }
@@ -1063,6 +1316,52 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
     // Synchronize banner height into CSS variable --site-banner-height
     let bannerResizeObserver = null;
+    let bannerSliderAutoTimer = null;
+    let bannerCurrentSlide = 0;
+    let isBannerSliderPaused = false;
+
+    const SITE_BANNERS_STORAGE_KEY = 'zhukov_site_banners';
+    const SITE_BANNERS_SPEED_KEY = 'zhukov_site_banner_speed';
+
+    function getStoredBannerSets() {
+        try {
+            const raw = localStorage.getItem(SITE_BANNERS_STORAGE_KEY);
+            if (raw !== null) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            }
+        } catch (_) { }
+
+        // Fallback to legacy single banner constants if present
+        const legacyDesktop = (typeof BANNER_IMAGE_URL === 'string') ? BANNER_IMAGE_URL.trim() : '';
+        const legacyMobile = (typeof BANNER_MOBILE_IMAGE_URL === 'string') ? BANNER_MOBILE_IMAGE_URL.trim() : '';
+        const legacyLink = (typeof BANNER_DESTINATION_URL === 'string') ? BANNER_DESTINATION_URL.trim() : '';
+
+        if (legacyDesktop || legacyMobile) {
+            return [{
+                id: 'banner_default_1',
+                title: 'Featured Promotion',
+                desktopUrl: legacyDesktop,
+                mobileUrl: legacyMobile,
+                linkEnabled: Boolean(legacyLink),
+                linkUrl: legacyLink,
+                openInNewTab: false,
+                active: true
+            }];
+        }
+        return [];
+    }
+
+    function getBannerAutoInterval() {
+        try {
+            const raw = localStorage.getItem(SITE_BANNERS_SPEED_KEY);
+            if (raw !== null) {
+                const val = parseInt(raw, 10);
+                if (!isNaN(val)) return val;
+            }
+        } catch (_) { }
+        return 6000;
+    }
 
     function syncBannerHeight() {
         let maxBannerHeight = 0;
@@ -1083,89 +1382,373 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
     }
 
-    // Universal Header Banner Handler: applies BANNER_MOBILE_IMAGE_URL on mobile, BANNER_IMAGE_URL on mid/full
+    function stopBannerAutoSlider() {
+        if (bannerSliderAutoTimer) {
+            clearInterval(bannerSliderAutoTimer);
+            bannerSliderAutoTimer = null;
+        }
+    }
+
+    function startBannerAutoSlider(totalSlides, interval) {
+        stopBannerAutoSlider();
+        if (totalSlides <= 1 || interval <= 0) return;
+
+        bannerSliderAutoTimer = setInterval(() => {
+            if (isBannerSliderPaused) return;
+            window.nextSiteBannerSlide();
+        }, interval);
+    }
+
+    window.goToSiteBannerSlide = function (targetIndex, e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const tracks = document.querySelectorAll('.site-banner-track');
+        if (tracks.length === 0) return;
+
+        const slides = tracks[0].querySelectorAll('.site-banner-slide');
+        const count = slides.length;
+        if (count <= 1) return;
+
+        bannerCurrentSlide = ((targetIndex % count) + count) % count;
+
+        tracks.forEach(track => {
+            track.style.transform = `translateX(-${bannerCurrentSlide * 100}%)`;
+        });
+
+        // Update dot states
+        document.querySelectorAll('.site-banner-dots').forEach(dotsContainer => {
+            dotsContainer.querySelectorAll('.site-banner-dot').forEach((dot, idx) => {
+                dot.classList.toggle('active', idx === bannerCurrentSlide);
+            });
+        });
+    };
+
+    window.nextSiteBannerSlide = function (e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        window.goToSiteBannerSlide(bannerCurrentSlide + 1);
+    };
+
+    window.prevSiteBannerSlide = function (e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        window.goToSiteBannerSlide(bannerCurrentSlide - 1);
+    };
+
+    function escapeHtmlAttr(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+
+
+    // Parse UTC Date-Time string into UTC epoch milliseconds
+    function parseUtcDateTime(str) {
+        if (!str || typeof str !== 'string' || !str.trim()) return null;
+        const clean = str.trim();
+        const utcStr = clean.endsWith('Z') ? clean : (clean.includes('T') ? (clean.length === 16 ? clean + ':00Z' : clean + 'Z') : clean + 'T00:00:00Z');
+        const t = Date.parse(utcStr);
+        return isNaN(t) ? null : t;
+    }
+
+    // Check whether banner is active according to its UTC schedule window
+    function isBannerScheduledActive(banner) {
+        if (!banner || banner.scheduleEnabled !== true) return true;
+        const nowUtc = Date.now();
+
+        if (banner.scheduleStart && typeof banner.scheduleStart === 'string' && banner.scheduleStart.trim()) {
+            const startMs = parseUtcDateTime(banner.scheduleStart);
+            if (startMs !== null && nowUtc < startMs) {
+                return false; // Scheduled for future
+            }
+        }
+
+        if (banner.scheduleEnd && typeof banner.scheduleEnd === 'string' && banner.scheduleEnd.trim()) {
+            const endMs = parseUtcDateTime(banner.scheduleEnd);
+            if (endMs !== null && nowUtc > endMs) {
+                return false; // Expired
+            }
+        }
+
+        return true;
+    }
+
+    // Check whether a banner is visible on the current page / gallery
+    function isBannerVisibleOnCurrentPage(banner) {
+        if (!banner || banner.active === false) return false;
+        if (!isBannerScheduledActive(banner)) return false;
+
+        // Default: 'all' or empty scope means visible on all site pages
+        if (!banner.visibilityScope || banner.visibilityScope === 'all') {
+            return true;
+        }
+
+        const path = window.location.pathname.toLowerCase();
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetPages = Array.isArray(banner.targetPages) ? banner.targetPages : [];
+
+        const isHome = path === '/' || path === '/index.html' || path === '' ||
+            (path.endsWith('/index.html') && !path.includes('/about') && !path.includes('/contact') && !path.includes('/photoshoots') && !path.includes('/promotion'));
+        const isAbout = path.includes('/about');
+        const isContact = path.includes('/contact');
+        const isPromotion = path.includes('/promotion');
+        const isPhotoshootsMain = path === '/photoshoots/' || path === '/photoshoots/index.html' ||
+            (path.includes('/photoshoots') && !path.includes('gallery.html') && !path.includes('archived.html'));
+        const isGalleryPage = path.includes('/photoshoots/gallery.html');
+        const isArchived = path.includes('/photoshoots/archived.html');
+
+        if (isHome && targetPages.includes('home')) return true;
+        if (isAbout && targetPages.includes('about')) return true;
+        if (isContact && targetPages.includes('contact')) return true;
+        if (isPromotion && targetPages.includes('promotion')) return true;
+
+        if (targetPages.includes('photoshoots')) {
+            // If all galleries are selected or no scope specified:
+            if (!banner.galleriesScope || banner.galleriesScope === 'all') {
+                if (isPhotoshootsMain || isGalleryPage || isArchived) return true;
+            } else if (banner.galleriesScope === 'specific') {
+                const targetGalleries = Array.isArray(banner.targetGalleries) ? banner.targetGalleries : [];
+
+                // If visiting the main photoshoots catalog or archive page:
+                if (isPhotoshootsMain || isArchived) {
+                    if (targetGalleries.includes('main_catalog') || targetGalleries.includes('all_galleries') || targetGalleries.includes('archived')) {
+                        return true;
+                    }
+                }
+
+                // If visiting a specific photoshoot gallery (e.g. /photoshoots/gallery.html?id=XYZ):
+                if (isGalleryPage) {
+                    const currentId = searchParams.get('id');
+                    if (currentId && targetGalleries.includes(currentId)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // Universal Header Banner Handler: Multiple Sets with Horizontal Carousel Scrolling
     function updateBannerSlots() {
         // Exclude banner completely on moodboard & mood-dash pages
-        if (window.location.pathname.toLowerCase().includes('/moodboard') || window.location.pathname.toLowerCase().includes('/mood-dash')) {
+        const isExcludedPage = window.location.pathname.toLowerCase().includes('/moodboard') ||
+            window.location.pathname.toLowerCase().includes('/mood-dash');
+
+        if (isExcludedPage) {
             document.querySelectorAll('.site-banner-container').forEach(container => {
                 container.style.display = 'none';
+                container.classList.remove('is-active-visible');
             });
             document.documentElement.style.setProperty('--site-banner-height', '0px');
             document.body.classList.remove('has-site-banner');
+            stopBannerAutoSlider();
             return;
         }
 
-        let hasActiveBanner = false;
+        ensureBannerFullWidthStyles();
+        ensureSiteBannerContainer();
+
         const isMobile = isMobileBannerRatio();
+        const allSets = getStoredBannerSets();
+        const activeSets = allSets.filter(b => b && b.active !== false && (b.desktopUrl || b.mobileUrl) && isBannerVisibleOnCurrentPage(b));
 
-        const normalBanner = (typeof BANNER_IMAGE_URL === 'string' && BANNER_IMAGE_URL.trim() !== '')
-            ? BANNER_IMAGE_URL.trim()
-            : '';
-        const mobileBanner = (typeof BANNER_MOBILE_IMAGE_URL === 'string' && BANNER_MOBILE_IMAGE_URL.trim() !== '')
-            ? BANNER_MOBILE_IMAGE_URL.trim()
-            : ((typeof BANNER_IMAGE_MOBILE_URL === 'string' && BANNER_IMAGE_MOBILE_URL.trim() !== '')
-                ? BANNER_IMAGE_MOBILE_URL.trim()
-                : '');
-
-        document.querySelectorAll('.site-banner-container').forEach(container => {
-            const img = container.querySelector('.site-banner-img');
-            const link = container.querySelector('.site-banner-link');
-
-            if (!img) return;
-
-            // Preserve initial HTML src if present as fallback
-            if (!img.dataset.initialSrc && img.getAttribute('src')) {
-                img.dataset.initialSrc = img.getAttribute('src').trim();
-            }
-            const htmlFallback = (img.dataset.initialSrc || img.getAttribute('src') || '').trim();
-
-            // Mobile ratio: use mobileBanner if set; otherwise fall back to normalBanner or htmlFallback.
-            // Mid & Full ratio: use normalBanner; otherwise htmlFallback.
-            const targetUrl = isMobile
-                ? (mobileBanner || normalBanner || htmlFallback)
-                : (normalBanner || htmlFallback);
-
-            if (!targetUrl) {
+        const containers = document.querySelectorAll('.site-banner-container');
+        if (activeSets.length === 0) {
+            containers.forEach(container => {
                 container.style.display = 'none';
-                img.removeAttribute('src');
-            } else {
-                hasActiveBanner = true;
-                if (img.getAttribute('src') !== targetUrl) {
-                    img.src = targetUrl;
-                }
-                if (link && typeof BANNER_DESTINATION_URL === 'string' && BANNER_DESTINATION_URL.trim() !== '') {
-                    link.href = BANNER_DESTINATION_URL.trim();
-                    link.style.pointerEvents = 'auto';
-                    link.style.cursor = 'pointer';
-                }
-                container.style.display = 'block';
+                container.classList.remove('is-active-visible');
+                container.innerHTML = '';
+            });
+            document.documentElement.style.setProperty('--site-banner-height', '0px');
+            document.body.classList.remove('has-site-banner');
+            stopBannerAutoSlider();
+            return;
+        }
 
+        containers.forEach(container => {
+            container.style.display = 'block';
+            container.style.visibility = 'visible';
+            container.classList.add('is-active-visible');
+
+            if (activeSets.length === 1) {
+                // Single Banner Set: clean static display without slider overhead
+                const b = activeSets[0];
+                const targetUrl = isMobile ? (b.mobileUrl || b.desktopUrl) : (b.desktopUrl || b.mobileUrl);
+                const hasLink = Boolean(b.linkEnabled && b.linkUrl && b.linkUrl.trim() !== '');
+                const targetBlank = b.openInNewTab ? 'target="_blank" rel="noopener"' : '';
+
+                container.innerHTML = `
+                    <div class="site-banner-single">
+                        ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
+                            <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || 'Site Banner')}" loading="eager">
+                        ${hasLink ? `</a>` : `</div>`}
+                    </div>
+                `;
+            } else {
+                // Multiple Banner Sets: Horizontal Sliding Carousel
+                let slidesHtml = '';
+                let dotsHtml = '';
+
+                activeSets.forEach((b, idx) => {
+                    const targetUrl = isMobile ? (b.mobileUrl || b.desktopUrl) : (b.desktopUrl || b.mobileUrl);
+                    const hasLink = Boolean(b.linkEnabled && b.linkUrl && b.linkUrl.trim() !== '');
+                    const targetBlank = b.openInNewTab ? 'target="_blank" rel="noopener"' : '';
+                    const isActive = idx === bannerCurrentSlide;
+
+                    slidesHtml += `
+                        <li class="site-banner-slide ${isActive ? 'active' : ''}" data-slide-index="${idx}">
+                            ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
+                                <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || `Site Banner ${idx + 1}`)}" loading="eager">
+                            ${hasLink ? `</a>` : `</div>`}
+                        </li>
+                    `;
+
+                    dotsHtml += `
+                        <button type="button" class="site-banner-dot ${isActive ? 'active' : ''}" data-dot-index="${idx}" onclick="window.goToSiteBannerSlide(${idx}, event)" aria-label="Go to slide ${idx + 1}"></button>
+                    `;
+                });
+
+                container.innerHTML = `
+                    <div class="site-banner-slider" id="site-banner-slider">
+                        <ul class="site-banner-track" id="site-banner-track" style="transform: translateX(-${bannerCurrentSlide * 100}%);">
+                            ${slidesHtml}
+                        </ul>
+                        <button type="button" class="site-banner-nav-btn prev" aria-label="Previous banner" onclick="window.prevSiteBannerSlide(event)">‹</button>
+                        <button type="button" class="site-banner-nav-btn next" aria-label="Next banner" onclick="window.nextSiteBannerSlide(event)">›</button>
+                        <div class="site-banner-dots">
+                            ${dotsHtml}
+                        </div>
+                    </div>
+                `;
+
+                // Pause on hover
+                const sliderEl = container.querySelector('.site-banner-slider');
+                if (sliderEl) {
+                    sliderEl.addEventListener('mouseenter', () => { isBannerSliderPaused = true; });
+                    sliderEl.addEventListener('mouseleave', () => { isBannerSliderPaused = false; });
+
+                    // Mobile touch swipe gestures
+                    let touchStartX = 0;
+                    let touchStartY = 0;
+                    sliderEl.addEventListener('touchstart', (e) => {
+                        if (e.touches && e.touches[0]) {
+                            touchStartX = e.touches[0].clientX;
+                            touchStartY = e.touches[0].clientY;
+                            isBannerSliderPaused = true;
+                        }
+                    }, { passive: true });
+
+                    sliderEl.addEventListener('touchend', (e) => {
+                        isBannerSliderPaused = false;
+                        if (e.changedTouches && e.changedTouches[0]) {
+                            const diffX = e.changedTouches[0].clientX - touchStartX;
+                            const diffY = e.changedTouches[0].clientY - touchStartY;
+                            if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                                if (diffX < 0) window.nextSiteBannerSlide();
+                                else window.prevSiteBannerSlide();
+                            }
+                        }
+                    }, { passive: true });
+                }
+            }
+
+            // Sync image loading and ResizeObserver
+            const imgs = container.querySelectorAll('.site-banner-img');
+            imgs.forEach(img => {
                 if (img.complete && img.naturalHeight > 0) {
                     syncBannerHeight();
                 } else {
-                    img.onload = () => syncBannerHeight();
+                    img.addEventListener('load', () => syncBannerHeight(), { once: true });
                 }
+            });
 
-                if (window.ResizeObserver && !bannerResizeObserver) {
-                    bannerResizeObserver = new ResizeObserver(() => {
-                        syncBannerHeight();
-                    });
-                    bannerResizeObserver.observe(container);
-                }
+            if (window.ResizeObserver && !bannerResizeObserver) {
+                bannerResizeObserver = new ResizeObserver(() => syncBannerHeight());
+                bannerResizeObserver.observe(container);
             }
         });
 
-        if (!hasActiveBanner) {
-            document.documentElement.style.setProperty('--site-banner-height', '0px');
-            document.body.classList.remove('has-site-banner');
+        syncBannerHeight();
+
+        // Start auto-slide if multiple banner sets exist
+        if (activeSets.length > 1) {
+            startBannerAutoSlider(activeSets.length, getBannerAutoInterval());
         } else {
-            syncBannerHeight();
+            stopBannerAutoSlider();
         }
     }
+
+    // Expose programmatic update to other scripts
+    window.updateSiteBannerSlots = updateBannerSlots;
+    window.updateSiteBanners = function (newBanners, newSpeed) {
+        if (Array.isArray(newBanners)) {
+            localStorage.setItem(SITE_BANNERS_STORAGE_KEY, JSON.stringify(newBanners));
+        }
+        if (typeof newSpeed === 'number') {
+            localStorage.setItem(SITE_BANNERS_SPEED_KEY, String(newSpeed));
+        }
+        bannerCurrentSlide = 0;
+        updateBannerSlots();
+    };
+
+    // Stale-while-revalidate background sync with Firestore cloud settings
+    async function syncCloudBanners() {
+        try {
+            const res = await fetch('https://firestore.googleapis.com/v1/projects/zhukovphotograpy/databases/(default)/documents/settings/site_banners?t=' + Date.now());
+            if (res.ok) {
+                const docData = await res.json();
+                if (docData && docData.fields) {
+                    let cloudBanners = null;
+                    if (docData.fields.bannersJson && docData.fields.bannersJson.stringValue) {
+                        try { cloudBanners = JSON.parse(docData.fields.bannersJson.stringValue); } catch (_) { }
+                    }
+                    if (!Array.isArray(cloudBanners) && docData.fields.banners && docData.fields.banners.arrayValue && docData.fields.banners.arrayValue.values) {
+                        try {
+                            cloudBanners = docData.fields.banners.arrayValue.values.map(v => {
+                                const f = v.mapValue?.fields || {};
+                                return {
+                                    id: f.id?.stringValue || '',
+                                    title: f.title?.stringValue || '',
+                                    desktopUrl: f.desktopUrl?.stringValue || '',
+                                    mobileUrl: f.mobileUrl?.stringValue || '',
+                                    linkEnabled: f.linkEnabled ? f.linkEnabled.booleanValue : false,
+                                    linkUrl: f.linkUrl?.stringValue || '',
+                                    openInNewTab: f.openInNewTab ? f.openInNewTab.booleanValue : false,
+                                    visibilityScope: f.visibilityScope?.stringValue || 'all',
+                                    targetPages: f.targetPages?.arrayValue?.values?.map(p => p.stringValue) || [],
+                                    galleriesScope: f.galleriesScope?.stringValue || 'all',
+                                    targetGalleries: f.targetGalleries?.arrayValue?.values?.map(g => g.stringValue) || [],
+                                    scheduleEnabled: f.scheduleEnabled ? f.scheduleEnabled.booleanValue : false,
+                                    scheduleStart: f.scheduleStart?.stringValue || '',
+                                    scheduleEnd: f.scheduleEnd?.stringValue || '',
+                                    altText: f.altText?.stringValue || '',
+                                    active: f.active ? f.active.booleanValue : true
+                                };
+                            });
+                        } catch (_) { }
+                    }
+                    if (Array.isArray(cloudBanners)) {
+                        localStorage.setItem(SITE_BANNERS_STORAGE_KEY, JSON.stringify(cloudBanners));
+                    }
+                    if (docData.fields.autoScrollInterval && docData.fields.autoScrollInterval.integerValue) {
+                        localStorage.setItem(SITE_BANNERS_SPEED_KEY, docData.fields.autoScrollInterval.integerValue);
+                    }
+                    updateBannerSlots();
+                }
+            }
+        } catch (_) { }
+    }
+    syncCloudBanners();
+    setTimeout(syncCloudBanners, 600);
 
     window.addEventListener('resize', () => updateBannerSlots());
     window.addEventListener('orientationchange', () => updateBannerSlots());
     window.addEventListener('load', () => updateBannerSlots());
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBannerSlots(); });
+    setInterval(() => updateBannerSlots(), 45000); // Periodically check for scheduled banner starts and expirations
 
     const bannerMobileMql = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
     if (bannerMobileMql) {
@@ -1246,6 +1829,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         initThemeToggle();
         initCookieConsent();
         updateBannerSlots();
+        syncCloudBanners();
         fetchFreshTemplates();
     }
 
