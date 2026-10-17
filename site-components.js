@@ -293,7 +293,6 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         const uploadLink = document.getElementById('upload-nav-link');
         const archivedLink = document.getElementById('archived-nav-link');
         const promotionLink = document.getElementById('promotion-nav-link');
-        const moodboardLink = document.getElementById('moodboard-nav-link');
 
         // Set Top Bar text for current page
         if (topBarCenter) {

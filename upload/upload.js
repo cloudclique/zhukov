@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, addDoc, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { invalidateCache } from "../site-cache.js";
 import { CLOUDFLARE_WORKER_URL } from "../cloudflare-storage.js";
@@ -9,9 +9,6 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 document.addEventListener('DOMContentLoaded', () => {
-    // UI Elements
-    const loginBtn = document.getElementById('login-btn-header');
-    const logoutBtn = document.getElementById('logout-btn');
     const authWarning = document.getElementById('auth-warning');
     const uploadSection = document.getElementById('upload-section');
 
@@ -692,7 +689,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         isArchived,
                         themeDisplay,
                         modelDisplay,
-                        metaLabel
+                        metaLabel,
+                        thumbUrls: data.thumbUrls || {},
+                        aspectRatios: data.aspectRatios || {}
                     };
 
                     categoryIdMap.set(displayName, id);
@@ -826,13 +825,11 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
-            let isAdmin = false;
             try {
                 const userRef = doc(db, 'users', user.uid);
                 const userSnap = await getDoc(userRef);
 
                 if (userSnap.exists() && userSnap.data().role === 'admin') {
-                    isAdmin = true;
                     if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, true);
                     authWarning.classList.add('hidden');
                     uploadSection.classList.remove('hidden');
@@ -880,6 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const processImage = async (file) => {
         const MAX_DIMENSION = 1920;
         const MAX_THUMB_DIMENSION = 720;
+        const MAX_THUMB_DIMENSION_HORIZONTAL = 960;
 
         const renderToBlob = async (source, srcWidth, srcHeight, maxDim, quality) => {
             let width = srcWidth;
@@ -926,7 +924,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const generateBlobs = async (source, srcWidth, srcHeight) => {
             const ratio = Math.round((srcWidth / srcHeight) * 10000) / 10000;
             const fullBlob = await renderToBlob(source, srcWidth, srcHeight, MAX_DIMENSION, 0.85);
-            const thumbBlob = await renderToBlob(source, srcWidth, srcHeight, MAX_THUMB_DIMENSION, 0.80);
+            const thumbMaxDim = (srcWidth > srcHeight) ? MAX_THUMB_DIMENSION_HORIZONTAL : MAX_THUMB_DIMENSION;
+            const thumbBlob = await renderToBlob(source, srcWidth, srcHeight, thumbMaxDim, 0.80);
             return { fullBlob, thumbBlob, aspectRatio: ratio, width: srcWidth, height: srcHeight };
         };
 
@@ -1103,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fullUrl = uploadResult.data.url;
                 let thumbUrl = fullUrl;
 
-                // Upload 720px lightweight grid thumbnail
+                // Upload lightweight grid thumbnail (960px horizontal, 720px vertical)
                 if (thumbBlob && thumbBlob.size > 0) {
                     try {
                         const thumbFormData = new FormData();
@@ -1179,13 +1178,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 // image is placed at index 0 (the top of the gallery), followed by subsequent images.
                 const reversedBatch = [...uploadedUrls].reverse();
 
+                // Preserve existing thumbnails & aspect ratios for append uploads
+                const existingThumbs = (targetSet && targetSet.thumbUrls && typeof targetSet.thumbUrls === 'object') ? targetSet.thumbUrls : {};
+                const existingRatios = (targetSet && targetSet.aspectRatios && typeof targetSet.aspectRatios === 'object') ? targetSet.aspectRatios : {};
+                const mergedThumbMap = { ...existingThumbs, ...thumbMap };
+                const mergedRatioMap = { ...existingRatios, ...ratioMap };
+
                 // 1. Save base photoshoot metadata
                 const baseData = {
                     categoryName: category,
                     uploadedAt: date,
                     uploadedBy: auth.currentUser.uid,
-                    thumbUrls: thumbMap,
-                    aspectRatios: ratioMap
+                    thumbUrls: mergedThumbMap,
+                    aspectRatios: mergedRatioMap
                 };
 
                 // Model resolution: carry over / preserve
@@ -1236,8 +1241,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusMsg.innerHTML = `<span style="color: #60a5fa;">Saving batch ${c + 1} of ${totalChunks} to database...</span>`;
                     const chunkUpdate = {
                         urls: arrayUnion(...chunk),
-                        thumbUrls: thumbMap,
-                        aspectRatios: ratioMap
+                        thumbUrls: mergedThumbMap,
+                        aspectRatios: mergedRatioMap
                     };
                     if (isAdult) {
                         chunkUpdate.adultUrls = arrayUnion(...chunk);

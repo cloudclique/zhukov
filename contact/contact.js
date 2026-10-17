@@ -35,8 +35,6 @@ let isAdmin = false;
 let isDragging = false;
 let dragTargetState = null; // true: mark unavailable (booked); false: mark available (free)
 let dragModifiedDates = new Set();
-let dragStartX = 0;
-let dragStartY = 0;
 let toastTimeout = null;
 
 // UI DOM References - Main Page
@@ -466,8 +464,6 @@ function initInteractionEngine() {
         e.preventDefault();
 
         isDragging = true;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
 
         const isCurrentlyBooked = isDateUnavailable(dateKey);
         dragTargetState = !isCurrentlyBooked;

@@ -19,9 +19,6 @@ const provider = new GoogleAuthProvider();
 document.addEventListener('DOMContentLoaded', async () => {
     registerSiteServiceWorker();
 
-    // Auth UI Elements
-    const loginBtn = document.getElementById('login-btn-header');
-    const logoutBtn = document.getElementById('logout-btn');
 
     // Gallery, View Switcher & Sort UI
     const sortSelect = document.getElementById('sort-select');
@@ -49,6 +46,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isAdmin = localStorage.getItem('zhukov_is_admin') === 'true';
     let showArchived = false; // "dont show is default"
     let hasInitialLoadStarted = false;
+
+    // Fast robust thumbnail resolution helper
+    const getThumbnailUrl = (url, cat = null) => {
+        if (!url || typeof url !== 'string') return url || '';
+        if (photoThumbMap.has(url)) return photoThumbMap.get(url);
+        if (cat && cat.thumbUrls && cat.thumbUrls[url]) return cat.thumbUrls[url];
+        for (let i = 0; i < categoriesData.length; i++) {
+            const c = categoriesData[i];
+            if (c.thumbUrls && c.thumbUrls[url]) {
+                photoThumbMap.set(url, c.thumbUrls[url]);
+                return c.thumbUrls[url];
+            }
+        }
+        if (url.endsWith('.webp') && !url.endsWith('_thumb.webp')) {
+            const derived = url.replace(/\.webp$/, '_thumb.webp');
+            photoThumbMap.set(url, derived);
+            return derived;
+        }
+        return url;
+    };
 
     // Admin Archived Toggle UI
     const adminArchivedSlot = document.getElementById('admin-archived-toggle-slot');
@@ -158,7 +175,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- Editorial Fine-Art Lightbox Logic ---
-    let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
     let isLightboxHistoryActive = false;
     let isHandlingHistoryBack = false;
@@ -173,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openLightbox = (imgElement, setName = 'PHOTOSHOOT', categoryId = null, modelName = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
-        activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
 
         // Manage browser history for phone back action / gesture
@@ -287,7 +302,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (lightboxImg) lightboxImg.src = '';
             if (lightboxSetName) lightboxSetName.textContent = 'PHOTOSHOOT';
             if (lightboxActions) lightboxActions.style.display = 'none';
-            activeOriginImg = null;
         }, 300);
     };
 
@@ -386,6 +400,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const cached = getCachedData(cacheKey);
         if (cached && Array.isArray(cached) && cached.length > 0) {
             categoriesData = sortCategoryArray([...cached]);
+            categoriesData.forEach(cat => {
+                if (cat.thumbUrls && typeof cat.thumbUrls === 'object') {
+                    Object.entries(cat.thumbUrls).forEach(([u, t]) => {
+                        if (t) photoThumbMap.set(u, t);
+                    });
+                }
+            });
             renderCurrentView();
         } else {
             // Show skeleton loading state only on cold / un-cached load
@@ -402,6 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ]);
             const singleUrls = [];
             const singleItems = [];
+            const singleThumbUrls = {};
             const archivedSingleUrls = new Set();
             let latestSingleDate = '1970-01-01T00:00:00.000Z';
 
@@ -410,8 +432,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (data.url && data.modelName) {
                     photoModelMap.set(data.url, data.modelName.trim());
                 }
-                if (data.url && data.thumbUrl) {
-                    photoThumbMap.set(data.url, data.thumbUrl);
+                const thumb = data.thumbUrl || data.thumbnailUrl || (typeof data.url === 'string' && data.url.endsWith('.webp') && !data.url.endsWith('_thumb.webp') ? data.url.replace(/\.webp$/, '_thumb.webp') : null);
+                if (data.url && thumb) {
+                    photoThumbMap.set(data.url, thumb);
+                    singleThumbUrls[data.url] = thumb;
                 }
                 if (data.url && typeof data.aspectRatio === 'number') {
                     setRatio(data.url, data.aspectRatio);
@@ -455,6 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     theme: 'Mixed',
                     date: latestSingleDate,
                     urls: singleUrls,
+                    thumbUrls: singleThumbUrls,
                     archivedUrls: Array.from(archivedSingleUrls).sort()
                 });
             }
@@ -467,13 +492,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const archivedUrls = Array.isArray(data.archivedUrls) ? data.archivedUrls : (Array.isArray(data.archived_photos) ? data.archived_photos : []);
                     const allImagesArchived = data.urls.every(url => archivedUrls.includes(url));
 
-                    // Sets that are fully archived should ONLY be visible in the archived tab
-                    if (data.archived === true) return;
-                    if (allImagesArchived && (!isAdmin || !showArchived)) return;
+                    // Archived sets should NEVER be displayed on the photoshoots page (they belong only on archived.html)
+                    if (data.archived === true || allImagesArchived) return;
 
                     let visibleUrls = [...data.urls];
 
-                    // Filter out individually archived photos for non-admins or when showArchived is off
+                    // For unarchived sets: filter out individually archived photos when showArchived is off
                     if (!isAdmin || !showArchived) {
                         visibleUrls = visibleUrls.filter(url => !archivedUrls.includes(url));
                         if (visibleUrls.length === 0) {
@@ -495,9 +519,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (typeof r === 'number') setRatio(u, r);
                         });
                     }
-                    if (data.thumbUrls && typeof data.thumbUrls === 'object') {
-                        Object.entries(data.thumbUrls).forEach(([u, t]) => {
-                            if (t) photoThumbMap.set(u, t);
+                    const setThumbUrls = { ...(data.thumbUrls || {}) };
+                    if (data.urls && Array.isArray(data.urls)) {
+                        data.urls.forEach(u => {
+                            if (!setThumbUrls[u] && typeof u === 'string' && u.endsWith('.webp') && !u.endsWith('_thumb.webp')) {
+                                setThumbUrls[u] = u.replace(/\.webp$/, '_thumb.webp');
+                            }
+                            if (setThumbUrls[u]) {
+                                photoThumbMap.set(u, setThumbUrls[u]);
+                            }
                         });
                     }
 
@@ -508,7 +538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         theme: data.theme || 'None',
                         date: data.date || '1970-01-01T00:00:00.000Z',
                         urls: visibleUrls.reverse(), // Show newest to oldest
-                        thumbUrls: data.thumbUrls || {},
+                        thumbUrls: setThumbUrls,
                         archivedUrls: [...archivedUrls].sort()
                     });
                 }
@@ -668,6 +698,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         cfUrlsToDelete.push(thumbUrls[photoUrl]);
                         delete thumbUrls[photoUrl];
                     }
+                    if (photoThumbMap.has(photoUrl)) {
+                        cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                    }
                     for (const [full, thumb] of Object.entries(thumbUrls)) {
                         if (thumb === photoUrl) {
                             cfUrlsToDelete.push(full);
@@ -685,6 +718,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         aspectRatios
                     });
                 } else {
+                    if (photoThumbMap.has(photoUrl)) {
+                        cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                    }
                     await updateDoc(setRef, {
                         urls: arrayRemove(photoUrl),
                         adultUrls: arrayRemove(photoUrl),
@@ -704,7 +740,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const deleteCategory = async (categoryId, extraUrls = []) => {
+    const deleteCategory = async (categoryId, extraUrls = [], extraThumbUrls = {}) => {
         const confirmed = await showConfirmModal({
             title: "Delete Entire Photoshoot",
             message: "Are you sure you want to permanently delete this ENTIRE set? This cannot be undone.",
@@ -714,7 +750,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirmed) return;
 
         try {
-            await deletePhotoshootSet(categoryId, { extraUrls });
+            const targetCat = categoriesData.find(c => c.categoryId === categoryId);
+            const combinedThumbs = {
+                ...(targetCat?.thumbUrls || {}),
+                ...extraThumbUrls,
+                ...Object.fromEntries(photoThumbMap)
+            };
+            const combinedUrls = targetCat && Array.isArray(targetCat.urls) ? targetCat.urls : extraUrls;
+            await deletePhotoshootSet(categoryId, { extraUrls: combinedUrls, thumbUrls: combinedThumbs });
             await loadPhotos();
         } catch (error) {
             console.error("Error deleting photo set:", error);
@@ -742,6 +785,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Error archiving photo set: " + (error.message || error));
         }
     };
+
 
     // --- Cold Load Skeleton Helper ---
     const showSkeletonLoading = () => {
@@ -945,7 +989,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         wrapper.dataset.url = url;
         wrapper.dataset.categoryId = cat.categoryId;
 
-        const thumbUrl = photoThumbMap.get(url) || (cat.thumbUrls && cat.thumbUrls[url]) || null;
+        const thumbUrl = getThumbnailUrl(url, cat);
         const displaySrc = thumbUrl || url;
 
         const img = document.createElement('img');
@@ -1092,6 +1136,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateFlowCardAdminState = (wrapper, cat, url) => {
+        const img = wrapper.querySelector('img.masonry-img');
+        if (img) {
+            const targetThumb = getThumbnailUrl(url, cat);
+            if (targetThumb && img.dataset.src && img.dataset.src !== targetThumb) {
+                img.dataset.src = targetThumb;
+            } else if (targetThumb && img.src && !img.src.startsWith('data:') && img.src !== targetThumb) {
+                img.src = targetThumb;
+            }
+        }
+
         let delPhotoBtn = wrapper.querySelector('.delete-photo-btn');
         if (isAdmin) {
             if (!delPhotoBtn) {
@@ -1229,6 +1283,167 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================================================
     let photoshootsViewportObserver = null;
 
+    const createCategoryImgElem = (cat, url, scrollRow, isPriority = false) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-container';
+        wrapper.dataset.url = url;
+        wrapper.setAttribute('draggable', 'false');
+        wrapper.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        // Retrieve known aspect ratio or default to standard editorial portrait (2:3 = 0.667)
+        const ratio = getRatio(url) || (2 / 3);
+        const initialWidth = Math.round(270 * ratio);
+        wrapper.style.width = `${initialWidth}px`;
+        wrapper.style.aspectRatio = `${ratio}`;
+
+        const thumbUrl = getThumbnailUrl(url, cat);
+        const displaySrc = thumbUrl || url;
+
+        const img = document.createElement('img');
+        img.className = 'row-img';
+        img.dataset.fullUrl = url;
+        img.dataset.src = displaySrc;
+
+        if (isPriority) {
+            img.src = displaySrc;
+            img.loading = 'eager';
+            img.decoding = 'async';
+            img.setAttribute('fetchpriority', 'high');
+            img.removeAttribute('data-src');
+        } else {
+            // SVG placeholder with proportional viewBox matching the ratio
+            const svgW = Math.round(1000 * ratio);
+            img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.setAttribute('fetchpriority', 'low');
+        }
+        img.style.aspectRatio = `${ratio}`;
+        img.draggable = false;
+        img.setAttribute('draggable', 'false');
+        img.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            return false;
+        });
+
+        const markLoaded = () => {
+            if (img.naturalWidth && img.naturalHeight) {
+                const actualRatio = img.naturalWidth / img.naturalHeight;
+                setRatio(url, actualRatio);
+                wrapper.style.width = `${Math.round(270 * actualRatio)}px`;
+                wrapper.style.aspectRatio = `${actualRatio}`;
+                img.style.aspectRatio = `${actualRatio}`;
+            }
+            img.classList.add('is-loaded');
+            wrapper.classList.add('img-loaded');
+        };
+
+        img._markLoaded = markLoaded;
+
+        if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:')) {
+            markLoaded();
+        } else {
+            img.addEventListener('load', () => {
+                if (img.src && !img.src.startsWith('data:')) {
+                    markLoaded();
+                }
+            });
+        }
+
+        img.addEventListener('error', markLoaded);
+
+        const specificModel = (cat.categoryId === 'single-shots')
+            ? (photoModelMap.get(url) || '')
+            : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
+        if (specificModel) {
+            img.dataset.model = specificModel;
+        }
+
+        // Tap & Click handler for lightbox
+        let touchMoved = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const triggerLightbox = (e) => {
+            if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+            if (scrollRow && (scrollRow._hasDragged || scrollRow.classList.contains('is-dragging'))) return;
+            if (touchMoved) {
+                touchMoved = false;
+                return;
+            }
+            openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId, specificModel);
+        };
+
+        wrapper.addEventListener('click', triggerLightbox);
+
+        wrapper.addEventListener('touchstart', (e) => {
+            touchMoved = false;
+            if (e.touches && e.touches[0]) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches[0]) {
+                if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
+                    touchMoved = true;
+                }
+            }
+        }, { passive: true });
+
+        // Attach 3D Magnetic Tilt
+        attachTiltEffect(wrapper);
+
+        wrapper.appendChild(img);
+
+        // Delete Photo Button
+        if (isAdmin) {
+            const delPhotoBtn = document.createElement('button');
+            delPhotoBtn.className = 'delete-photo-btn';
+            delPhotoBtn.innerHTML = '&times;';
+            delPhotoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deletePhoto(cat.categoryId, url);
+            });
+            wrapper.appendChild(delPhotoBtn);
+        }
+
+        // Archived indicator badge on photo card for admin
+        const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+        if (isAdmin && showArchived && isPhotoArchived) {
+            const badge = document.createElement('div');
+            badge.className = 'photo-archived-badge';
+            badge.innerText = 'Archived';
+            wrapper.appendChild(badge);
+        }
+
+        if (photoshootsViewportObserver) {
+            photoshootsViewportObserver.observe(wrapper);
+        }
+
+        return wrapper;
+    };
+
+    const buildSeeAllCard = (cat, shownCount) => {
+        const seeAllCard = document.createElement('a');
+        seeAllCard.className = 'see-all-card';
+        seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+        const remaining = cat.urls.length - shownCount;
+        seeAllCard.innerHTML = `
+            <div class="see-all-card-inner">
+                <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
+                <span class="see-all-label">Full Editorial</span>
+                <span class="see-all-count">${cat.urls.length} Photos</span>
+                <span class="see-all-arrow">&rarr;</span>
+            </div>
+        `;
+        return seeAllCard;
+    };
+
     const buildCategoryRow = (cat) => {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'category-row';
@@ -1276,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const delCatBtn = document.createElement('button');
             delCatBtn.className = 'delete-category-btn';
             delCatBtn.innerText = 'Delete Set';
-            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls));
+            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls, cat.thumbUrls));
 
             actionsDiv.appendChild(archCatBtn);
             actionsDiv.appendChild(delCatBtn);
@@ -1288,12 +1503,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Images Container
         const scrollRow = document.createElement('div');
         scrollRow.className = 'scrollable-row';
+        scrollRow._hasDragged = false;
 
         // --- PC Drag-to-Scroll & Smooth Wheel ---
         let isMouseDown = false;
         let startX = 0;
         let scrollLeftStart = 0;
-        let hasDragged = false;
 
         scrollRow.setAttribute('draggable', 'false');
         scrollRow.addEventListener('dragstart', (e) => {
@@ -1304,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         scrollRow.addEventListener('mousedown', (e) => {
             if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
             isMouseDown = true;
-            hasDragged = false;
+            scrollRow._hasDragged = false;
             startX = e.pageX - scrollRow.offsetLeft;
             scrollLeftStart = scrollRow.scrollLeft;
             pauseAutoScroll();
@@ -1315,11 +1530,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const x = e.pageX - scrollRow.offsetLeft;
             const walk = (x - startX) * 1.5;
             if (Math.abs(walk) > 6) {
-                hasDragged = true;
+                scrollRow._hasDragged = true;
                 scrollRow.classList.add('is-dragging');
                 e.preventDefault();
             }
-            if (hasDragged) {
+            if (scrollRow._hasDragged) {
                 scrollRow.scrollLeft = scrollLeftStart - walk;
                 pauseAutoScroll();
             }
@@ -1329,9 +1544,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isMouseDown) {
                 isMouseDown = false;
                 scrollRow.classList.remove('is-dragging');
-                if (hasDragged) {
+                if (scrollRow._hasDragged) {
                     setTimeout(() => {
-                        hasDragged = false;
+                        scrollRow._hasDragged = false;
                     }, 80);
                 }
                 scheduleAutoScroll();
@@ -1485,170 +1700,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const imagesToShow = cat.urls.slice(0, limit);
         const hasMore = cat.urls.length > 5;
 
-        const createImgElem = (url, isPriority = false) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'img-container';
-            wrapper.dataset.url = url;
-            wrapper.setAttribute('draggable', 'false');
-            wrapper.addEventListener('dragstart', (e) => {
-                e.preventDefault();
-                return false;
-            });
-
-            // Retrieve known aspect ratio or default to standard editorial portrait (2:3 = 0.667)
-            const ratio = getRatio(url) || (2 / 3);
-            const initialWidth = Math.round(270 * ratio);
-            wrapper.style.width = `${initialWidth}px`;
-            wrapper.style.aspectRatio = `${ratio}`;
-
-            const thumbUrl = photoThumbMap.get(url) || (cat.thumbUrls && cat.thumbUrls[url]) || null;
-            const displaySrc = thumbUrl || url;
-
-            const img = document.createElement('img');
-            img.className = 'row-img';
-            img.dataset.fullUrl = url;
-            img.dataset.src = displaySrc;
-
-            if (isPriority) {
-                img.src = displaySrc;
-                img.loading = 'eager';
-                img.decoding = 'async';
-                img.setAttribute('fetchpriority', 'high');
-                img.removeAttribute('data-src');
-            } else {
-                // SVG placeholder with proportional viewBox matching the ratio
-                const svgW = Math.round(1000 * ratio);
-                img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
-                img.loading = 'lazy';
-                img.decoding = 'async';
-                img.setAttribute('fetchpriority', 'low');
-            }
-            img.style.aspectRatio = `${ratio}`;
-            img.draggable = false;
-            img.setAttribute('draggable', 'false');
-            img.addEventListener('dragstart', (e) => {
-                e.preventDefault();
-                return false;
-            });
-
-            const markLoaded = () => {
-                if (img.naturalWidth && img.naturalHeight) {
-                    const actualRatio = img.naturalWidth / img.naturalHeight;
-                    setRatio(url, actualRatio);
-                    wrapper.style.width = `${Math.round(270 * actualRatio)}px`;
-                    wrapper.style.aspectRatio = `${actualRatio}`;
-                    img.style.aspectRatio = `${actualRatio}`;
-                }
-                img.classList.add('is-loaded');
-                wrapper.classList.add('img-loaded');
-            };
-
-            img._markLoaded = markLoaded;
-
-            if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:')) {
-                markLoaded();
-            } else {
-                img.addEventListener('load', () => {
-                    if (img.src && !img.src.startsWith('data:')) {
-                        markLoaded();
-                    }
-                });
-            }
-
-            img.addEventListener('error', markLoaded);
-
-            const specificModel = (cat.categoryId === 'single-shots')
-                ? (photoModelMap.get(url) || '')
-                : (photoModelMap.get(url) || ((cat.modelName && cat.modelName.toLowerCase() !== 'unknown' && cat.modelName.toLowerCase() !== 'mixed') ? cat.modelName : ''));
-            if (specificModel) {
-                img.dataset.model = specificModel;
-            }
-
-            // Tap & Click handler for lightbox
-            let touchMoved = false;
-            let touchStartX = 0;
-            let touchStartY = 0;
-
-            const triggerLightbox = (e) => {
-                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-                if (hasDragged) return;
-                if (touchMoved) {
-                    touchMoved = false;
-                    return;
-                }
-                openLightbox(img, cat.categoryName || 'PHOTOSHOOT', cat.categoryId, specificModel);
-            };
-
-            wrapper.addEventListener('click', triggerLightbox);
-
-            wrapper.addEventListener('touchstart', (e) => {
-                touchMoved = false;
-                if (e.touches && e.touches[0]) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                }
-            }, { passive: true });
-
-            wrapper.addEventListener('touchmove', (e) => {
-                if (e.touches && e.touches[0]) {
-                    if (Math.abs(e.touches[0].clientX - touchStartX) > 8 || Math.abs(e.touches[0].clientY - touchStartY) > 8) {
-                        touchMoved = true;
-                    }
-                }
-            }, { passive: true });
-
-            // Attach 3D Magnetic Tilt
-            attachTiltEffect(wrapper);
-
-            wrapper.appendChild(img);
-
-            // Delete Photo Button
-            if (isAdmin) {
-                const delPhotoBtn = document.createElement('button');
-                delPhotoBtn.className = 'delete-photo-btn';
-                delPhotoBtn.innerHTML = '&times;';
-                delPhotoBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    deletePhoto(cat.categoryId, url);
-                });
-                wrapper.appendChild(delPhotoBtn);
-            }
-
-            // Archived indicator badge on photo card for admin
-            const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
-            if (isAdmin && showArchived && isPhotoArchived) {
-                const badge = document.createElement('div');
-                badge.className = 'photo-archived-badge';
-                badge.innerText = 'Archived';
-                wrapper.appendChild(badge);
-            }
-
-            if (photoshootsViewportObserver) {
-                photoshootsViewportObserver.observe(wrapper);
-            }
-
-            return wrapper;
-        };
-
         imagesToShow.forEach((url, idx) => {
-            scrollRow.appendChild(createImgElem(url, idx < 3));
+            scrollRow.appendChild(createCategoryImgElem(cat, url, scrollRow, idx < 3));
         });
 
         // Luxury End-Card Tile (Never blocks images, fluidly accessible via scroll/swipe)
         if (hasMore) {
-            const seeAllCard = document.createElement('a');
-            seeAllCard.className = 'see-all-card';
-            seeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
-            const remaining = cat.urls.length - imagesToShow.length;
-            seeAllCard.innerHTML = `
-                <div class="see-all-card-inner">
-                    <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
-                    <span class="see-all-label">Full Editorial</span>
-                    <span class="see-all-count">${cat.urls.length} Photos</span>
-                    <span class="see-all-arrow">&rarr;</span>
-                </div>
-            `;
-            scrollRow.appendChild(seeAllCard);
+            scrollRow.appendChild(buildSeeAllCard(cat, imagesToShow.length));
         }
 
         const scrollWrapper = document.createElement('div');
@@ -1686,10 +1744,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateCategoryRowAdminState = (rowDiv, cat) => {
+        // 1. Reconcile header meta
+        const meta = rowDiv.querySelector('.category-meta');
+        if (meta) {
+            const displayDate = cat.date !== '1970-01-01T00:00:00.000Z' ? new Date(cat.date).toLocaleDateString() : '';
+            meta.innerText = `${cat.modelName} | ${cat.theme} ${displayDate ? '| ' + displayDate : ''}`;
+        }
+
+        // 2. Reconcile View Set button count & link
         const actionsDiv = rowDiv.querySelector('.category-actions');
         if (actionsDiv) {
+            const viewSetBtn = actionsDiv.querySelector('.view-set-header-btn');
+            if (viewSetBtn) {
+                viewSetBtn.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                viewSetBtn.innerHTML = `View Set <span style="opacity: 0.65;">(${cat.urls.length})</span> <span class="arrow">&rarr;</span>`;
+            }
+
+            // Reconcile Admin Action Buttons (Archive + Delete)
             let archCatBtn = actionsDiv.querySelector('.archive-category-btn');
             let delCatBtn = actionsDiv.querySelector('.delete-category-btn');
+
             if (isAdmin && cat.categoryId !== 'single-shots') {
                 if (!archCatBtn) {
                     archCatBtn = document.createElement('button');
@@ -1698,11 +1772,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     archCatBtn.addEventListener('click', () => archiveCategory(cat.categoryId));
                     actionsDiv.appendChild(archCatBtn);
                 }
+
                 if (!delCatBtn) {
                     delCatBtn = document.createElement('button');
                     delCatBtn.className = 'delete-category-btn';
                     delCatBtn.innerText = 'Delete Set';
-                    delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls));
+                    delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, cat.urls, cat.thumbUrls));
+                    actionsDiv.appendChild(delCatBtn);
+                } else {
                     actionsDiv.appendChild(delCatBtn);
                 }
             } else {
@@ -1711,40 +1788,105 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        const imgWrappers = rowDiv.querySelectorAll('.scrollable-row .img-container');
-        imgWrappers.forEach(wrapper => {
-            const url = wrapper.dataset.url;
-            if (!url) return;
+        // 3. Reconcile photos inside .scrollable-row (insert newly unhidden photos, remove hidden ones, update badges)
+        const scrollRow = rowDiv.querySelector('.scrollable-row');
+        if (scrollRow) {
+            const limit = 15;
+            const imagesToShow = cat.urls.slice(0, limit);
+            const hasMore = cat.urls.length > 5;
 
-            let delPhotoBtn = wrapper.querySelector('.delete-photo-btn');
-            if (isAdmin) {
-                if (!delPhotoBtn) {
-                    delPhotoBtn = document.createElement('button');
-                    delPhotoBtn.className = 'delete-photo-btn';
-                    delPhotoBtn.innerHTML = '&times;';
-                    delPhotoBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        deletePhoto(cat.categoryId, url);
-                    });
-                    wrapper.appendChild(delPhotoBtn);
-                }
-            } else if (delPhotoBtn) {
-                delPhotoBtn.remove();
-            }
+            const existingContainers = new Map();
+            scrollRow.querySelectorAll('.img-container[data-url]').forEach(c => {
+                existingContainers.set(c.dataset.url, c);
+            });
 
-            let badge = wrapper.querySelector('.photo-archived-badge');
-            const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
-            if (isAdmin && showArchived && isPhotoArchived) {
-                if (!badge) {
-                    badge = document.createElement('div');
-                    badge.className = 'photo-archived-badge';
-                    badge.innerText = 'Archived';
-                    wrapper.appendChild(badge);
+            const existingSeeAllCard = scrollRow.querySelector('.see-all-card');
+
+            imagesToShow.forEach((url, idx) => {
+                let wrapper = existingContainers.get(url);
+                if (wrapper) {
+                    existingContainers.delete(url);
+
+                    const img = wrapper.querySelector('img.row-img');
+                    if (img) {
+                        const targetThumb = getThumbnailUrl(url, cat);
+                        if (targetThumb && img.dataset.src && img.dataset.src !== targetThumb) {
+                            img.dataset.src = targetThumb;
+                        } else if (targetThumb && img.src && !img.src.startsWith('data:') && img.src !== targetThumb) {
+                            img.src = targetThumb;
+                        }
+                    }
+
+                    // Reconcile delete photo button
+                    let delPhotoBtn = wrapper.querySelector('.delete-photo-btn');
+                    if (isAdmin) {
+                        if (!delPhotoBtn) {
+                            delPhotoBtn = document.createElement('button');
+                            delPhotoBtn.className = 'delete-photo-btn';
+                            delPhotoBtn.innerHTML = '&times;';
+                            delPhotoBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                deletePhoto(cat.categoryId, url);
+                            });
+                            wrapper.appendChild(delPhotoBtn);
+                        }
+                    } else if (delPhotoBtn) {
+                        delPhotoBtn.remove();
+                    }
+
+                    // Reconcile archived badge
+                    let badge = wrapper.querySelector('.photo-archived-badge');
+                    const isPhotoArchived = cat.archivedUrls && cat.archivedUrls.includes(url);
+                    if (isAdmin && showArchived && isPhotoArchived) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'photo-archived-badge';
+                            badge.innerText = 'Archived';
+                            wrapper.appendChild(badge);
+                        }
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                } else {
+                    wrapper = createCategoryImgElem(cat, url, scrollRow, idx < 3);
                 }
-            } else if (badge) {
-                badge.remove();
+
+                if (existingSeeAllCard) {
+                    scrollRow.insertBefore(wrapper, existingSeeAllCard);
+                } else {
+                    scrollRow.appendChild(wrapper);
+                }
+            });
+
+            // Remove containers for images no longer visible (e.g. when showArchived is toggled off)
+            existingContainers.forEach(wrapper => {
+                if (photoshootsViewportObserver) {
+                    photoshootsViewportObserver.unobserve(wrapper);
+                }
+                wrapper.remove();
+            });
+
+            // Reconcile seeAllCard
+            if (hasMore) {
+                if (existingSeeAllCard) {
+                    const remaining = cat.urls.length - imagesToShow.length;
+                    existingSeeAllCard.href = `/photoshoots/gallery.html?id=${encodeURIComponent(cat.categoryId)}`;
+                    existingSeeAllCard.innerHTML = `
+                        <div class="see-all-card-inner">
+                            <span class="see-all-plus">${remaining > 0 ? '+' + remaining : '&rarr;'}</span>
+                            <span class="see-all-label">Full Editorial</span>
+                            <span class="see-all-count">${cat.urls.length} Photos</span>
+                            <span class="see-all-arrow">&rarr;</span>
+                        </div>
+                    `;
+                    scrollRow.appendChild(existingSeeAllCard);
+                } else {
+                    scrollRow.appendChild(buildSeeAllCard(cat, imagesToShow.length));
+                }
+            } else if (existingSeeAllCard) {
+                existingSeeAllCard.remove();
             }
-        });
+        }
     };
 
     const renderSetsView = () => {

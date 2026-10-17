@@ -49,9 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Register Service Worker for offline asset & image caching
     registerSiteServiceWorker();
 
-    // UI Elements
-    const loginBtn = document.getElementById('login-btn-header');
-    const logoutBtn = document.getElementById('logout-btn');
     
     // Gallery Elements
     const gallery = document.getElementById('gallery');
@@ -153,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Editorial Fine-Art Lightbox Logic ---
-    let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
     let isLightboxHistoryActive = false;
     let isHandlingHistoryBack = false;
@@ -168,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const openLightbox = (imgElement, setName = 'EDITORIAL ARCHIVE') => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
-        activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
 
         // Manage browser history for phone back action / gesture
@@ -214,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             lightbox.style.display = 'none';
             if (lightboxImg) lightboxImg.src = '';
-            activeOriginImg = null;
         }, 300);
     };
 

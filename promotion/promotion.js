@@ -264,19 +264,7 @@ const DEFAULT_PAGE_DATA = [
 ];
 
 const PRESETS_STORAGE_KEY = 'zhukov_promotion_presets';
-const ACTIVE_PRESET_KEY = 'zhukov_promotion_active_preset_id';
 
-// Verified Studio Photo Library assets available in repo
-const STUDIO_LIBRARY_IMAGES = [
-    { url: '/_images/theme_main.jpg', title: 'Main Editorial Portrait' },
-    { url: '/_images/theme_concept_a.jpg', title: 'Sensual Concept A' },
-    { url: '/_images/theme_concept_b.jpg', title: 'Haute Glamour Concept B' },
-    { url: '/_images/location_studio.jpg', title: 'Studio Production Setup' },
-    { url: '/_images/location_interior.jpg', title: 'Interior Atelier Atmosphere' },
-    { url: '/_images/location_waterfall.jpg', title: 'Outdoor Natural Location' },
-    { url: '/_images/moodboard_preview.jpg', title: 'Editorial Moodboard' },
-    { url: '/_images/editing_preview.jpg', title: 'Retouching & Grading Suite' }
-];
 
 // Initial built-in presets
 const INITIAL_PRESETS = [
@@ -408,7 +396,6 @@ function slugify(text) {
 }
 
 // ── Firebase Auth & Role Verification ─────────────────────────────────────
-let currentFirebaseUser = null;
 let isUserVerifiedAdmin = false;
 
 // Check Admin Status (cached flag or query override)
@@ -426,7 +413,6 @@ function initPromotionAuth() {
     isUserVerifiedAdmin = checkIsAdmin();
 
     onAuthStateChanged(auth, async (user) => {
-        currentFirebaseUser = user;
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
             try {
@@ -1101,8 +1087,6 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
         case 'hero':
             const heroTag = block.tag || '01 / CONCEPT / EDITORIAL';
             const heroSubdeck = block.subdeck || 'Where darkness meets light. Exclusive, artistic, and sensual photography that redefines your perspective.';
-            const heroBtn = block.buttonLabel || 'EXPLORE PORTFOLIO';
-            const heroLink = block.linkUrl || '#packages';
             const heroImg = block.imageUrl || '/_images/theme_main.jpg';
             const heroAlt = block.imageAlt || 'Editorial Hero Photography';
 
@@ -1119,8 +1103,6 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             const showTag = block.showTag !== false;
             const showTitle = block.showTitle !== false;
             const showSubdeck = block.showSubdeck !== false;
-            const showBtn = block.showButton !== false;
-            const showSecBtn = !!block.showSecondaryButton;
             const showBadge = !!block.showBadge;
             const showNote = !!block.showExtraNote;
 

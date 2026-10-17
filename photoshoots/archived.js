@@ -1,8 +1,7 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
-import { deleteFromCloudflare } from "../cloudflare-storage.js";
 import { deletePhotoshootSet } from "./delete-set-helper.js";
 
 // --- CONFIGURATION ---
@@ -18,12 +17,6 @@ const provider = new GoogleAuthProvider();
 document.addEventListener('DOMContentLoaded', () => {
     registerSiteServiceWorker();
 
-    // DOM Elements
-    const loginBtn            = document.getElementById('login-btn-header');
-    const logoutBtn           = document.getElementById('logout-btn');
-    const uploadLink          = document.getElementById('upload-nav-link');
-    const archivedLink        = document.getElementById('archived-nav-link');
-    const archivedBanner      = document.getElementById('archived-banner');
     const sortBar             = document.getElementById('sort-bar');
     const sortSelect          = document.getElementById('sort-select');
     const sortOrderBtn        = document.getElementById('sort-order-btn');
@@ -49,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Data State
     let categoriesData = [];
     let photoModelMap = new Map();
+    let photoThumbMap = new Map();
     let loadReqId = 0;
 
     // --- State Handler ---
@@ -56,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // state: 'loading' | 'denied' | 'empty' | 'content' | 'error'
         if (loadingMsg) loadingMsg.style.display = 'none';
         if (accessDenied) accessDenied.style.display = 'none';
-        if (archivedBanner) archivedBanner.style.display = 'none';
         if (sortBar) sortBar.style.display = 'none';
         if (categoriesContainer) categoriesContainer.style.display = 'none';
         if (flowContainer) flowContainer.style.display = 'none';
@@ -71,10 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (state === 'denied') {
             if (accessDenied) accessDenied.style.display = 'block';
         } else if (state === 'empty') {
-            if (archivedBanner) archivedBanner.style.display = 'flex';
             if (archivedEmpty) archivedEmpty.style.display = 'block';
         } else if (state === 'content') {
-            if (archivedBanner) archivedBanner.style.display = 'flex';
             if (sortBar) sortBar.style.display = 'flex';
             if (currentView === 'flow') {
                 if (flowContainer) flowContainer.style.display = 'block';
@@ -126,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Editorial Fine-Art Lightbox Logic ---
-    let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
     let isLightboxHistoryActive = false;
     let isHandlingHistoryBack = false;
@@ -141,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const openLightbox = (imgElement, setName = 'ARCHIVE', categoryId = null, modelName = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
-        activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
 
         // Manage browser history for phone back action / gesture
@@ -255,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lightboxImg) lightboxImg.src = '';
             if (lightboxSetName) lightboxSetName.textContent = 'ARCHIVE';
             if (lightboxActions) lightboxActions.style.display = 'none';
-            activeOriginImg = null;
         }, 300);
     };
 
@@ -339,6 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.url && data.modelName) {
                         photoModelMap.set(data.url, data.modelName.trim());
                     }
+                    const thumb = data.thumbUrl || data.thumbnailUrl;
+                    if (data.url && thumb) {
+                        photoThumbMap.set(data.url, thumb);
+                    }
                 });
             }
 
@@ -359,13 +351,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         }
 
+                        const setThumbUrls = { ...(data.thumbUrls || {}) };
+                        if (data.thumbUrls && typeof data.thumbUrls === 'object') {
+                            Object.entries(data.thumbUrls).forEach(([u, t]) => {
+                                if (t) photoThumbMap.set(u, t);
+                            });
+                        }
+
                         loaded.push({
                             categoryId: docSnap.id,
                             categoryName: data.categoryName || 'Untitled Set',
                             modelName: data.modelName || 'Unknown',
                             theme: data.theme || 'None',
                             date: data.date || '1970-01-01T00:00:00.000Z',
-                            urls: [...data.urls].reverse()
+                            urls: [...data.urls].reverse(),
+                            thumbUrls: setThumbUrls
                         });
                     }
                 }
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const deleteCategory = async (categoryId, rowElement, extraUrls = []) => {
+    const deleteCategory = async (categoryId, rowElement, extraUrls = [], extraThumbUrls = {}) => {
         const confirmed = await showConfirmModal({
             title: "Delete Archived Set",
             message: "Permanently delete this ENTIRE photoshoot set? This cannot be undone.",
@@ -516,7 +516,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirmed) return;
 
         try {
-            await deletePhotoshootSet(categoryId, { extraUrls });
+            const targetCat = categoriesData.find(c => c.categoryId === categoryId);
+            const combinedThumbs = {
+                ...(targetCat?.thumbUrls || {}),
+                ...extraThumbUrls,
+                ...Object.fromEntries(photoThumbMap)
+            };
+            const combinedUrls = targetCat && Array.isArray(targetCat.urls) ? targetCat.urls : extraUrls;
+            await deletePhotoshootSet(categoryId, { extraUrls: combinedUrls, thumbUrls: combinedThumbs });
 
             if (rowElement) {
                 rowElement.style.transition = 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -998,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const delCatBtn = document.createElement('button');
             delCatBtn.className = 'delete-category-btn';
             delCatBtn.innerText = 'Delete Set';
-            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, rowDiv, cat.urls));
+            delCatBtn.addEventListener('click', () => deleteCategory(cat.categoryId, rowDiv, cat.urls, cat.thumbUrls));
 
             actionsDiv.appendChild(unarchBtn);
             actionsDiv.appendChild(delCatBtn);
@@ -1496,11 +1503,9 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             localStorage.setItem('zhukov_logged_in', 'true');
-            let isAdmin = false;
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    isAdmin = true;
                     if (window.updateHeaderAuthState) window.updateHeaderAuthState(user, true);
                     loadArchivedPhotos();
                 } else {

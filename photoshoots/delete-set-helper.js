@@ -20,7 +20,7 @@ import { invalidateCache } from "../site-cache.js";
  * @param {string[]} [options.extraUrls] - Any additional URLs loaded client-side
  * @returns {Promise<{ success: boolean, deletedUrlsCount: number }>}
  */
-export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
+export async function deletePhotoshootSet(categoryId, { extraUrls = [], thumbUrls = {} } = {}) {
     if (!categoryId || categoryId === 'single-shots') {
         throw new Error("Invalid photoshoot categoryId: " + categoryId);
     }
@@ -43,6 +43,16 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
                     urlsCollector.add(s.replace(/\.webp$/, '_thumb.webp'));
                 }
             }
+        });
+    }
+
+    // Include any thumbnails passed explicitly from the caller
+    if (thumbUrls && typeof thumbUrls === 'object') {
+        Object.keys(thumbUrls).forEach(k => {
+            if (typeof k === 'string' && k.trim()) urlsCollector.add(k.trim());
+        });
+        Object.values(thumbUrls).forEach(v => {
+            if (typeof v === 'string' && v.trim()) urlsCollector.add(v.trim());
         });
     }
 
@@ -80,7 +90,10 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
                 if (val.url) addTarget(val.url);
                 if (val.thumbUrl) addTarget(val.thumbUrl);
                 if (val.src) addTarget(val.src);
-                // Handle map of url -> thumbUrl
+                // Handle map of url -> thumbUrl (collect BOTH keys and values)
+                Object.keys(val).forEach(k => {
+                    if (typeof k === 'string' && (k.startsWith('http') || k.includes('.webp'))) addTarget(k);
+                });
                 Object.values(val).forEach(v => {
                     if (typeof v === 'string') addTarget(v);
                 });
@@ -154,6 +167,9 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
             if (val.url) addRemaining(val.url);
             if (val.thumbUrl) addRemaining(val.thumbUrl);
             if (val.src) addRemaining(val.src);
+            Object.keys(val).forEach(k => {
+                if (typeof k === 'string' && (k.startsWith('http') || k.includes('.webp'))) addRemaining(k);
+            });
             Object.values(val).forEach(v => {
                 if (typeof v === 'string') addRemaining(v);
             });
@@ -161,7 +177,7 @@ export async function deletePhotoshootSet(categoryId, { extraUrls = [] } = {}) {
     };
 
     setsSnap.forEach(docSnap => {
-        if (docSnap.id === categoryId) return;
+        if (docSnap.id === categoryId || docSnap.id.toLowerCase() === categoryId.toLowerCase()) return;
         const d = docSnap.data() || {};
         collectRemaining(d.urls);
         collectRemaining(d.thumbUrls);

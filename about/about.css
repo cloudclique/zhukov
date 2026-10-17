@@ -47,11 +47,6 @@
         text-align: left;
     }
 
-    .about-hero-bio {
-        max-width: 460px;
-        text-align: left;
-    }
-
     .about-editorial-hero .hero-subdeck {
         max-width: 440px;
         text-align: left;
@@ -134,15 +129,6 @@
     margin-bottom: 0;
 }
 
-.about-hero-statement {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: 1.25rem !important;
-    line-height: 1.4 !important;
-    color: #111111 !important;
-    font-style: italic;
-    margin-bottom: 0.85rem !important;
-}
-
 .about-hero-pillars {
     display: flex;
     flex-wrap: wrap;
@@ -192,8 +178,7 @@
     color: #ffffff;
 }
 
-#profile-img,
-#about-portrait-img {
+#profile-img {
     object-position: center 15% !important;
 }
 
@@ -362,10 +347,6 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-}
-
-.mobile-swipe-controls {
-    display: none;
 }
 
 /* ── Unified Chronological Roadmap Grid (Strictly 1 to 7) ── */
@@ -893,12 +874,6 @@
     line-height: 1;
 }
 
-.swatch-meta,
-.swatch-hex,
-.swatch-hsl {
-    display: none !important;
-}
-
 .swatch-copy-hint {
     font-family: 'Inter', sans-serif;
     font-size: 0.58rem;
@@ -1087,18 +1062,6 @@
     border-radius: 4px;
 }
 
-html[data-theme="dark"] .gear-img-light,
-.theme-dark .gear-img-light,
-[data-theme="dark"] .gear-img-light {
-    display: none !important;
-}
-
-html[data-theme="dark"] .gear-img-dark,
-.theme-dark .gear-img-dark,
-[data-theme="dark"] .gear-img-dark {
-    display: block !important;
-}
-
 .gear-camera-banner:hover .gear-img {
     transform: scale(1.05);
 }
@@ -1269,103 +1232,6 @@ html[data-theme="dark"] .gear-img-dark,
 /* ==========================================================================
    4. Concluding Editorial Call to Action
    ========================================================================== */
-.about-cta-section {
-    background: #000000;
-    color: #ffffff;
-    padding: 5.5rem 4vw;
-    text-align: center;
-    width: 100%;
-    box-sizing: border-box;
-    border-top: 1px solid #222222;
-}
-
-.about-cta-container {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.cta-kicker {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.24em;
-    color: #b32d2e;
-    text-transform: uppercase;
-    display: inline-block;
-    margin-bottom: 0.8rem;
-}
-
-.cta-title {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-size: clamp(2.4rem, 4.5vw, 3.6rem);
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #ffffff;
-    margin: 0 0 1.2rem 0;
-    line-height: 1.08;
-}
-
-.cta-desc {
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
-    line-height: 1.7;
-    color: #aaaaaa;
-    max-width: 580px;
-    margin: 0 auto 2.2rem auto;
-}
-
-.cta-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1.2rem;
-    flex-wrap: wrap;
-}
-
-.cta-btn {
-    padding: 1.15rem 2.5rem;
-    background: #ffffff;
-    color: #000000;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    text-decoration: none;
-    border: 1px solid #ffffff;
-    box-shadow: 0 6px 24px rgba(255, 255, 255, 0.15);
-    transition: all 0.3s ease;
-}
-
-.cta-btn:hover {
-    background: #b32d2e;
-    color: #ffffff;
-    border-color: #b32d2e;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(179, 45, 46, 0.4);
-}
-
-.cta-btn-secondary {
-    padding: 1.15rem 2.2rem;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    color: #ffffff;
-    background: transparent;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-.cta-btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #ffffff;
-    color: #ffffff;
-    transform: translateY(-2px);
-}
 
 /* ── Mobile Swipeable Carousel Controls (Hidden on Desktop) ── */
 .mobile-swipe-controls {
@@ -1561,12 +1427,6 @@ html[data-theme="dark"] .gear-img-dark,
         height: 14px !important;
         min-width: 14px !important;
         min-height: 14px !important;
-    }
-
-    .swatch-meta,
-    .swatch-hex,
-    .swatch-hsl {
-        display: none !important;
     }
 
     .palette-interactive-stage {
@@ -1920,23 +1780,6 @@ html[data-theme="dark"] .gear-img-dark,
         grid-template-columns: repeat(2, 1fr);
         gap: 0.9rem;
     }
-
-    /* ── CTA on Mobile ── */
-    .about-cta-section {
-        padding: 4rem 1.25rem;
-    }
-
-    .cta-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .cta-btn,
-    .cta-btn-secondary {
-        width: 100%;
-        box-sizing: border-box;
-        text-align: center;
-    }
 }
 
 @media (max-width: 600px) {
@@ -2018,381 +1861,3 @@ html[data-theme="dark"] .gear-img-dark,
 /* ==========================================================================
    ABOUT ME — DARK MODE HARMONIZATION
    ========================================================================== */
-html[data-theme="dark"] .vogue-about-main,
-html[data-theme="dark"] .about-editorial-hero {
-    background: #ffffff !important;
-    border-color: #ebebeb !important;
-}
-
-html[data-theme="dark"] .about-pillar-tag {
-    color: #fae8a4 !important;
-    background: rgba(204, 163, 83, 0.1) !important;
-    border-color: rgba(204, 163, 83, 0.25) !important;
-}
-
-html[data-theme="dark"] .about-jump-btn {
-    border: 1px solid rgba(216, 196, 170, 0.35) !important;
-    color: #dcd3c5 !important;
-    background: transparent !important;
-}
-
-html[data-theme="dark"] .about-jump-btn:hover {
-    border-color: #cca353 !important;
-    background: rgba(204, 163, 83, 0.12) !important;
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
-}
-
-html[data-theme="dark"] .stepper-rail-header {
-    border-bottom-color: rgba(216, 196, 170, 0.1) !important;
-}
-
-html[data-theme="dark"] .stepper-rail-title {
-    color: #cbbdaf !important;
-}
-
-html[data-theme="dark"] .stepper-rail-dot {
-    background: #cca353 !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step {
-    color: #ad9f8d !important;
-    background: transparent !important;
-    border: 1px solid transparent !important;
-    box-sizing: border-box !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step:hover {
-    background: #241c16 !important;
-    color: #fae8a4 !important;
-    border-color: rgba(204, 163, 83, 0.2) !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step.active {
-    background: #271e17 !important;
-    color: #fae8a4 !important;
-    border-color: rgba(204, 163, 83, 0.4) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-num {
-    color: #cca353 !important;
-}
-
-html[data-theme="dark"] .methodology-stepper-bar.vertical .stepper-step.active .stepper-num {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .process-step-card {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
-    color: #dcd3c5 !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3) !important;
-}
-
-html[data-theme="dark"] .process-step-card:hover {
-    border-color: #cca353 !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
-}
-
-html[data-theme="dark"] .step-badge-row {
-    border-bottom-color: rgba(216, 196, 170, 0.1) !important;
-}
-
-html[data-theme="dark"] .step-number-badge {
-    color: #cca353 !important;
-}
-
-html[data-theme="dark"] .step-pill {
-    background: rgba(204, 163, 83, 0.12) !important;
-    color: #fae8a4 !important;
-    border-color: rgba(204, 163, 83, 0.3) !important;
-}
-
-html[data-theme="dark"] .step-title {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .step-desc,
-html[data-theme="dark"] .step-detail-text {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .gear-spec-card,
-html[data-theme="dark"] .lighting-diagram-box,
-html[data-theme="dark"] .palette-stage-box {
-    background: #14100d !important;
-    border-color: rgba(216, 196, 170, 0.1) !important;
-}
-
-/* Step 2: Interactive Color Palette Widget (Zero White) */
-html[data-theme="dark"] .color-palette-widget {
-    background: #14100d !important;
-    border-color: rgba(216, 196, 170, 0.12) !important;
-}
-
-html[data-theme="dark"] .palette-mode-selector {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.18) !important;
-}
-
-html[data-theme="dark"] .palette-mode-btn {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .palette-mode-btn:hover {
-    background: #241c16 !important;
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .palette-mode-btn.active {
-    background: #271e17 !important;
-    color: #fae8a4 !important;
-    border: 1px solid rgba(204, 163, 83, 0.4) !important;
-}
-
-html[data-theme="dark"] .palette-swatch-box,
-html[data-theme="dark"] .palette-swatch-item {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.15) !important;
-    color: #dcd3c5 !important;
-}
-
-html[data-theme="dark"] .swatch-copy-hint {
-    background: #1e1813 !important;
-    border-color: rgba(204, 163, 83, 0.3) !important;
-    color: #fae8a4 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
-}
-
-html[data-theme="dark"] .palette-sliders-box {
-    background: #171310 !important;
-    border: 1px solid rgba(216, 196, 170, 0.15) !important;
-}
-
-html[data-theme="dark"] .palette-sliders-box label,
-html[data-theme="dark"] .slider-label-row {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .palette-mode-status,
-html[data-theme="dark"] .slider-val {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .palette-range-input {
-    background: #241c16 !important;
-}
-
-/* Step 7: Deliverables Box & Luxury Gold Button (Zero White & Zero Crimson) */
-html[data-theme="dark"] .milestone-deliverables-panel {
-    background: #14100d !important;
-    border: 1px solid rgba(216, 196, 170, 0.12) !important;
-    box-shadow: none !important;
-}
-
-html[data-theme="dark"] .deliverable-text strong {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .deliverable-text span {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .deliverable-check {
-    background: rgba(204, 163, 83, 0.15) !important;
-    color: #cca353 !important;
-}
-
-html[data-theme="dark"] .milestone-cta-link {
-    background: #171310 !important;
-    border: 1px solid #cca353 !important;
-    color: #fae8a4 !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4) !important;
-}
-
-html[data-theme="dark"] .milestone-cta-link:hover {
-    background: linear-gradient(135deg, #cca353 0%, #fae8a4 100%) !important;
-    border-color: #fae8a4 !important;
-    color: #120e0b !important;
-    box-shadow: 0 8px 28px rgba(212, 175, 55, 0.35) !important;
-    transform: translateY(-2px);
-}
-
-/* Image Frames & Zero 1px Light Border in About Me */
-html[data-theme="dark"] .process-image-container,
-html[data-theme="dark"] .fan-card,
-html[data-theme="dark"] .fan-card-left,
-html[data-theme="dark"] .fan-card-center,
-html[data-theme="dark"] .fan-card-right,
-html[data-theme="dark"] .profile-image-frame {
-    background: #14100d !important;
-    border: 1px solid rgba(216, 196, 170, 0.12) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
-}
-
-html[data-theme="dark"] .image-overlay-badge {
-    background: rgba(20, 16, 13, 0.85) !important;
-    border-color: rgba(216, 196, 170, 0.2) !important;
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] #about-hero-img-container,
-html[data-theme="dark"] .hero-diagonal-cut-wrapper {
-    background-color: #14100d !important;
-    border: none !important;
-}
-
-/* Mobile Swipe Controls & Numbered Bar in Dark Mode */
-html[data-theme="dark"] .methodology-stepper-bar.vertical {
-    background: #171310 !important;
-    border: 1px solid rgba(216, 196, 170, 0.18) !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
-}
-
-html[data-theme="dark"] .mobile-swipe-controls {
-    background: #171310 !important;
-    border: 1px solid rgba(216, 196, 170, 0.18) !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
-}
-
-html[data-theme="dark"] .mobile-swipe-btn {
-    background: #1f1914 !important;
-    border: 1px solid rgba(216, 196, 170, 0.2) !important;
-    color: #dcd3c5 !important;
-}
-
-html[data-theme="dark"] .mobile-swipe-btn:hover,
-html[data-theme="dark"] .mobile-swipe-btn:active {
-    background: #2a221b !important;
-    border-color: #cca353 !important;
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .mobile-swipe-badge {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .mobile-swipe-badge strong {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .swipe-dot {
-    background: rgba(216, 196, 170, 0.25) !important;
-}
-
-html[data-theme="dark"] .swipe-dot.active {
-    background: #cca353 !important;
-}
-
-/* ── Gear Section Dark Mode Harmonization ── */
-html[data-theme="dark"] .gear-section {
-    background: transparent !important;
-}
-
-html[data-theme="dark"] .gear-badge,
-[data-theme="dark"] .gear-badge,
-.theme-dark .gear-badge {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .gear-section-title,
-[data-theme="dark"] .gear-section-title,
-.theme-dark .gear-section-title {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .gear-section-subtitle,
-[data-theme="dark"] .gear-section-subtitle,
-.theme-dark .gear-section-subtitle {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .gear-camera-banner,
-html[data-theme="dark"] .gear-optic-card,
-[data-theme="dark"] .gear-camera-banner,
-[data-theme="dark"] .gear-optic-card,
-.theme-dark .gear-camera-banner,
-.theme-dark .gear-optic-card {
-    background: #171310 !important;
-    border-color: rgba(216, 196, 170, 0.14) !important;
-    color: #dcd3c5 !important;
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
-}
-
-html[data-theme="dark"] .gear-camera-banner:hover,
-html[data-theme="dark"] .gear-optic-card:hover,
-[data-theme="dark"] .gear-camera-banner:hover,
-[data-theme="dark"] .gear-optic-card:hover,
-.theme-dark .gear-camera-banner:hover,
-.theme-dark .gear-optic-card:hover {
-    border-color: #cca353 !important;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5) !important;
-}
-
-html[data-theme="dark"] .gear-banner-tag,
-html[data-theme="dark"] .gear-optic-num,
-[data-theme="dark"] .gear-banner-tag,
-[data-theme="dark"] .gear-optic-num,
-.theme-dark .gear-banner-tag,
-.theme-dark .gear-optic-num {
-    color: #cca353 !important;
-}
-
-html[data-theme="dark"] .gear-banner-badge,
-html[data-theme="dark"] .gear-optic-pill,
-[data-theme="dark"] .gear-banner-badge,
-[data-theme="dark"] .gear-optic-pill,
-.theme-dark .gear-banner-badge,
-.theme-dark .gear-optic-pill {
-    background: rgba(204, 163, 83, 0.12) !important;
-    color: #fae8a4 !important;
-    border-color: rgba(204, 163, 83, 0.3) !important;
-}
-
-html[data-theme="dark"] .gear-banner-title,
-html[data-theme="dark"] .gear-optic-name,
-[data-theme="dark"] .gear-banner-title,
-[data-theme="dark"] .gear-optic-name,
-.theme-dark .gear-banner-title,
-.theme-dark .gear-optic-name {
-    color: #fae8a4 !important;
-}
-
-html[data-theme="dark"] .gear-banner-desc,
-html[data-theme="dark"] .gear-optic-desc,
-[data-theme="dark"] .gear-banner-desc,
-[data-theme="dark"] .gear-optic-desc,
-.theme-dark .gear-banner-desc,
-.theme-dark .gear-optic-desc {
-    color: #ad9f8d !important;
-}
-
-html[data-theme="dark"] .gear-highlight-item,
-[data-theme="dark"] .gear-highlight-item,
-.theme-dark .gear-highlight-item {
-    color: #dcd3c5 !important;
-}
-
-html[data-theme="dark"] .gear-banner-highlights,
-html[data-theme="dark"] .gear-optic-top,
-html[data-theme="dark"] .gear-optic-role,
-[data-theme="dark"] .gear-banner-highlights,
-[data-theme="dark"] .gear-optic-top,
-[data-theme="dark"] .gear-optic-role,
-.theme-dark .gear-banner-highlights,
-.theme-dark .gear-optic-top,
-.theme-dark .gear-optic-role {
-    border-color: rgba(216, 196, 170, 0.12) !important;
-}
-
-html[data-theme="dark"] .gear-optic-role,
-[data-theme="dark"] .gear-optic-role,
-.theme-dark .gear-optic-role {
-    color: #9e8e7c !important;
-}

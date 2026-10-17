@@ -100,22 +100,30 @@ export async function deleteFromCloudflare(urlsOrKeys) {
             headers['Authorization'] = `Bearer ${idToken}`;
         }
 
-        // Use POST with JSON body as primary method:
-        // 1. Fully supported by standard CORS configurations
-        // 2. Avoids preflight issues where DELETE is rejected by older worker deployments
+        const keys = Array.from(new Set(cfTargets.map(extractR2Key).filter(Boolean)));
+        const deletePayload = JSON.stringify({ urls: cfTargets, keys, files: keys });
+
+        // Try DELETE first, then fallback to POST if not supported by worker route
         let res;
         try {
             res = await fetch(CLOUDFLARE_WORKER_URL, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ urls: cfTargets })
-            });
-        } catch (postErr) {
-            // Attempt DELETE as fallback in case POST was blocked
-            res = await fetch(CLOUDFLARE_WORKER_URL, {
                 method: 'DELETE',
                 headers,
-                body: JSON.stringify({ urls: cfTargets })
+                body: deletePayload
+            });
+            if (!res.ok && res.status !== 401 && res.status !== 403) {
+                const postRes = await fetch(CLOUDFLARE_WORKER_URL, {
+                    method: 'POST',
+                    headers,
+                    body: deletePayload
+                });
+                if (postRes.ok) res = postRes;
+            }
+        } catch (delErr) {
+            res = await fetch(CLOUDFLARE_WORKER_URL, {
+                method: 'POST',
+                headers,
+                body: deletePayload
             });
         }
 

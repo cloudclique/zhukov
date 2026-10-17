@@ -1,7 +1,7 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, updateDoc, arrayRemove, arrayUnion, addDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
-import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { getCachedData, setCachedData, invalidateCache, registerSiteServiceWorker } from "../site-cache.js";
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
 import { deletePhotoshootSet } from "./delete-set-helper.js";
@@ -17,9 +17,6 @@ const provider = new GoogleAuthProvider();
 document.addEventListener('DOMContentLoaded', async () => {
     registerSiteServiceWorker();
 
-    // Auth UI Elements
-    const loginBtn = document.getElementById('login-btn-header');
-    const logoutBtn = document.getElementById('logout-btn');
 
     // Gallery UI
     const headerContainer = document.getElementById('gallery-header');
@@ -151,7 +148,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- Editorial Fine-Art Lightbox Logic ---
-    let activeOriginImg = null;
     let lastLightboxOpenTime = 0;
     let isLightboxHistoryActive = false;
     let isHandlingHistoryBack = false;
@@ -166,7 +162,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openLightbox = (imgElement, setName = 'GALLERY', catId = null, modelName = null) => {
         if (!lightbox || !lightboxImg) return;
         lastLightboxOpenTime = Date.now();
-        activeOriginImg = imgElement;
         document.body.classList.add('lightbox-open');
 
         // Manage browser history for phone back action / gesture
@@ -238,7 +233,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             lightbox.style.display = 'none';
             if (lightboxImg) lightboxImg.src = '';
             if (lightboxSetName) lightboxSetName.textContent = 'GALLERY';
-            activeOriginImg = null;
         }, 300);
     };
 
@@ -273,7 +267,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Fetch & Render Data ---
     let loadGalleryReqId = 0;
-    let cachedActiveData = null;
 
     let lastRenderSignature = null;
 
@@ -314,9 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 1. Instant Cache Render
         const cached = getCachedData(cacheKey);
-        if (cached) {
-            cachedActiveData = cached;
-        } else {
+        if (!cached) {
             // Skeleton Loading State on cold load
             loadingState.style.display = 'none';
             headerContainer.innerHTML = `
@@ -750,6 +741,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (categoryId === 'single-shots') {
                         for (const photoUrl of urls) {
+                            if (photoThumbMap.has(photoUrl)) {
+                                cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                            }
                             const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                             const snap = await getDocs(q);
                             for (const d of snap.docs) {
@@ -780,6 +774,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 if (thumbUrls[u]) {
                                     cfUrlsToDelete.push(thumbUrls[u]);
                                     delete thumbUrls[u];
+                                } else if (photoThumbMap.has(u)) {
+                                    cfUrlsToDelete.push(photoThumbMap.get(u));
                                 }
                                 for (const [full, thumb] of Object.entries(thumbUrls)) {
                                     if (thumb === u) {
@@ -1192,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!confirmed) return;
 
                 try {
-                    await deletePhotoshootSet(categoryId, { extraUrls: currentUrls });
+                    await deletePhotoshootSet(categoryId, { extraUrls: currentUrls, thumbUrls: Object.fromEntries(photoThumbMap) });
                     window.location.href = '/photoshoots/'; // Redirect back
                 } catch (error) {
                     console.error("Error deleting photo set:", error);
@@ -1388,7 +1384,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                                             (typeof c === 'object' && c !== null && (c.name || '').trim().toLowerCase() === oldName.toLowerCase())
                                                         );
                                                         if (idxByName !== -1) {
-                                                            const existing = tagList[idxByName];
                                                             tagList[idxByName] = { id: categoryId, name: newVal };
                                                             // Remove any leftover duplicate with old name
                                                             tagList = tagList.filter((c, i) => i === idxByName || (

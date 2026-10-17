@@ -1,5 +1,5 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot, query, where, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 
@@ -44,7 +44,6 @@ let isTransformingElement = false;
 let transformAction = null;
 let dragStartX = 0;
 let dragStartY = 0;
-let elementInitialRect = { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
 
 // Freehand Ink Drawing System (Zero-VRAM Vector SVG Layer)
 let isDrawingStroke = false;
@@ -64,17 +63,12 @@ const MAX_HISTORY = 50;
 document.addEventListener('DOMContentLoaded', () => {
     registerSiteServiceWorker();
 
-    // --- DOM Elements ---
-    const loginBtn = document.getElementById('login-btn-header');
-    const logoutBtn = document.getElementById('logout-btn');
-    const uploadLink = document.getElementById('upload-nav-link');
     const dashboardView = document.getElementById('dashboard-view');
     const canvasView = document.getElementById('canvas-view');
     const boardsGrid = document.getElementById('boards-grid');
     const btnCreateBoard = document.getElementById('btn-create-board');
     const authNotice = document.getElementById('auth-notice');
     const emptyBoardsNotice = document.getElementById('empty-boards-notice');
-    const btnAuthNoticeLogin = document.getElementById('btn-auth-notice-login');
     const selectionToolbar = document.getElementById('selection-toolbar');
     const btnCreateGroup = document.getElementById('btn-create-group');
     const btnUngroup = document.getElementById('btn-ungroup');
@@ -89,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnRedoAction = document.getElementById('btn-redo-action');
     const btnDeleteSelected = document.getElementById('btn-delete-selected');
 
-    const boardMetaBar = document.getElementById('board-meta-bar');
     const btnBackToDashboard = document.getElementById('btn-back-to-dashboard');
     const activeBoardTitle = document.getElementById('active-board-title');
     const activeBoardRoleBadge = document.getElementById('active-board-role-badge');
@@ -3153,10 +3146,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    let prevSelectedIdsKey = '';
     function updateSelectedDOM() {
         const isMulti = selectedElementIds.size > 1;
-        const currentKey = Array.from(selectedElementIds).sort().join(',') + ':' + (selectedElementId || '') + ':' + (isMulti ? 'm' : 's');
         
         document.querySelectorAll('.board-element:not(.board-element-drawing)').forEach(el => {
             if (el.id === 'group-selection-box') return;
@@ -3186,8 +3177,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updateDrawingSelectionBoxes();
         }
-
-        prevSelectedIdsKey = currentKey;
     }
 
     function selectElement(id, addToSelection = false) {
@@ -3211,7 +3200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectionToolbar();
     }
 
-    const deselectElement = deselectAll;
 
     // Multi-Element & Drawing Drag Handling
     let dragItemInitialPositions = new Map();
@@ -3848,38 +3836,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Deleted ${totalDeleted} item${totalDeleted === 1 ? '' : 's'}.`);
     };
 
-    const deleteElementById = async (id) => {
-        if (!activeBoardData) return;
-        const itemToDelete = (activeBoardData.elements || []).find(it => it.id === id);
-        const pathToDelete = (activeBoardData.drawingPaths || []).find(p => p.id === id);
-
-        if (itemToDelete) {
-            recordAction({ type: 'DELETE_ELEMENT', element: { ...itemToDelete } });
-            activeBoardData.elements = (activeBoardData.elements || []).filter(it => it.id !== id);
-        } else if (pathToDelete) {
-            recordAction({ type: 'DELETE_ITEMS', drawings: [{ ...pathToDelete, points: pathToDelete.points.map(pt => ({ ...pt })) }] });
-            activeBoardData.drawingPaths = (activeBoardData.drawingPaths || []).filter(p => p.id !== id);
-        }
-
-        selectedElementIds.delete(id);
-        if (selectedElementId === id) {
-            selectedElementId = Array.from(selectedElementIds)[0] || null;
-        }
-
-        if (activeBoardData.groups) {
-            activeBoardData.groups.forEach(g => {
-                g.elementIds = (g.elementIds || []).filter(itemI => itemI !== id);
-            });
-            activeBoardData.groups = activeBoardData.groups.filter(g => g.elementIds && g.elementIds.length > 0);
-        }
-
-        renderCanvasElements(activeBoardData.elements);
-        renderDrawingPaths(activeBoardData.drawingPaths);
-        renderGroupTags();
-        updateSelectionToolbar();
-        await queueSaveBoard();
-        showToast('Item deleted.');
-    };
 
     // Add Image Element Helper (Calculates Exact Natural Aspect Ratio & Viewport Scale)
     const insertImageElement = (imageUrl) => {
