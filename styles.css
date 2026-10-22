@@ -234,14 +234,18 @@ main {
 .gallery-item.empty-slot .slot-edit-btn,
 .editorial-hero:hover .hero-edit-btn,
 .editorial-hero:hover .profile-edit-btn,
+.editorial-hero:hover .about-hero-edit-btn,
+.about-editorial-hero:hover .about-hero-edit-btn,
 .hero-diagonal-cut-wrapper:hover .hero-edit-btn,
 .hero-diagonal-cut-wrapper:hover .profile-edit-btn,
+.hero-diagonal-cut-wrapper:hover .about-hero-edit-btn,
 .profile-image-frame:hover .profile-edit-btn {
     opacity: 1;
 }
 
 .hero-edit-btn,
-.profile-edit-btn {
+.profile-edit-btn,
+.about-hero-edit-btn {
     width: 38px;
     height: 38px;
     font-size: 1.05rem;
@@ -251,7 +255,9 @@ main {
     display: none;
 }
 
-.hero-edit-btn {
+.hero-edit-btn,
+.about-hero-edit-btn {
+    position: absolute;
     top: 24px;
     right: 24px;
 }
@@ -265,7 +271,8 @@ main {
 @media (hover: none) {
 
     .hero-edit-btn,
-    .profile-edit-btn {
+    .profile-edit-btn,
+    .about-hero-edit-btn {
         opacity: 0.85;
     }
 }

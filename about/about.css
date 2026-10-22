@@ -178,7 +178,8 @@
     color: #ffffff;
 }
 
-#profile-img {
+#profile-img,
+#about-hero-img {
     object-position: center 15% !important;
 }
 

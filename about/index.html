@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — About</title>
-    <link rel="stylesheet" href="/styles.css?v=69">
-    <link rel="stylesheet" href="about.css?v=73">
+    <link rel="stylesheet" href="/styles.css?v=74">
+    <link rel="stylesheet" href="about.css?v=74">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -64,9 +64,25 @@
 
             <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right (1-to-1 Homepage Angle) -->
             <div class="hero-diagonal-cut-wrapper" id="about-hero-img-container">
-                <img src="" alt="Stanislav Zhukov Atelier Portrait" loading="eager" id="profile-img">
-                <button class="slot-edit-btn profile-edit-btn hero-edit-btn" id="profile-edit-btn"
-                    title="Change profile photo" aria-label="Change profile photo">✏️</button>
+                <img src="" alt="Stanislav Zhukov Atelier Portrait" loading="eager" id="about-hero-img">
+                <script>
+                    (function () {
+                        try {
+                            var cached = localStorage.getItem('zhukov_mem_about_hero_image') || localStorage.getItem('zhukov_mem_home_profile_image');
+                            if (cached) {
+                                var parsed = JSON.parse(cached);
+                                if (parsed && parsed.data) {
+                                    var img = document.getElementById('about-hero-img');
+                                    if (img && parsed.data && img.src !== parsed.data) {
+                                        img.src = parsed.data;
+                                    }
+                                }
+                            }
+                        } catch (e) { }
+                    })();
+                </script>
+                <button class="slot-edit-btn profile-edit-btn hero-edit-btn about-hero-edit-btn" id="about-hero-edit-btn" style="display: none;"
+                    title="Change About Me hero cover image" aria-label="Change About Me hero cover image">✏️</button>
             </div>
         </section>
 
@@ -558,11 +574,132 @@
         </section> -->
 
 
-        <!-- Modular Shared Footer Component -->
-        <div id="site-footer-slot"></div>
+    </main>
 
-        <script type="module" src="/script.js"></script>
-        <script src="about.js?v=73"></script>
+    <!-- Modular Shared Footer Component -->
+    <div id="site-footer-slot"></div>
+
+    <!-- Admin Studio Photo Library Modal -->
+    <div class="studio-picker-backdrop" id="studio-gallery-modal" aria-hidden="true" role="dialog" aria-modal="true"
+        aria-labelledby="studio-gallery-title">
+        <div class="studio-picker-window">
+            <!-- Top Bar -->
+            <div class="studio-picker-header">
+                <div class="studio-picker-branding">
+                    <span class="studio-picker-badge">ARCHIVE</span>
+                    <div>
+                        <h3 class="studio-picker-title" id="studio-gallery-title">STUDIO PHOTO LIBRARY</h3>
+                        <p class="studio-picker-subtitle" id="studio-stats-text">Browse photoshoot sets, single shots
+                            &amp; editorial archives</p>
+                    </div>
+                </div>
+
+                <div class="studio-picker-search-bar">
+                    <span class="studio-search-icon">🔍</span>
+                    <input type="text" id="studio-library-search" class="studio-search-input"
+                        placeholder="Search sets, models, themes..."
+                        oninput="window.filterStudioLibrarySets(this.value)">
+                    <button type="button" class="studio-search-clear-btn" id="studio-search-clear-btn"
+                        onclick="window.clearStudioSearch()" style="display:none;"
+                        aria-label="Clear search">&times;</button>
+                </div>
+
+                <div class="studio-picker-header-actions">
+                    <label class="studio-upload-btn" title="Upload local image">
+                        <span>📤 Upload Local</span>
+                        <input type="file" id="modal-image-file-input" accept="image/*" style="display:none;"
+                            onchange="window.handleModalImageUpload(event)">
+                    </label>
+                    <button type="button" class="studio-picker-close-btn" onclick="window.closeStudioGalleryModal()"
+                        aria-label="Close Studio Library">&times;</button>
+                </div>
+            </div>
+
+            <!-- Master-Detail Layout -->
+            <div class="studio-picker-body">
+                <!-- Left Sidebar: Sets Navigation -->
+                <aside class="studio-picker-sidebar" id="studio-picker-sidebar">
+                    <div class="studio-sidebar-header">
+                        <span class="studio-sidebar-heading">PHOTO SETS &amp; ALBUMS</span>
+                        <span class="studio-sidebar-count" id="studio-sidebar-set-count">Loading…</span>
+                    </div>
+
+                    <div class="studio-sidebar-filter-tabs" role="group" aria-label="Filter photo sets by status">
+                        <button type="button" class="studio-filter-tab active" data-filter="all"
+                            onclick="window.setStudioArchiveFilter('all')">All Sets</button>
+                        <button type="button" class="studio-filter-tab" data-filter="active"
+                            onclick="window.setStudioArchiveFilter('active')">Active</button>
+                        <button type="button" class="studio-filter-tab" data-filter="archived"
+                            onclick="window.setStudioArchiveFilter('archived')">📦 Archived</button>
+                    </div>
+
+                    <div class="studio-sets-list" id="studio-sets-list">
+                        <!-- Populated by JS: Set Cards with thumbnail, title, count -->
+                    </div>
+                </aside>
+
+                <!-- Right Detail Panel: Photos in Selected Set -->
+                <main class="studio-picker-canvas">
+                    <!-- Canvas Sub-header -->
+                    <div class="studio-canvas-header">
+                        <div class="studio-canvas-info">
+                            <button type="button" class="studio-mobile-back-btn" id="studio-mobile-back-btn"
+                                onclick="window.switchStudioMobileView('sidebar')" style="display:none;">
+                                ← All Sets
+                            </button>
+                            <div>
+                                <h4 class="studio-current-set-title" id="studio-current-set-title">All Photos</h4>
+                                <div class="studio-current-set-meta" id="studio-current-set-meta">Loading photoshoot
+                                    library…</div>
+                            </div>
+                        </div>
+
+                        <div class="studio-canvas-controls">
+                            <div class="studio-density-toggle" role="group" aria-label="Thumbnail size">
+                                <button type="button" class="studio-density-btn" data-density="compact"
+                                    onclick="window.setStudioGridDensity('compact')"
+                                    title="Compact thumbnails">Compact</button>
+                                <button type="button" class="studio-density-btn active" data-density="normal"
+                                    onclick="window.setStudioGridDensity('normal')"
+                                    title="Standard thumbnails">Normal</button>
+                                <button type="button" class="studio-density-btn" data-density="large"
+                                    onclick="window.setStudioGridDensity('large')"
+                                    title="Large thumbnails">Large</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="upload-status-indicator" class="studio-upload-status"></div>
+
+                    <!-- Scrollable Photo Grid -->
+                    <div class="studio-photos-grid-wrap" id="studio-photos-grid-wrap">
+                        <div class="studio-photos-grid" id="studio-photos-grid">
+                            <!-- Populated with images of active set -->
+                        </div>
+                    </div>
+
+                    <!-- Bottom Selection Action Bar -->
+                    <div class="studio-picker-footer" id="studio-picker-footer">
+                        <div class="studio-selected-preview" id="studio-selected-preview">
+                            <span class="studio-no-selection-hint">Click a photo to select • Double-click to apply
+                                immediately</span>
+                        </div>
+                        <div class="studio-footer-actions">
+                            <button type="button" class="studio-cancel-btn"
+                                onclick="window.closeStudioGalleryModal()">Cancel</button>
+                            <button type="button" class="studio-apply-btn" id="studio-apply-selection-btn"
+                                onclick="window.confirmStudioSelection()" disabled>
+                                ✓ Use Selected Image
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/script.js?v=74"></script>
+    <script src="about.js?v=74"></script>
 </body>
 
 </html>

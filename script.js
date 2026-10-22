@@ -57,35 +57,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxSetName = document.getElementById('lightbox-set-name');
     const closeBtn = document.querySelector('#lightbox-close, .lightbox .close, .close');
 
-    // Hero Image Elements
-    const heroImg = document.getElementById('hero-img') || document.querySelector('.hero-diagonal-cut-wrapper img');
-    const heroEditBtn = document.getElementById('hero-edit-btn');
+    const isAboutPage = window.location.pathname.includes('/about') || !!document.querySelector('.about-editorial-hero');
 
-    // Profile Image Elements
-    const profileImg = document.getElementById('profile-img') || document.querySelector('.profile-image-frame img');
-    const profileEditBtn = document.getElementById('profile-edit-btn');
+    // Hero Image Elements (Homepage Hero)
+    const heroImg = isAboutPage ? null : (document.getElementById('hero-img') || document.querySelector('.editorial-hero:not(.about-editorial-hero) .hero-diagonal-cut-wrapper img'));
+    const heroEditBtn = isAboutPage ? null : document.getElementById('hero-edit-btn');
 
-    // Instant Cache Render for Hero Image (0ms delay)
-    const cachedHero = getCachedData('home_hero_image');
-    if (cachedHero && heroImg && heroImg.src !== cachedHero) {
-        heroImg.src = cachedHero;
-    } else if (!cachedHero && heroImg && heroImg.src) {
-        setCachedData('home_hero_image', heroImg.src);
+    // Profile Image Elements (Homepage About Section)
+    const profileImg = isAboutPage ? null : (document.getElementById('profile-img') || document.querySelector('.profile-image-frame img'));
+    const profileEditBtn = isAboutPage ? null : (document.getElementById('profile-edit-btn') || document.querySelector('.profile-image-frame .profile-edit-btn'));
+
+    // About Me Page Hero Image Elements (Independent hero on /about/)
+    const aboutHeroImg = document.getElementById('about-hero-img') || (isAboutPage ? (document.querySelector('.about-editorial-hero img') || document.getElementById('profile-img')) : null);
+    const aboutHeroEditBtn = document.getElementById('about-hero-edit-btn') || (isAboutPage ? (document.querySelector('.about-editorial-hero .slot-edit-btn') || document.getElementById('profile-edit-btn')) : null);
+
+    // Instant Cache Render for Home Hero Image (0ms delay)
+    if (heroImg) {
+        const cachedHero = getCachedData('home_hero_image');
+        if (cachedHero && heroImg.src !== cachedHero) {
+            heroImg.src = cachedHero;
+        } else if (!cachedHero && heroImg.src) {
+            setCachedData('home_hero_image', heroImg.src);
+        }
     }
 
-    // Instant Cache Render for Profile Image (0ms delay)
-    const cachedProfile = getCachedData('home_profile_image');
-    if (cachedProfile && profileImg) {
-        profileImg.src = cachedProfile;
+    // Instant Cache Render for Home Profile Image (0ms delay)
+    if (profileImg) {
+        const cachedProfile = getCachedData('home_profile_image');
+        if (cachedProfile && profileImg.src !== cachedProfile) {
+            profileImg.src = cachedProfile;
+        }
     }
 
-    if (localStorage.getItem('zhukov_is_admin') === 'true') {
-        if (heroEditBtn) heroEditBtn.style.display = 'flex';
-        if (profileEditBtn) profileEditBtn.style.display = 'flex';
-    } else {
-        if (heroEditBtn) heroEditBtn.style.display = 'none';
-        if (profileEditBtn) profileEditBtn.style.display = 'none';
+    // Instant Cache Render for About Me Hero Image (0ms delay, fallback to home_profile_image if not set)
+    if (aboutHeroImg) {
+        const cachedAboutHero = getCachedData('about_hero_image') || getCachedData('home_profile_image');
+        if (cachedAboutHero && aboutHeroImg.src !== cachedAboutHero) {
+            aboutHeroImg.src = cachedAboutHero;
+        }
     }
+
+    const isAdminUser = localStorage.getItem('zhukov_is_admin') === 'true';
+    if (heroEditBtn) heroEditBtn.style.display = isAdminUser ? 'flex' : 'none';
+    if (profileEditBtn) profileEditBtn.style.display = isAdminUser ? 'flex' : 'none';
+    if (aboutHeroEditBtn) aboutHeroEditBtn.style.display = isAdminUser ? 'flex' : 'none';
 
     if (heroEditBtn) {
         heroEditBtn.addEventListener('click', (e) => {
@@ -100,6 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             openPicker('profile');
+        });
+    }
+
+    if (aboutHeroEditBtn) {
+        aboutHeroEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPicker('about_hero');
         });
     }
 
@@ -289,7 +312,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Sync Hero, Homepage Profile, and About Hero Images from Firestore settings
+    const syncSiteImagesFromSettings = async () => {
+        try {
+            const settingsDoc = await getDoc(doc(db, 'settings', 'home_gallery'));
+            if (!settingsDoc.exists()) return;
+            const data = settingsDoc.data();
+
+            // Sync Homepage Hero Image
+            if (data.heroImage) {
+                const freshHero = data.heroImage;
+                setCachedData('home_hero_image', freshHero);
+                if (heroImg && heroImg.src !== freshHero) {
+                    heroImg.src = freshHero;
+                }
+            }
+
+            // Sync Homepage About Section Profile Image
+            if (data.profileImage) {
+                const freshProfile = data.profileImage;
+                setCachedData('home_profile_image', freshProfile);
+                if (profileImg && profileImg.src !== freshProfile) {
+                    profileImg.src = freshProfile;
+                }
+            }
+
+            // Sync About Me Page Hero Image (Independent)
+            if (data.aboutHeroImage) {
+                const freshAboutHero = data.aboutHeroImage;
+                setCachedData('about_hero_image', freshAboutHero);
+                if (aboutHeroImg && aboutHeroImg.src !== freshAboutHero) {
+                    aboutHeroImg.src = freshAboutHero;
+                }
+            } else if (data.profileImage && !getCachedData('about_hero_image')) {
+                // If aboutHeroImage was never set, fallback to profileImage initially
+                if (aboutHeroImg && !aboutHeroImg.src) {
+                    aboutHeroImg.src = data.profileImage;
+                }
+            }
+        } catch (e) {
+            console.warn('Could not sync site images from Firestore:', e);
+        }
+    };
+
     const loadGallerySlots = async () => {
+        // Always sync site hero/profile imagery regardless of whether gallery exists on this page
+        syncSiteImagesFromSettings();
+
         if (!gallery) return;
 
         // Background resolve origin set names from Firestore sets
@@ -319,24 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let freshSlots = [];
             if (settingsDoc.exists() && settingsDoc.data().slots) {
                 freshSlots = settingsDoc.data().slots;
-            }
-
-            // Sync Hero Image from Firestore settings
-            if (settingsDoc.exists() && settingsDoc.data().heroImage) {
-                const freshHero = settingsDoc.data().heroImage;
-                setCachedData('home_hero_image', freshHero);
-                if (heroImg && heroImg.src !== freshHero) {
-                    heroImg.src = freshHero;
-                }
-            }
-
-            // Sync Profile Image from Firestore settings
-            if (settingsDoc.exists() && settingsDoc.data().profileImage) {
-                const freshProfile = settingsDoc.data().profileImage;
-                setCachedData('home_profile_image', freshProfile);
-                if (profileImg && profileImg.src !== freshProfile) {
-                    profileImg.src = freshProfile;
-                }
             }
 
             // Fill any missing slots with fallbacks and set names
@@ -530,6 +581,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const openPicker = async (slotIndex) => {
+        const isAdmin = currentIsAdmin || localStorage.getItem('zhukov_is_admin') === 'true';
+        if (!isAdmin) {
+            showToast('Admin permission required.');
+            return;
+        }
+
         const modal = document.getElementById('studio-gallery-modal');
         if (!modal) return;
 
@@ -554,7 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const statsText = document.getElementById('studio-stats-text');
         let targetLabel = 'Curated Gallery Slot';
         if (slotIndex === 'hero') targetLabel = 'Hero Cover Image';
-        else if (slotIndex === 'profile') targetLabel = 'About Profile Image';
+        else if (slotIndex === 'profile') targetLabel = 'Homepage About Profile Photo';
+        else if (slotIndex === 'about_hero') targetLabel = 'About Me Hero Cover Image';
         else if (typeof slotIndex === 'number') targetLabel = `Recent Work Slot #${slotIndex + 1}`;
 
         if (statsText) {
@@ -1218,6 +1276,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openStudioGalleryModal = openPicker;
 
     const selectImage = async (url, setName = '') => {
+        const isAdmin = currentIsAdmin || localStorage.getItem('zhukov_is_admin') === 'true';
+        if (!isAdmin) {
+            showToast('Admin permission required.');
+            return;
+        }
+
         if (activeSlotIndex === 'hero') {
             try {
                 if (heroImg) {
@@ -1248,10 +1312,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Save to Firestore in settings/home_gallery
                 const settingsRef = doc(db, 'settings', 'home_gallery');
                 await setDoc(settingsRef, { profileImage: url }, { merge: true });
-                showToast('Profile photo updated ✓');
+                showToast('Homepage About profile photo updated ✓');
             } catch (err) {
                 console.error('Failed to save profile image:', err);
                 showToast('Error saving profile image.');
+            }
+            return;
+        }
+
+        if (activeSlotIndex === 'about_hero') {
+            try {
+                if (aboutHeroImg) {
+                    aboutHeroImg.src = url;
+                }
+                setCachedData('about_hero_image', url);
+                window.closeStudioGalleryModal();
+
+                // Save to Firestore in settings/home_gallery
+                const settingsRef = doc(db, 'settings', 'home_gallery');
+                await setDoc(settingsRef, { aboutHeroImage: url }, { merge: true });
+                showToast('About Me hero image updated ✓');
+            } catch (err) {
+                console.error('Failed to save About Me hero image:', err);
+                showToast('Error saving About Me hero image.');
             }
             return;
         }
@@ -1321,6 +1404,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (profileEditBtn) {
             profileEditBtn.style.display = currentIsAdmin ? 'flex' : 'none';
         }
+        if (aboutHeroEditBtn) {
+            aboutHeroEditBtn.style.display = currentIsAdmin ? 'flex' : 'none';
+        }
     });
 
     // Delegated Login / Logout button click handlers
@@ -1354,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentIsAdmin = false;
             if (heroEditBtn) heroEditBtn.style.display = 'none';
             if (profileEditBtn) profileEditBtn.style.display = 'none';
+            if (aboutHeroEditBtn) aboutHeroEditBtn.style.display = 'none';
             renderGallerySlots();
             signOut(auth).catch((error) => {
                 console.error("Error signing out: ", error);
