@@ -400,7 +400,7 @@
                         <label>Select image from your device or drop here</label>
                         <input type="file" id="input-file-local" class="form-input" accept="image/*">
                     </div>
-                    <small style="color: var(--mb-text-muted); display: block; margin-top: 0.5rem;">Images will be uploaded to ImgBB and placed directly onto your moodboard.</small>
+                    <small style="color: var(--mb-text-muted); display: block; margin-top: 0.5rem;">Images will be optimized, uploaded to Cloudflare (moodboards), and archived in the moodboard_images collection.</small>
                     <div id="upload-status-text" style="color: var(--mb-accent); margin-top: 1rem; font-size: 0.9rem; display: none;">Uploading image, please wait...</div>
                 </div>
             </div>
@@ -472,6 +472,6 @@
     </div>
 
     <!-- Main Moodboard Studio Script -->
-    <script type="module" src="moodboard.js"></script>
+    <script type="module" src="moodboard.js?v=2.2"></script>
 </body>
 </html>

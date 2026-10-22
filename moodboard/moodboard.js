@@ -1,7 +1,8 @@
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
+import { CLOUDFLARE_WORKER_URL } from "../cloudflare-storage.js";
 
 // Initialize Firebase Auth
 const auth = getAuth(app);
@@ -3951,8 +3952,10 @@ document.addEventListener('DOMContentLoaded', () => {
             singleSnap.forEach(docSnap => {
                 const data = docSnap.data();
                 if (data.url) {
+                    const thumb = data.thumbUrl || data.thumbnailUrl || (typeof data.url === 'string' && data.url.endsWith('.webp') && !data.url.endsWith('_thumb.webp') ? data.url.replace(/\.webp$/, '_thumb.webp') : null);
                     allPhotos.push({
                         url: data.url,
+                        thumbUrl: thumb || data.url,
                         title: 'Single Shot',
                         isArchived: false,
                         category: 'Single Shots'
@@ -3968,16 +3971,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = docSnap.data();
                 const isArchived = data.archived === true;
 
-                // If regular user, exclude archived
-                if (isArchived && !currentIsAdmin) return;
+                // If regular user, exclude archived (except moodboard_images collection)
+                const isMoodboardImagesSet = (docSnap.id === 'moodboard_images' || data.categoryName === 'moodboard_images');
+                if (isArchived && !currentIsAdmin && !isMoodboardImagesSet) return;
 
                 const catName = data.categoryName || 'Untitled Set';
                 categoriesFound.add(catName);
 
+                const setThumbUrls = { ...(data.thumbUrls || {}) };
+
                 if (data.urls && Array.isArray(data.urls)) {
                     data.urls.forEach(url => {
+                        const thumb = setThumbUrls[url] || (typeof url === 'string' && url.endsWith('.webp') && !url.endsWith('_thumb.webp') ? url.replace(/\.webp$/, '_thumb.webp') : null);
                         allPhotos.push({
                             url: url,
+                            thumbUrl: thumb || url,
                             title: catName,
                             isArchived: isArchived,
                             category: catName
@@ -4007,8 +4015,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 filtered.forEach(photo => {
                     const card = document.createElement('div');
                     card.className = 'picker-photo-card';
+                    const displaySrc = photo.thumbUrl || photo.url;
+                    const fallbackAttr = (displaySrc !== photo.url)
+                        ? ` data-full-url="${escapeHtml(photo.url)}" onerror="this.onerror=null;if(this.dataset.fullUrl)this.src=this.dataset.fullUrl;"`
+                        : '';
                     card.innerHTML = `
-                        <img src="${photo.url}" alt="${escapeHtml(photo.title)}" loading="lazy">
+                        <img src="${escapeHtml(displaySrc)}" alt="${escapeHtml(photo.title)}" loading="lazy"${fallbackAttr}>
                         ${photo.isArchived ? '<span class="picker-badge-archived">Archived</span>' : ''}
                     `;
                     card.addEventListener('click', (e) => {
@@ -4403,41 +4415,168 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Local File Upload directly onto Moodboard via Cloudflare Worker -> ImgBB
-    inputFileLocal.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    // Helper: Save uploaded image URL to the archived photoshoot set 'moodboard_images'
+    async function saveMoodboardImageToArchivedSet(imageUrl) {
+        if (!imageUrl) return;
+        try {
+            const setRef = doc(db, 'photo_sets', 'moodboard_images');
+            const nowIso = new Date().toISOString();
+            const todayDate = nowIso.split('T')[0];
 
-        uploadStatusText.style.display = 'block';
-        uploadStatusText.textContent = 'Optimizing & resizing image to 720px...';
+            let existingData = {};
+            try {
+                const snap = await getDoc(setRef);
+                if (snap && snap.exists()) {
+                    existingData = snap.data() || {};
+                }
+            } catch (_) {}
+
+            await setDoc(setRef, {
+                categoryName: existingData.categoryName || 'moodboard_images',
+                title: existingData.title || 'moodboard_images',
+                archived: true,
+                urls: arrayUnion(imageUrl),
+                modelName: existingData.modelName || 'Moodboard Images',
+                theme: existingData.theme || 'Moodboard Local Uploads',
+                date: existingData.date || todayDate,
+                uploadedAt: existingData.uploadedAt || nowIso,
+                updatedAt: nowIso
+            }, { merge: true });
+
+            console.log("✓ Saved moodboard image to archived set 'moodboard_images' in photo_sets:", imageUrl);
+        } catch (err) {
+            console.warn("Could not save to 'moodboard_images' photo_set:", err);
+        }
+    }
+
+    // Process local image upload: resize/optimize to 720px -> Cloudflare R2 (moodboards bucket) -> Firestore archived set 'moodboard_images' -> canvas insertion
+    const processLocalMoodboardImageUpload = async (file) => {
+        if (!file) return;
+        if (!file.type || !file.type.startsWith('image/')) {
+            showToast('Please select a valid image file (JPEG, PNG, WebP).');
+            return;
+        }
+
+        if (uploadStatusText) {
+            uploadStatusText.style.display = 'block';
+            uploadStatusText.style.color = 'var(--mb-accent)';
+            uploadStatusText.textContent = 'Optimizing & resizing image to 720px...';
+        }
 
         try {
             const optimizedBlob = await optimizeImageTo720(file, 720);
 
-            uploadStatusText.textContent = 'Uploading optimized image to atelier cloud...';
-            const formData = new FormData();
-            formData.append('image', optimizedBlob, `moodboard_${Date.now()}.webp`);
+            if (uploadStatusText) {
+                uploadStatusText.textContent = 'Uploading to Cloudflare (moodboards bucket)...';
+            }
 
-            const workerUrl = 'https://long-sky-4aa4.dener4826.workers.dev';
+            const formData = new FormData();
+            const originalBase = (file.name || 'moodboard_image')
+                .replace(/\.[^/.]+$/, '')
+                .replace(/[^a-zA-Z0-9_-]/g, '_');
+            const fileName = `moodboard_${originalBase}_${Date.now()}.webp`;
+
+            formData.append('image', optimizedBlob, fileName);
+            formData.append('bucket', 'moodboards');
+
+            const workerUrl = `${CLOUDFLARE_WORKER_URL}?bucket=moodboards`;
             const response = await fetch(workerUrl, {
                 method: 'POST',
                 body: formData
             });
 
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.error || `HTTP ${response.status}`);
+            }
+
             const data = await response.json();
             if (data.success && data.data && data.data.url) {
-                insertImageElement(data.data.url);
-                uploadStatusText.style.display = 'none';
-                inputFileLocal.value = '';
+                const directImageUrl = data.data.url;
+
+                if (uploadStatusText) {
+                    uploadStatusText.textContent = 'Archiving image to moodboard_images set...';
+                }
+                await saveMoodboardImageToArchivedSet(directImageUrl);
+
+                insertImageElement(directImageUrl);
+
+                if (uploadStatusText) uploadStatusText.style.display = 'none';
+                if (inputFileLocal) inputFileLocal.value = '';
+
+                // Close the modal if open
+                const modalAddPhoto = document.getElementById('modal-add-photo');
+                if (modalAddPhoto) modalAddPhoto.classList.remove('active');
+
+                showToast('Image uploaded and added to moodboard!');
             } else {
-                throw new Error(data.error?.message || 'Upload failed');
+                throw new Error(data.error?.message || data.error || 'Upload failed');
             }
         } catch (err) {
-            console.error("Direct upload error:", err);
-            uploadStatusText.textContent = 'Upload failed. Please try a direct URL.';
-            uploadStatusText.style.color = '#f43f5e';
+            console.error("Direct moodboard upload error:", err);
+            if (uploadStatusText) {
+                uploadStatusText.textContent = 'Upload failed: ' + (err.message || 'Please try again.');
+                uploadStatusText.style.color = '#f43f5e';
+            }
+            showToast('Upload failed: ' + (err.message || 'Error occurred'));
         }
-    });
+    };
+
+    // Local File Upload directly onto Moodboard via Cloudflare Worker -> moodboards bucket
+    if (inputFileLocal) {
+        inputFileLocal.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                await processLocalMoodboardImageUpload(file);
+            }
+        });
+    }
+
+    // Drag-and-drop on the upload tab area in modal
+    const uploadTabPane = document.getElementById('tab-content-upload');
+    if (uploadTabPane) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadTabPane.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadTabPane.classList.add('drag-active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadTabPane.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadTabPane.classList.remove('drag-active');
+            });
+        });
+        uploadTabPane.addEventListener('drop', async (e) => {
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                await processLocalMoodboardImageUpload(files[0]);
+            }
+        });
+    }
+
+    // Drag-and-drop image file directly onto the moodboard canvas
+    if (canvasViewport) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            canvasViewport.addEventListener(eventName, (e) => {
+                if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+                    e.preventDefault();
+                }
+            });
+        });
+        canvasViewport.addEventListener('drop', async (e) => {
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type && file.type.startsWith('image/')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await processLocalMoodboardImageUpload(file);
+                }
+            }
+        });
+    }
 
     // Helper: Check if current user is admin (only admin can change settings, title, desc, collaborators, and viewViaUrl)
     const isBoardAdmin = () => {

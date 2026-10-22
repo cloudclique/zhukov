@@ -486,6 +486,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeStudioSearchQuery = '';
     let activeSlotIndex = -1; // 'hero', 'profile', or number 0..7
 
+    // Helper: resolve thumbnail size for studio picker with full-res fallback
+    const getStudioThumbnailUrl = (url, set = null) => {
+        if (!url || typeof url !== 'string') return url || '';
+        if (set && set.thumbUrls && set.thumbUrls[url]) {
+            return set.thumbUrls[url];
+        }
+        if (cachedStudioPhotoSets) {
+            for (let i = 0; i < cachedStudioPhotoSets.length; i++) {
+                const s = cachedStudioPhotoSets[i];
+                if (s.thumbUrls && s.thumbUrls[url]) {
+                    return s.thumbUrls[url];
+                }
+            }
+        }
+        if (url.endsWith('.webp') && !url.endsWith('_thumb.webp')) {
+            return url.replace(/\.webp$/, '_thumb.webp');
+        }
+        return url;
+    };
+
     function escapeHtml(str) {
         if (!str) return '';
         return String(str)
@@ -541,8 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
             statsText.textContent = `Selecting ${targetLabel} • Connecting to studio archive…`;
         }
 
-        // Check if we already have complete cached data
-        if (cachedStudioPhotoSets && cachedStudioPhotoSets.length > 0) {
+        // Check if we already have complete cached data with thumbnail mapping
+        if (cachedStudioPhotoSets && cachedStudioPhotoSets.length > 0 && cachedStudioPhotoSets.some(s => 'thumbUrls' in s)) {
             renderStudioLibraryUI(targetLabel);
             return;
         }
@@ -606,6 +626,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const archivedCount = isSetArchived ? orderedUrls.length : orderedUrls.filter(u => archivedUrlsSet.has(u)).length;
 
+                    // Collect thumbnail maps and derive thumbnails for WebP when available
+                    const setThumbUrls = { ...(data.thumbUrls || {}) };
+                    orderedUrls.forEach(u => {
+                        if (!setThumbUrls[u] && typeof u === 'string' && u.endsWith('.webp') && !u.endsWith('_thumb.webp')) {
+                            setThumbUrls[u] = u.replace(/\.webp$/, '_thumb.webp');
+                        }
+                    });
+
+                    const coverUrl = data.coverUrl || orderedUrls[0] || '';
+                    const coverThumbUrl = setThumbUrls[coverUrl] || (coverUrl && coverUrl.endsWith('.webp') && !coverUrl.endsWith('_thumb.webp') ? coverUrl.replace(/\.webp$/, '_thumb.webp') : coverUrl);
+
                     sets.push({
                         id: docSnap.id,
                         name: name,
@@ -613,10 +644,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         theme: theme,
                         date: date,
                         urls: orderedUrls,
+                        thumbUrls: setThumbUrls,
                         archivedUrls: archivedUrlsSet,
                         isArchived: isSetArchived,
                         archivedCount: archivedCount,
-                        coverUrl: data.coverUrl || orderedUrls[0] || ''
+                        coverUrl: coverUrl,
+                        coverThumbUrl: coverThumbUrl
                     });
                 });
             }
@@ -625,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (singleSnap && !singleSnap.empty) {
                 const singleItems = [];
                 const singleArchivedUrls = new Set();
+                const singleThumbUrls = {};
 
                 singleSnap.forEach(docSnap => {
                     const d = docSnap.data();
@@ -632,6 +666,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         singleItems.push(d);
                         if (d.archived === true) {
                             singleArchivedUrls.add(d.url);
+                        }
+                        const thumb = d.thumbUrl || d.thumbnailUrl || (typeof d.url === 'string' && d.url.endsWith('.webp') && !d.url.endsWith('_thumb.webp') ? d.url.replace(/\.webp$/, '_thumb.webp') : null);
+                        if (thumb) {
+                            singleThumbUrls[d.url] = thumb;
                         }
                     }
                 });
@@ -653,6 +691,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const singleUrls = singleItems.map(item => item.url).filter(Boolean);
                 if (singleUrls.length > 0) {
+                    const firstUrl = singleUrls[0];
+                    const firstThumb = singleThumbUrls[firstUrl] || (firstUrl && firstUrl.endsWith('.webp') && !firstUrl.endsWith('_thumb.webp') ? firstUrl.replace(/\.webp$/, '_thumb.webp') : firstUrl);
                     sets.unshift({
                         id: 'single_shots',
                         name: 'Single Shots',
@@ -660,10 +700,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         theme: 'Mixed',
                         date: '',
                         urls: singleUrls,
+                        thumbUrls: singleThumbUrls,
                         archivedUrls: singleArchivedUrls,
                         isArchived: false,
                         archivedCount: singleArchivedUrls.size,
-                        coverUrl: singleUrls[0] || ''
+                        coverUrl: firstUrl || '',
+                        coverThumbUrl: firstThumb || ''
                     });
                 }
             }
@@ -721,8 +763,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isArchived = set.isArchived || (set.archivedUrls && set.archivedUrls.has(url));
                 if (isArchived) {
                     seen.add(url);
+                    const thumbUrl = getStudioThumbnailUrl(url, set);
                     archivedPhotos.push({
                         url: url,
+                        thumbUrl: thumbUrl,
                         setName: set.name,
                         isArchived: true
                     });
@@ -865,9 +909,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         ? `<span class="studio-set-item-badge">${set.urls.length} (${set.archivedCount} 📦)</span>`
                         : `<span class="studio-set-item-badge">${set.urls.length}</span>`);
 
+                const coverUrl = set.coverUrl || '/_images/theme_main.jpg';
+                const coverThumb = set.coverThumbUrl || getStudioThumbnailUrl(coverUrl, set);
+                const coverFallback = (coverThumb && coverThumb !== coverUrl)
+                    ? ` data-full-url="${escapeHtml(coverUrl)}" onerror="this.onerror=null;if(this.dataset.fullUrl)this.src=this.dataset.fullUrl;"`
+                    : '';
+
                 html += `
                     <div class="studio-set-item ${isActive ? 'is-active' : ''} ${set.isArchived ? 'is-archived-item' : ''}" onclick="window.selectStudioSet('${escapeHtml(set.id)}')">
-                        <img src="${escapeHtml(set.coverUrl || '/_images/theme_main.jpg')}" alt="${escapeHtml(displayName)}" class="studio-set-item-thumb" loading="lazy">
+                        <img src="${escapeHtml(coverThumb || coverUrl)}" alt="${escapeHtml(displayName)}" class="studio-set-item-thumb" loading="lazy"${coverFallback}>
                         <div class="studio-set-item-info">
                             <div class="studio-set-item-title">${escapeHtml(displayName)}</div>
                             <div class="studio-set-item-sub">${subtitle}</div>
@@ -910,6 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (matchesSet || u.toLowerCase().includes(query)) {
                         photosToDisplay.push({
                             url: u,
+                            thumbUrl: getStudioThumbnailUrl(u, set),
                             setName: set.name,
                             isArchived: isPhotoArchived
                         });
@@ -932,6 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
                     photosToDisplay.push({
                         url: u,
+                        thumbUrl: getStudioThumbnailUrl(u, set),
                         setName: set.name,
                         isArchived: isPhotoArchived
                     });
@@ -952,6 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (activeStudioArchiveFilter === 'archived' && !isPhotoArchived) return;
                     photosToDisplay.push({
                         url: u,
+                        thumbUrl: getStudioThumbnailUrl(u, found),
                         setName: found.name,
                         isArchived: isPhotoArchived
                     });
@@ -977,16 +1030,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        grid.innerHTML = photosToDisplay.map(({ url, setName, isArchived }) => {
+        grid.innerHTML = photosToDisplay.map(({ url, thumbUrl, setName, isArchived }) => {
             const isSelected = activeStudioSelectedUrl === url;
+            const displaySrc = thumbUrl || url;
+            const fallbackAttr = (displaySrc !== url)
+                ? ` data-full-url="${escapeHtml(url)}" onerror="this.onerror=null;if(this.dataset.fullUrl)this.src=this.dataset.fullUrl;"`
+                : '';
             return `
                 <div class="studio-photo-card ${isSelected ? 'is-selected' : ''} ${isArchived ? 'is-archived' : ''}"
                      data-photo-url="${escapeHtml(url)}"
+                     data-photo-thumb="${escapeHtml(displaySrc)}"
                      data-photo-set="${escapeHtml(setName)}"
                      data-photo-archived="${isArchived ? 'true' : 'false'}"
                      onclick="window.chooseStudioPhoto('${escapeHtml(url)}', '${escapeHtml(setName)}', false)"
                      ondblclick="window.chooseStudioPhoto('${escapeHtml(url)}', '${escapeHtml(setName)}', true)">
-                    <img src="${escapeHtml(url)}" alt="${escapeHtml(setName)}" loading="lazy">
+                    <img src="${escapeHtml(displaySrc)}" alt="${escapeHtml(setName)}" loading="lazy"${fallbackAttr}>
                     ${isArchived ? '<div class="studio-photo-card-archived-tag">📦 ARCHIVED</div>' : ''}
                     <div class="studio-photo-card-check">✓</div>
                     <div class="studio-photo-hover-tag">${isArchived ? '📦 Archived • Double-click to apply' : 'Double-click to apply'}</div>
@@ -1078,9 +1136,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.querySelector(`.studio-photo-card[data-photo-url="${activeStudioSelectedUrl}"]`);
         const setName = activeStudioSelectedSetName || (card ? card.getAttribute('data-photo-set') : 'Studio Photo');
         const isArchived = card ? card.getAttribute('data-photo-archived') === 'true' : false;
+        const cardThumb = card ? card.getAttribute('data-photo-thumb') : null;
+        const previewSrc = cardThumb || getStudioThumbnailUrl(activeStudioSelectedUrl);
+        const previewFallback = (previewSrc && previewSrc !== activeStudioSelectedUrl)
+            ? ` data-full-url="${escapeHtml(activeStudioSelectedUrl)}" onerror="this.onerror=null;if(this.dataset.fullUrl)this.src=this.dataset.fullUrl;"`
+            : '';
 
         previewContainer.innerHTML = `
-            <img src="${escapeHtml(activeStudioSelectedUrl)}" alt="Selected preview" class="studio-selected-preview-img">
+            <img src="${escapeHtml(previewSrc || activeStudioSelectedUrl)}" alt="Selected preview" class="studio-selected-preview-img"${previewFallback}>
             <div class="studio-selected-preview-info">
                 <div class="studio-selected-preview-title">
                     Selected Photo from "${escapeHtml(setName)}"
