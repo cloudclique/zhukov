@@ -705,9 +705,10 @@
 
 .scrollable-row .img-container {
     height: 270px;
-    width: 180px; /* Default elegant portrait ratio (2:3 at 270px) matching skeleton, prevents square jumping */
+    width: auto;
     aspect-ratio: 2 / 3;
-    min-width: 120px;
+    min-width: 0;
+    max-width: 85vw;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -726,10 +727,9 @@
 }
 
 .row-img {
-    height: 270px;
+    height: 100%;
     width: 100%;
-    aspect-ratio: 2 / 3;
-    max-width: 90vw;
+    max-width: 100%;
     object-fit: cover;
     border-radius: 0;
     flex-shrink: 0;
@@ -1062,15 +1062,15 @@
 
     .scrollable-row .img-container {
         height: 220px;
-        width: 147px;
-        aspect-ratio: 2 / 3;
-        min-width: 100px;
+        width: auto;
+        min-width: 0;
+        max-width: 85vw;
         border-radius: 0;
     }
 
     .row-img {
-        height: 220px;
-        aspect-ratio: 2 / 3;
+        height: 100%;
+        width: 100%;
         border-radius: 0;
     }
 
@@ -1330,15 +1330,15 @@
 
     .scrollable-row .img-container {
         height: 180px;
-        width: 120px;
-        aspect-ratio: 2 / 3;
-        min-width: 90px;
+        width: auto;
+        min-width: 0;
+        max-width: 85vw;
         border-radius: 0;
     }
 
     .row-img {
-        height: 180px;
-        aspect-ratio: 2 / 3;
+        height: 100%;
+        width: 100%;
         border-radius: 0;
     }
 

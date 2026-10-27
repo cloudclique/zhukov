@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.co
 import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 import { deletePhotoshootSet } from "./delete-set-helper.js";
+import { getRatio, setRatio } from "./image-ratios.js";
 
 // --- CONFIGURATION ---
 // Change this number to control how many images per photoshoot set are shown in Flow Mode:
@@ -582,9 +583,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="scrollable-row-wrapper">
                                 <div class="scrollable-row" style="mask-image: none; -webkit-mask-image: none;">
-                                    <div class="skeleton skeleton-img row-img" style="width: 350px;"></div>
-                                    <div class="skeleton skeleton-img row-img" style="width: 250px;"></div>
-                                    <div class="skeleton skeleton-img row-img" style="width: 300px;"></div>
+                                    <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
+                                    <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
+                                    <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
                                 </div>
                             </div>
                         </div>
@@ -1234,12 +1235,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     return false;
                 });
+
+                const ratio = getRatio(url) || (2 / 3);
+                wrapper.style.aspectRatio = `${ratio}`;
+                wrapper.style.width = 'auto';
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.dataset.src = url;
                 img.dataset.fullUrl = url;
-                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E';
+                const svgW = Math.round(1000 * ratio);
+                img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
                 img.draggable = false;
                 img.setAttribute('draggable', 'false');
                 img.addEventListener('dragstart', (e) => {
@@ -1248,15 +1254,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 const markLoaded = () => {
+                    if (img.naturalWidth && img.naturalHeight) {
+                        const actualRatio = img.naturalWidth / img.naturalHeight;
+                        setRatio(url, actualRatio);
+                        wrapper.style.aspectRatio = `${actualRatio}`;
+                        wrapper.style.width = 'auto';
+                        img.style.aspectRatio = `${actualRatio}`;
+                    }
                     img.classList.add('is-loaded');
                     wrapper.classList.add('img-loaded');
                 };
 
-                img.addEventListener('load', () => {
-                    if (img.src && !img.src.startsWith('data:')) {
-                        markLoaded();
-                    }
-                });
+                if (img.complete && img.naturalWidth > 0 && img.src && !img.src.startsWith('data:')) {
+                    markLoaded();
+                } else {
+                    img.addEventListener('load', () => {
+                        if (img.src && !img.src.startsWith('data:')) {
+                            markLoaded();
+                        }
+                    });
+                }
 
                 img.addEventListener('error', markLoaded);
 

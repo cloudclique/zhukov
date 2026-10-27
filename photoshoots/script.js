@@ -872,9 +872,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="scrollable-row-wrapper">
                             <div class="scrollable-row">
-                                <div class="skeleton skeleton-img img-container" style="width: 180px; flex-shrink: 0;"></div>
-                                <div class="skeleton skeleton-img img-container" style="width: 180px; flex-shrink: 0;"></div>
-                                <div class="skeleton skeleton-img img-container" style="width: 180px; flex-shrink: 0;"></div>
+                                <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
+                                <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
+                                <div class="skeleton skeleton-img img-container" style="aspect-ratio: 2 / 3; flex-shrink: 0;"></div>
                             </div>
                         </div>
                     </div>
@@ -1341,9 +1341,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Retrieve known aspect ratio or default to standard editorial portrait (2:3 = 0.667)
         const ratio = getRatio(url) || (2 / 3);
-        const initialWidth = Math.round(270 * ratio);
-        wrapper.style.width = `${initialWidth}px`;
         wrapper.style.aspectRatio = `${ratio}`;
+        wrapper.style.width = 'auto';
 
         const thumbUrl = getThumbnailUrl(url, cat);
         const displaySrc = thumbUrl || url;
@@ -1379,8 +1378,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (img.naturalWidth && img.naturalHeight) {
                 const actualRatio = img.naturalWidth / img.naturalHeight;
                 setRatio(url, actualRatio);
-                wrapper.style.width = `${Math.round(270 * actualRatio)}px`;
                 wrapper.style.aspectRatio = `${actualRatio}`;
+                wrapper.style.width = 'auto';
                 img.style.aspectRatio = `${actualRatio}`;
             }
             img.classList.add('is-loaded');
