@@ -523,7 +523,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 ...Object.fromEntries(photoThumbMap)
             };
             const combinedUrls = targetCat && Array.isArray(targetCat.urls) ? targetCat.urls : extraUrls;
-            await deletePhotoshootSet(categoryId, { extraUrls: combinedUrls, thumbUrls: combinedThumbs });
+            await deletePhotoshootSet(categoryId, {
+                extraUrls: combinedUrls,
+                thumbUrls: combinedThumbs,
+                categoryName: targetCat?.categoryName,
+                modelName: targetCat?.modelName,
+                theme: targetCat?.theme
+            });
 
             if (rowElement) {
                 rowElement.style.transition = 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)';

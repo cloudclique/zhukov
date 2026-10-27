@@ -4,7 +4,7 @@ import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, isDataEqual, registerSiteServiceWorker } from "../site-cache.js";
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
-import { deletePhotoshootSet } from "./delete-set-helper.js";
+import { deletePhotoshootSet, cleanupOrphanedMetadata } from "./delete-set-helper.js";
 
 // --- CONFIGURATION ---
 // Change this number to control how many images per photoshoot set are shown in Flow Mode:
@@ -667,20 +667,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             invalidateCache('photoshoots');
             invalidateCache('gallery');
             const cfUrlsToDelete = [photoUrl];
+            const candidateModels = [];
+            const candidateThemes = [];
+            const deletedDocIds = [];
+            const excludedUrls = [photoUrl];
+
+            if (photoModelMap.has(photoUrl)) {
+                candidateModels.push(photoModelMap.get(photoUrl));
+            }
 
             if (categoryId === 'single-shots') {
                 const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                 const snap = await getDocs(q);
                 for (const d of snap.docs) {
                     const data = d.data() || {};
-                    if (data.thumbUrl) cfUrlsToDelete.push(data.thumbUrl);
+                    if (data.thumbUrl) {
+                        cfUrlsToDelete.push(data.thumbUrl);
+                        excludedUrls.push(data.thumbUrl);
+                    }
+                    if (data.modelName) candidateModels.push(data.modelName);
+                    if (data.theme) candidateThemes.push(data.theme);
+                    deletedDocIds.push(d.id);
                     await deleteDoc(doc(db, 'single_shots', d.id));
                 }
                 const qThumb = query(collection(db, 'single_shots'), where('thumbUrl', '==', photoUrl));
                 const snapThumb = await getDocs(qThumb);
                 for (const d of snapThumb.docs) {
                     const data = d.data() || {};
-                    if (data.url) cfUrlsToDelete.push(data.url);
+                    if (data.url) {
+                        cfUrlsToDelete.push(data.url);
+                        excludedUrls.push(data.url);
+                    }
+                    if (data.modelName) candidateModels.push(data.modelName);
+                    if (data.theme) candidateThemes.push(data.theme);
+                    deletedDocIds.push(d.id);
                     await deleteDoc(doc(db, 'single_shots', d.id));
                 }
                 try {
@@ -692,18 +712,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const setSnap = await getDoc(setRef);
                 if (setSnap.exists()) {
                     const data = setSnap.data() || {};
+                    if (data.modelName) candidateModels.push(data.modelName);
+                    if (data.theme) candidateThemes.push(data.theme);
                     const thumbUrls = { ...(data.thumbUrls || {}) };
                     const aspectRatios = { ...(data.aspectRatios || {}) };
                     if (thumbUrls[photoUrl]) {
                         cfUrlsToDelete.push(thumbUrls[photoUrl]);
+                        excludedUrls.push(thumbUrls[photoUrl]);
                         delete thumbUrls[photoUrl];
                     }
                     if (photoThumbMap.has(photoUrl)) {
-                        cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                        const thumb = photoThumbMap.get(photoUrl);
+                        cfUrlsToDelete.push(thumb);
+                        excludedUrls.push(thumb);
                     }
                     for (const [full, thumb] of Object.entries(thumbUrls)) {
                         if (thumb === photoUrl) {
                             cfUrlsToDelete.push(full);
+                            excludedUrls.push(full);
                             delete thumbUrls[full];
                             delete aspectRatios[full];
                         }
@@ -719,7 +745,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 } else {
                     if (photoThumbMap.has(photoUrl)) {
-                        cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                        const thumb = photoThumbMap.get(photoUrl);
+                        cfUrlsToDelete.push(thumb);
+                        excludedUrls.push(thumb);
                     }
                     await updateDoc(setRef, {
                         urls: arrayRemove(photoUrl),
@@ -731,6 +759,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Also delete from Cloudflare R2 bucket (both full-res and thumbnail)
             await deleteFromCloudflare(cfUrlsToDelete);
+
+            // Clean up model or theme from metadata/tags if this was the last photo/set containing it
+            if (candidateModels.length > 0 || candidateThemes.length > 0) {
+                await cleanupOrphanedMetadata({
+                    candidateModels,
+                    candidateThemes,
+                    excludedDocIds: deletedDocIds,
+                    excludedUrls
+                });
+            }
+
+            photoModelMap.delete(photoUrl);
 
             // Reload data
             await loadPhotos();
@@ -757,7 +797,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ...Object.fromEntries(photoThumbMap)
             };
             const combinedUrls = targetCat && Array.isArray(targetCat.urls) ? targetCat.urls : extraUrls;
-            await deletePhotoshootSet(categoryId, { extraUrls: combinedUrls, thumbUrls: combinedThumbs });
+            await deletePhotoshootSet(categoryId, {
+                extraUrls: combinedUrls,
+                thumbUrls: combinedThumbs,
+                categoryName: targetCat?.categoryName,
+                modelName: targetCat?.modelName,
+                theme: targetCat?.theme
+            });
             await loadPhotos();
         } catch (error) {
             console.error("Error deleting photo set:", error);

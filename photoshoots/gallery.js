@@ -4,7 +4,7 @@ import { app, db } from "../firebase-config.js";
 import { getCachedData, setCachedData, invalidateCache, registerSiteServiceWorker } from "../site-cache.js";
 import { getRatio, setRatio, preloadRatios } from "./image-ratios.js";
 import { deleteFromCloudflare } from "../cloudflare-storage.js";
-import { deletePhotoshootSet } from "./delete-set-helper.js";
+import { deletePhotoshootSet, cleanupOrphanedMetadata } from "./delete-set-helper.js";
 
 // --- CONFIGURATION ---
 // Change this number to control the maximum columns in Flow View (default: 5):
@@ -738,24 +738,45 @@ document.addEventListener('DOMContentLoaded', async () => {
                     invalidateCache('gallery');
 
                     const cfUrlsToDelete = [...urls];
+                    const candidateModels = [];
+                    const candidateThemes = [];
+                    const deletedDocIds = [];
+                    const excludedUrls = [...urls];
 
                     if (categoryId === 'single-shots') {
                         for (const photoUrl of urls) {
                             if (photoThumbMap.has(photoUrl)) {
-                                cfUrlsToDelete.push(photoThumbMap.get(photoUrl));
+                                const thumb = photoThumbMap.get(photoUrl);
+                                cfUrlsToDelete.push(thumb);
+                                excludedUrls.push(thumb);
+                            }
+                            if (photoModelMap.has(photoUrl)) {
+                                candidateModels.push(photoModelMap.get(photoUrl));
                             }
                             const q = query(collection(db, 'single_shots'), where('url', '==', photoUrl));
                             const snap = await getDocs(q);
                             for (const d of snap.docs) {
                                 const data = d.data() || {};
-                                if (data.thumbUrl) cfUrlsToDelete.push(data.thumbUrl);
+                                if (data.thumbUrl) {
+                                    cfUrlsToDelete.push(data.thumbUrl);
+                                    excludedUrls.push(data.thumbUrl);
+                                }
+                                if (data.modelName) candidateModels.push(data.modelName);
+                                if (data.theme) candidateThemes.push(data.theme);
+                                deletedDocIds.push(d.id);
                                 await deleteDoc(doc(db, 'single_shots', d.id));
                             }
                             const qThumb = query(collection(db, 'single_shots'), where('thumbUrl', '==', photoUrl));
                             const snapThumb = await getDocs(qThumb);
                             for (const d of snapThumb.docs) {
                                 const data = d.data() || {};
-                                if (data.url) cfUrlsToDelete.push(data.url);
+                                if (data.url) {
+                                    cfUrlsToDelete.push(data.url);
+                                    excludedUrls.push(data.url);
+                                }
+                                if (data.modelName) candidateModels.push(data.modelName);
+                                if (data.theme) candidateThemes.push(data.theme);
+                                deletedDocIds.push(d.id);
                                 await deleteDoc(doc(db, 'single_shots', d.id));
                             }
                         }
@@ -768,18 +789,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const setSnap = await getDoc(setRef);
                         if (setSnap.exists()) {
                             const data = setSnap.data() || {};
+                            if (data.modelName) candidateModels.push(data.modelName);
+                            if (data.theme) candidateThemes.push(data.theme);
                             const thumbUrls = { ...(data.thumbUrls || {}) };
                             const aspectRatios = { ...(data.aspectRatios || {}) };
                             urls.forEach(u => {
                                 if (thumbUrls[u]) {
                                     cfUrlsToDelete.push(thumbUrls[u]);
+                                    excludedUrls.push(thumbUrls[u]);
                                     delete thumbUrls[u];
                                 } else if (photoThumbMap.has(u)) {
-                                    cfUrlsToDelete.push(photoThumbMap.get(u));
+                                    const thumb = photoThumbMap.get(u);
+                                    cfUrlsToDelete.push(thumb);
+                                    excludedUrls.push(thumb);
                                 }
                                 for (const [full, thumb] of Object.entries(thumbUrls)) {
                                     if (thumb === u) {
                                         cfUrlsToDelete.push(full);
+                                        excludedUrls.push(full);
                                         delete thumbUrls[full];
                                         delete aspectRatios[full];
                                     }
@@ -804,6 +831,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     // Also delete all affected images (full-res and thumbnails) from Cloudflare R2 bucket
                     await deleteFromCloudflare(cfUrlsToDelete);
+
+                    // Clean up model or theme from metadata/tags if this was the last photo/set containing it
+                    if (candidateModels.length > 0 || candidateThemes.length > 0) {
+                        await cleanupOrphanedMetadata({
+                            candidateModels,
+                            candidateThemes,
+                            excludedDocIds: deletedDocIds,
+                            excludedUrls
+                        });
+                    }
+
+                    urls.forEach(u => photoModelMap.delete(u));
 
                     // Animate out and remove matching wrappers in-place
                     const wrappersToRemove = [];
@@ -1186,9 +1225,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     confirmVariant: "red"
                 });
                 if (!confirmed) return;
-
                 try {
-                    await deletePhotoshootSet(categoryId, { extraUrls: currentUrls, thumbUrls: Object.fromEntries(photoThumbMap) });
+                    await deletePhotoshootSet(categoryId, {
+                        extraUrls: currentUrls,
+                        thumbUrls: Object.fromEntries(photoThumbMap),
+                        categoryName,
+                        modelName: currentModelName
+                    });
                     window.location.href = '/photoshoots/'; // Redirect back
                 } catch (error) {
                     console.error("Error deleting photo set:", error);
