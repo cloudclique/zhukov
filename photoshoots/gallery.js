@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.history && window.history.state && window.history.state.zhukovLightbox) {
         try {
             window.history.replaceState(null, '', window.location.href);
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const openLightbox = (imgElement, setName = 'GALLERY', catId = null, modelName = null) => {
@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 history.pushState({ zhukovLightbox: true }, '', window.location.href);
                 isLightboxHistoryActive = true;
-            } catch (e) {}
+            } catch (e) { }
         }
 
         const targetSrc = imgElement.dataset.fullUrl || imgElement.dataset.src || imgElement.src;
@@ -825,7 +825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 urls: arrayRemove(...urls),
                                 adultUrls: arrayRemove(...urls),
                                 archivedUrls: arrayRemove(...urls)
-                            }).catch(() => {});
+                            }).catch(() => { });
                         }
                     }
 
@@ -1121,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     urls: arrayRemove(...urls),
                                     adultUrls: arrayRemove(...urls),
                                     archivedUrls: arrayRemove(...urls)
-                                }).catch(() => {});
+                                }).catch(() => { });
                             }
                         }
 
@@ -1896,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 createTouchGhost(sourceWrapper, initialTouch.clientX, initialTouch.clientY);
 
                 if (navigator.vibrate) {
-                    try { navigator.vibrate(50); } catch (e) {}
+                    try { navigator.vibrate(50); } catch (e) { }
                 }
 
                 let activeDropTarget = null;

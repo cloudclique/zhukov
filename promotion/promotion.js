@@ -690,9 +690,7 @@ function loadPageData() {
 
             // Reflect /promotion/<slug> cleanly in browser URL
             if (window.history && window.history.replaceState) {
-                const isAdmin = checkIsAdmin();
-                const adminQuery = isAdmin && new URLSearchParams(window.location.search).get('admin') === 'true' ? '?admin=true' : '';
-                const targetPath = '/promotion/' + encodeURIComponent(found.slug) + adminQuery;
+                const targetPath = '/promotion/' + encodeURIComponent(found.slug);
                 if (!window.location.pathname.includes('/promotion/' + found.slug)) {
                     try { window.history.replaceState(null, '', targetPath); } catch (_) {}
                 }
@@ -3789,8 +3787,7 @@ window.createNewPresetFromCanvas = async function () {
     try { navigator.clipboard.writeText(fullUrl); } catch (_) {}
 
     if (window.history && window.history.replaceState) {
-        const adminQuery = checkIsAdmin() ? '?admin=true' : '';
-        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(finalSlug) + adminQuery);
+        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(finalSlug));
     }
 
     closeAllModals();
@@ -3869,8 +3866,7 @@ window.updateSelectedOrActivePreset = async function () {
     try { navigator.clipboard.writeText(fullUrl); } catch (_) {}
 
     if (window.history && window.history.replaceState) {
-        const adminQuery = checkIsAdmin() ? '?admin=true' : '';
-        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(targetPreset.slug) + adminQuery);
+        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(targetPreset.slug));
     }
 
     closeAllModals();
@@ -3908,8 +3904,7 @@ window.loadPresetIntoBuilder = async function (presetId) {
     requestedPresetMissing = null;
 
     if (window.history && window.history.replaceState) {
-        const adminQuery = checkIsAdmin() ? '?admin=true' : '';
-        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(preset.slug) + adminQuery);
+        window.history.replaceState(null, '', '/promotion/' + encodeURIComponent(preset.slug));
     }
 
     savePageData(false);
