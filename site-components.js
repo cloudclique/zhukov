@@ -1441,6 +1441,21 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             .replace(/>/g, '&gt;');
     }
 
+    function sanitizeUrl(url) {
+        if (!url || typeof url !== 'string') return '#';
+        const trimmed = url.trim();
+        if (trimmed.startsWith('#') || trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
+            return trimmed;
+        }
+        try {
+            const parsed = new URL(trimmed, window.location.origin);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:' || parsed.protocol === 'tel:') {
+                return trimmed;
+            }
+        } catch (_) {}
+        return '#';
+    }
+
 
 
     // Parse UTC Date-Time string into UTC epoch milliseconds
@@ -1580,12 +1595,13 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                 // Single Banner Set: clean static display without slider overhead
                 const b = activeSets[0];
                 const targetUrl = isMobile ? (b.mobileUrl || b.desktopUrl) : (b.desktopUrl || b.mobileUrl);
-                const hasLink = Boolean(b.linkEnabled && b.linkUrl && b.linkUrl.trim() !== '');
+                const safeBannerLink = sanitizeUrl(b.linkUrl);
+                const hasLink = Boolean(b.linkEnabled && safeBannerLink && safeBannerLink !== '#');
                 const targetBlank = b.openInNewTab ? 'target="_blank" rel="noopener"' : '';
 
                 container.innerHTML = `
                     <div class="site-banner-single">
-                        ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
+                        ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(safeBannerLink)}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
                             <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || 'Site Banner')}" loading="eager" fetchpriority="high" decoding="async">
                         ${hasLink ? `</a>` : `</div>`}
                     </div>
@@ -1597,13 +1613,14 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 
                 activeSets.forEach((b, idx) => {
                     const targetUrl = isMobile ? (b.mobileUrl || b.desktopUrl) : (b.desktopUrl || b.mobileUrl);
-                    const hasLink = Boolean(b.linkEnabled && b.linkUrl && b.linkUrl.trim() !== '');
+                    const safeBannerLink = sanitizeUrl(b.linkUrl);
+                    const hasLink = Boolean(b.linkEnabled && safeBannerLink && safeBannerLink !== '#');
                     const targetBlank = b.openInNewTab ? 'target="_blank" rel="noopener"' : '';
                     const isActive = idx === bannerCurrentSlide;
 
                     slidesHtml += `
                         <li class="site-banner-slide ${isActive ? 'active' : ''}" data-slide-index="${idx}">
-                            ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
+                            ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(safeBannerLink)}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
                                 <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || `Site Banner ${idx + 1}`)}" loading="eager" ${idx === 0 ? 'fetchpriority="high"' : ''} decoding="async">
                             ${hasLink ? `</a>` : `</div>`}
                         </li>

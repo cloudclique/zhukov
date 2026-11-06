@@ -398,19 +398,14 @@ function slugify(text) {
 // ── Firebase Auth & Role Verification ─────────────────────────────────────
 let isUserVerifiedAdmin = false;
 
-// Check Admin Status (cached flag or query override)
+// Check Admin Status (verified Firebase role)
 function checkIsAdmin() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === 'true') {
-        try { localStorage.setItem('zhukov_is_admin', 'true'); } catch (e) { }
-        return true;
-    }
-    return localStorage.getItem('zhukov_is_admin') === 'true';
+    return isUserVerifiedAdmin === true;
 }
 
 // Initialize Firebase Authentication & Role Check
 function initPromotionAuth() {
-    isUserVerifiedAdmin = checkIsAdmin();
+    isUserVerifiedAdmin = false;
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -421,23 +416,21 @@ function initPromotionAuth() {
                     isUserVerifiedAdmin = true;
                     localStorage.setItem('zhukov_is_admin', 'true');
                 } else {
-                    if (!new URLSearchParams(window.location.search).get('admin')) {
-                        isUserVerifiedAdmin = false;
-                        localStorage.removeItem('zhukov_is_admin');
-                    }
+                    isUserVerifiedAdmin = false;
+                    localStorage.removeItem('zhukov_is_admin');
                 }
             } catch (err) {
                 console.warn("Could not verify user admin role in Firestore:", err);
+                isUserVerifiedAdmin = false;
+                localStorage.removeItem('zhukov_is_admin');
             }
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(user, isUserVerifiedAdmin);
             }
         } else {
             localStorage.removeItem('zhukov_logged_in');
-            if (!new URLSearchParams(window.location.search).get('admin')) {
-                isUserVerifiedAdmin = false;
-                localStorage.removeItem('zhukov_is_admin');
-            }
+            isUserVerifiedAdmin = false;
+            localStorage.removeItem('zhukov_is_admin');
             if (window.updateHeaderAuthState) {
                 window.updateHeaderAuthState(null, false);
             }
@@ -1215,7 +1208,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                         const extraStyle = !isPrimary ? 'font-size:0.75rem; padding:0.6rem 1.4rem; letter-spacing:0.12em;' : '';
                         return `
                             <div class="pub-hero-item-wrapper hero-elem-btn" data-hero-btn-id="${btn.id}">
-                                <a href="${isEditActive ? '#' : (btn.linkUrl || '#')}"
+                                <a href="${isEditActive ? '#' : sanitizeUrl(btn.linkUrl || '#')}"
                                    class="${btnClass}"
                                    style="${extraStyle}"
                                    ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-btn-index="${bIndex}" data-field="heroButtonLabel"` : ''}>
@@ -1285,7 +1278,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             contentHtml = `
                 <${block.level || 'h2'} class="pub-title level-${block.level || 'h2'} ${alignClass} ${isVCentered ? 'is-vertically-centered' : ''}" ${inlineTitleStyle}
                     ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
-                    ${block.text || 'Untitled Heading'}
+                    ${escapeHtml(block.text || 'Untitled Heading')}
                 </${block.level || 'h2'}>
             `;
             break;
@@ -1294,7 +1287,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             contentHtml = `
                 <div class="pub-subtitle color-${block.color || 'crimson'} ${alignClass}"
                     ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
-                    ${block.text || 'SUBTITLE'}
+                    ${escapeHtml(block.text || 'SUBTITLE')}
                 </div>
             `;
             break;
@@ -1303,7 +1296,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             contentHtml = `
                 <div class="pub-text ${alignClass}"
                     ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
-                    ${block.text || 'Click to edit your paragraph text here...'}
+                    ${escapeHtml(block.text || 'Click to edit your paragraph text here...')}
                 </div>
             `;
             break;
@@ -1348,7 +1341,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                         </ul>
                     ` : ''}
                     <div style="margin-top: auto; padding-top: 0.5rem;">
-                        <a href="${isEditActive ? '#' : (block.linkUrl || '/contact/')}"
+                        <a href="${isEditActive ? '#' : sanitizeUrl(block.linkUrl || '/contact/')}"
                            class="pub-btn style-${block.buttonStyle || (isFeatured ? 'gold' : 'solid')}"
                            style="width: 100%; box-sizing: border-box; text-align: center;">
                             ${escapeHtml(block.buttonLabel || 'BOOK THIS PACKAGE →')}
@@ -1455,7 +1448,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                 </div>
             `;
             const imageWrapped = block.linkUrl && !isEditActive
-                ? `<a href="${block.linkUrl}" class="pub-image-link" style="display:block; width:100%;">${imageCore}</a>`
+                ? `<a href="${sanitizeUrl(block.linkUrl)}" class="pub-image-link" style="display:block; width:100%;">${imageCore}</a>`
                 : imageCore;
 
             contentHtml = `
@@ -1471,11 +1464,11 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
         case 'button':
             contentHtml = `
                 <div class="pub-button-wrapper ${alignClass}">
-                    <a href="${isEditActive ? '#' : (block.linkUrl || '#')}"
+                    <a href="${isEditActive ? '#' : sanitizeUrl(block.linkUrl || '#')}"
                        class="pub-btn style-${block.style || 'solid'}"
                        ${block.targetBlank && !isEditActive ? 'target="_blank" rel="noopener noreferrer"' : ''}
                        ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="label"` : ''}>
-                        ${block.label || 'CLICK HERE'}
+                        ${escapeHtml(block.label || 'CLICK HERE')}
                     </a>
                 </div>
             `;
@@ -1496,7 +1489,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                 <div style="display: flex; justify-content: ${block.align === 'center' ? 'center' : (block.align === 'right' ? 'flex-end' : 'flex-start')};">
                     <span class="pub-badge color-${block.color || 'crimson'}"
                           ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
-                        ${block.text || 'BADGE'}
+                        ${escapeHtml(block.text || 'BADGE')}
                     </span>
                 </div>
             `;
@@ -1506,11 +1499,11 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             contentHtml = `
                 <div class="pub-quote ${alignClass}">
                     <div class="pub-quote-text" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="text"` : ''}>
-                        ${block.text || '“Quote goes here”'}
+                        ${escapeHtml(block.text || '“Quote goes here”')}
                     </div>
                     ${block.author ? `
                         <div class="pub-quote-author" ${isEditActive ? `contenteditable="true" data-block-id="${block.id}" data-field="author"` : ''}>
-                            ${block.author}
+                            ${escapeHtml(block.author)}
                         </div>
                     ` : ''}
                 </div>
@@ -5152,12 +5145,27 @@ document.addEventListener('keydown', (e) => {
 // ── 11. Utilities ─────────────────────────────────────────────────────────
 function escapeHtml(str) {
     if (!str) return '';
-    return str
+    return String(str)
         .replace(/&/g, '&amp;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+function sanitizeUrl(url) {
+    if (!url || typeof url !== 'string') return '#';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('#') || trimmed.startsWith('/') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
+        return trimmed;
+    }
+    try {
+        const parsed = new URL(trimmed, window.location.origin);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:' || parsed.protocol === 'tel:') {
+            return trimmed;
+        }
+    } catch (_) {}
+    return '#';
 }
 
 function getEmbedUrl(url) {
@@ -6345,8 +6353,17 @@ window.handleBannerFileUpload = async function (id, field, event) {
         const formData = new FormData();
         formData.append('image', file, safeName);
 
+        let uploadHeaders = {};
+        if (auth.currentUser) {
+            try {
+                const idToken = await auth.currentUser.getIdToken();
+                uploadHeaders['Authorization'] = `Bearer ${idToken}`;
+            } catch (_) {}
+        }
+
         const res = await fetch('https://zhukov-studio.dener4826.workers.dev', {
             method: 'POST',
+            headers: uploadHeaders,
             body: formData
         });
 

@@ -1062,6 +1062,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const uploadedItems = [];
             const workerUrl = CLOUDFLARE_WORKER_URL;
 
+            if (!auth.currentUser) {
+                throw new Error("You must be signed in as an administrator to upload images.");
+            }
+            const idToken = await auth.currentUser.getIdToken();
+            const authHeaders = {
+                'Authorization': `Bearer ${idToken}`
+            };
+
             // Process and Upload Sequentially
             for (let i = 0; i < selectedFiles.length; i++) {
                 statusMsg.innerHTML = `<span style="color: #60a5fa;">Processing & Uploading ${i + 1} of ${selectedFiles.length}...</span>`;
@@ -1090,6 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const uploadRes = await fetch(workerUrl, {
                     method: 'POST',
+                    headers: authHeaders,
                     body: formData
                 });
 
@@ -1109,6 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         thumbFormData.append('image', thumbBlob, uniqueThumbName);
                         const thumbRes = await fetch(workerUrl, {
                             method: 'POST',
+                            headers: authHeaders,
                             body: thumbFormData
                         });
                         const thumbResult = await thumbRes.json();

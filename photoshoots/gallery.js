@@ -451,12 +451,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (isAdmin) {
                         metaInfo = `
-                            <span class="editable" data-field="modelName" title="Double click to edit">${modelName}</span> | 
-                            <span class="editable" data-field="theme" title="Double click to edit">${theme}</span> | 
-                            <span class="editable" data-field="date" title="Double click to edit date">${dateStr}</span>
+                            <span class="editable" data-field="modelName" title="Double click to edit">${escapeHtml(modelName)}</span> | 
+                            <span class="editable" data-field="theme" title="Double click to edit">${escapeHtml(theme)}</span> | 
+                            <span class="editable" data-field="date" title="Double click to edit date">${escapeHtml(dateStr)}</span>
                         `;
                     } else {
-                        metaInfo = `${modelName} | ${theme} | ${dateStr}`;
+                        metaInfo = `${escapeHtml(modelName)} | ${escapeHtml(theme)} | ${escapeHtml(dateStr)}`;
                     }
 
                     if (data.urls && Array.isArray(data.urls)) {
@@ -1294,20 +1294,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isAdmin) {
                 if (categoryId === 'single-shots') {
                     headerContainer.innerHTML = `
-                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
+                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${escapeHtml(categoryName)}</h2>
                         <div class="gallery-meta">${metaInfo}</div>
                         ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
                     `;
                 } else {
                     headerContainer.innerHTML = `
-                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${categoryName}</h2>
+                        <h2 class="gallery-title editable" data-field="categoryName" data-raw="${escapeHtml(categoryName)}" title="Double click to edit" style="display:inline-block;">${escapeHtml(categoryName)}</h2>
                         <div class="gallery-meta">${metaInfo}</div>
                         <div class="gallery-description editable" data-field="description" data-raw="${escapeHtml(description)}" title="Double click to edit description">${description ? formattedDesc : '<span class="desc-placeholder">+ Add description & links...</span>'}</div>
                     `;
                 }
             } else {
                 headerContainer.innerHTML = `
-                    <h2 class="gallery-title">${categoryName}</h2>
+                    <h2 class="gallery-title">${escapeHtml(categoryName)}</h2>
                     <div class="gallery-meta">${metaInfo}</div>
                     ${description ? `<div class="gallery-description">${formattedDesc}</div>` : ''}
                 `;

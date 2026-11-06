@@ -4480,8 +4480,16 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('bucket', 'moodboards');
 
             const workerUrl = `${CLOUDFLARE_WORKER_URL}?bucket=moodboards`;
+            let uploadHeaders = {};
+            if (currentUser) {
+                try {
+                    const idToken = await currentUser.getIdToken();
+                    uploadHeaders['Authorization'] = `Bearer ${idToken}`;
+                } catch (_) {}
+            }
             const response = await fetch(workerUrl, {
                 method: 'POST',
+                headers: uploadHeaders,
                 body: formData
             });
 
