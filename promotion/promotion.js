@@ -1259,7 +1259,7 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
                         </div>
                     </div>
                     <div class="pub-hero-diagonal-cut-wrapper hero-diagonal-cut-wrapper">
-                        <img src="${heroImg}" alt="${escapeHtml(heroAlt)}" class="pub-hero-img" id="hero-img" loading="eager" style="object-position: ${heroImgPosition} !important;">
+                        <img src="${heroImg}" alt="${escapeHtml(heroAlt)}" class="pub-hero-img" id="hero-img" loading="eager" fetchpriority="high" decoding="async" style="object-position: ${heroImgPosition} !important;">
                         ${isEditActive ? `
                             <button type="button" class="pub-hero-photo-btn" onclick="openBlockSettingsModal('${block.id}')" title="Change Hero Image & Alignment">
                                 📷 Hero Image & Alignment
@@ -1447,9 +1447,11 @@ function renderBlock(block, colId, blockIndex, isEditActive) {
             const imgValign = `valign-${vertAlign}`;
             const imgFocal = `focal-${focalPos}`;
             const imgAlignClass = `align-${horizAlign}`;
+            const isTopBlockImage = (blockIndex === 0);
+            const imgLoadAttr = isTopBlockImage ? 'loading="eager" fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"';
             const imageCore = `
                 <div class="pub-image-wrapper ${imgRatio}">
-                    <img src="${block.url || '/_images/theme_main.jpg'}" alt="${block.alt || 'Photography image'}" class="pub-image ${imgFocal}" loading="lazy">
+                    <img src="${block.url || '/_images/theme_main.jpg'}" alt="${block.alt || 'Photography image'}" class="pub-image ${imgFocal}" ${imgLoadAttr}>
                 </div>
             `;
             const imageWrapped = block.linkUrl && !isEditActive

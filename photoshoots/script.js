@@ -1292,11 +1292,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 3. Reconcile
         const newWrappersToObserve = [];
         flowItems.forEach(({ url, cat }, index) => {
-            const isPriority = index < 4;
+            const isPriority = index < 6;
             if (existingCards.has(url)) {
                 const card = existingCards.get(url);
                 existingCards.delete(url);
                 updateFlowCardAdminState(card, cat, url);
+                if (isPriority) {
+                    const img = card.querySelector('img.masonry-img');
+                    if (img) {
+                        img.loading = 'eager';
+                        img.setAttribute('fetchpriority', 'high');
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            img.removeAttribute('data-src');
+                        }
+                    }
+                }
                 flowContainer.appendChild(card);
             } else {
                 const newCard = buildFlowCard(url, cat, isPriority);
@@ -1489,7 +1500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return seeAllCard;
     };
 
-    const buildCategoryRow = (cat) => {
+    const buildCategoryRow = (cat, catIdx = 0) => {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'category-row';
         rowDiv.dataset.categoryId = cat.categoryId;
@@ -1746,7 +1757,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hasMore = cat.urls.length > 5;
 
         imagesToShow.forEach((url, idx) => {
-            scrollRow.appendChild(createCategoryImgElem(cat, url, scrollRow, idx < 3));
+            const isPriority = (catIdx === 0 && idx < 4);
+            scrollRow.appendChild(createCategoryImgElem(cat, url, scrollRow, isPriority));
         });
 
         // Luxury End-Card Tile (Never blocks images, fluidly accessible via scroll/swipe)
@@ -1998,14 +2010,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // 3. Reconcile rows: reuse existing rows to preserve image DOM nodes and scroll state!
-        categoriesData.forEach(cat => {
+        categoriesData.forEach((cat, catIdx) => {
             if (existingRows.has(cat.categoryId)) {
                 const existingRow = existingRows.get(cat.categoryId);
                 existingRows.delete(cat.categoryId);
                 updateCategoryRowAdminState(existingRow, cat);
                 categoriesContainer.appendChild(existingRow);
             } else {
-                const newRow = buildCategoryRow(cat);
+                const newRow = buildCategoryRow(cat, catIdx);
                 categoriesContainer.appendChild(newRow);
             }
         });

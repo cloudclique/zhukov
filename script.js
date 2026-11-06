@@ -73,6 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Instant Cache Render for Home Hero Image (0ms delay)
     if (heroImg) {
+        heroImg.loading = 'eager';
+        heroImg.decoding = 'async';
+        heroImg.setAttribute('fetchpriority', 'high');
         const cachedHero = getCachedData('home_hero_image');
         if (cachedHero && heroImg.src !== cachedHero) {
             heroImg.src = cachedHero;
@@ -91,6 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Instant Cache Render for About Me Hero Image (0ms delay, fallback to home_profile_image if not set)
     if (aboutHeroImg) {
+        aboutHeroImg.loading = 'eager';
+        aboutHeroImg.decoding = 'async';
+        aboutHeroImg.setAttribute('fetchpriority', 'high');
         const cachedAboutHero = getCachedData('about_hero_image') || getCachedData('home_profile_image');
         if (cachedAboutHero && aboutHeroImg.src !== cachedAboutHero) {
             aboutHeroImg.src = cachedAboutHero;

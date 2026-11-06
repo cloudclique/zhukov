@@ -2041,7 +2041,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wrapper.className = `masonry-item img-container ${selectedPhotoUrls.has(url) ? 'is-selected' : ''}`;
                     wrapper.dataset.index = index;
 
-                    const isPriority = index < 4;
+                    const isPriority = index < 6;
                     const thumbUrl = photoThumbMap.get(url) || null;
                     const displaySrc = thumbUrl || url;
 

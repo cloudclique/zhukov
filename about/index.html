@@ -5,6 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZHUKOV — About</title>
+    <!-- Critical Hero Image Optimization (Preconnect & High-Priority Preload) -->
+    <link rel="preconnect" href="https://zhukov-studio.dener4826.workers.dev" crossorigin>
+    <link rel="dns-prefetch" href="https://zhukov-studio.dener4826.workers.dev">
+    <script>
+        (function () {
+            try {
+                var cached = localStorage.getItem('zhukov_mem_about_hero_image') || localStorage.getItem('zhukov_mem_home_profile_image');
+                if (cached) {
+                    var parsed = JSON.parse(cached);
+                    if (parsed && parsed.data) {
+                        var link = document.createElement('link');
+                        link.rel = 'preload';
+                        link.as = 'image';
+                        link.href = parsed.data;
+                        link.fetchPriority = 'high';
+                        document.head.appendChild(link);
+                    }
+                }
+            } catch (e) { }
+        })();
+    </script>
     <link rel="stylesheet" href="/styles.css?v=74">
     <link rel="stylesheet" href="about.css?v=74">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -64,7 +85,7 @@
 
             <!-- Diagonal Full Bleed Image Filling the Cutout Area on the Right (1-to-1 Homepage Angle) -->
             <div class="hero-diagonal-cut-wrapper" id="about-hero-img-container">
-                <img src="" alt="Stanislav Zhukov Atelier Portrait" loading="eager" id="about-hero-img">
+                <img src="" alt="Stanislav Zhukov Atelier Portrait" loading="eager" fetchpriority="high" decoding="async" id="about-hero-img">
                 <script>
                     (function () {
                         try {
@@ -155,15 +176,15 @@
                             <div class="fan-deck" aria-label="Theme Concept Images">
                                 <div class="fan-card fan-card-left" title="Concept A">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/theme_concept_a.jpg"
-                                        alt="Theme Concept A" class="fan-card-img" draggable="false">
+                                        alt="Theme Concept A" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                                 <div class="fan-card fan-card-center" title="Main Theme">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/theme_main.jpg"
-                                        alt="Main Theme" class="fan-card-img" draggable="false">
+                                        alt="Main Theme" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                                 <div class="fan-card fan-card-right" title="Concept B">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/theme_concept_b.jpg"
-                                        alt="Theme Concept B" class="fan-card-img" draggable="false">
+                                        alt="Theme Concept B" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                             </div>
 
@@ -294,15 +315,15 @@
                             <div class="fan-deck" aria-label="Location Scouting Images">
                                 <div class="fan-card fan-card-left" title="Outdoor & Nature">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_waterfall.jpg"
-                                        alt="Outdoor & Nature Location" class="fan-card-img" draggable="false">
+                                        alt="Outdoor & Nature Location" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                                 <div class="fan-card fan-card-center" title="Interior & Architecture">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_interior.jpg"
-                                        alt="Interior Architecture Location" class="fan-card-img" draggable="false">
+                                        alt="Interior Architecture Location" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                                 <div class="fan-card fan-card-right" title="Studio Setup">
                                     <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/location_studio.jpg"
-                                        alt="Studio Setup Location" class="fan-card-img" draggable="false">
+                                        alt="Studio Setup Location" class="fan-card-img" draggable="false" loading="lazy" decoding="async">
                                 </div>
                             </div>
 
@@ -326,7 +347,7 @@
                             <!-- Moodboard Preview Image -->
                             <div class="process-image-container" aria-label="Moodboard Reference Preview">
                                 <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/moodboard_preview.jpg"
-                                    alt="Moodboard Canvas Preview" class="process-preview-img" draggable="false">
+                                    alt="Moodboard Canvas Preview" class="process-preview-img" draggable="false" loading="lazy" decoding="async">
                             </div>
 
                             <div class="step-content">
@@ -349,7 +370,7 @@
                             <div class="process-image-container" aria-label="Live Photoshoot Production">
                                 <img src="https://i.ibb.co/JRNhSXJ2/image-0.webp"
                                     alt="On-Set Live Photoshoot and Lighting Production" class="process-preview-img"
-                                    draggable="false">
+                                    draggable="false" loading="lazy" decoding="async">
                                 <div class="image-overlay-badge">
                                     <span>ON-SET LIGHTING &amp; DIRECTING</span>
                                 </div>
@@ -376,7 +397,7 @@
                             <div class="process-image-container" aria-label="Editing and Color Grading Preview">
                                 <img src="https://raw.githubusercontent.com/cloudclique/zhukov/refs/heads/main/_images/editing_preview.jpg"
                                     alt="Lightroom Editing and Retouching Preview" class="process-preview-img"
-                                    draggable="false">
+                                    draggable="false" loading="lazy" decoding="async">
                             </div>
 
                             <div class="step-content">

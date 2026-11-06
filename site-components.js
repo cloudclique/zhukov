@@ -794,7 +794,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
 </style>
 <div class="site-banner-container" id="header-banner-container">
     <a class="site-banner-link" href="">
-        <img class="site-banner-img" src="" alt="Banner" loading="eager">
+        <img class="site-banner-img" src="" alt="Banner" loading="eager" fetchpriority="high" decoding="async">
     </a>
 </div>`;
 
@@ -1586,7 +1586,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                 container.innerHTML = `
                     <div class="site-banner-single">
                         ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
-                            <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || 'Site Banner')}" loading="eager">
+                            <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || 'Site Banner')}" loading="eager" fetchpriority="high" decoding="async">
                         ${hasLink ? `</a>` : `</div>`}
                     </div>
                 `;
@@ -1604,7 +1604,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                     slidesHtml += `
                         <li class="site-banner-slide ${isActive ? 'active' : ''}" data-slide-index="${idx}">
                             ${hasLink ? `<a class="site-banner-link" href="${escapeHtmlAttr(b.linkUrl.trim())}" ${targetBlank}>` : `<div class="site-banner-link is-inert">`}
-                                <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || `Site Banner ${idx + 1}`)}" loading="eager">
+                                <img class="site-banner-img" src="${escapeHtmlAttr(targetUrl)}" alt="${escapeHtmlAttr(b.altText || b.title || `Site Banner ${idx + 1}`)}" loading="eager" ${idx === 0 ? 'fetchpriority="high"' : ''} decoding="async">
                             ${hasLink ? `</a>` : `</div>`}
                         </li>
                     `;

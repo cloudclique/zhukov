@@ -807,17 +807,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const escapeHtml = (str) => String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
-        flowItems.forEach(({ url, cat }) => {
+        flowItems.forEach(({ url, cat }, index) => {
             const wrapper = document.createElement('div');
             wrapper.className = 'masonry-item img-container';
 
+            const isPriority = index < 6;
             const img = document.createElement('img');
             img.className = 'masonry-img';
             img.dataset.fullUrl = url;
-            img.dataset.src = url;
-            img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
-            img.loading = 'lazy';
-            img.decoding = 'async';
+
+            if (isPriority) {
+                img.src = url;
+                img.loading = 'eager';
+                img.decoding = 'async';
+                img.setAttribute('fetchpriority', 'high');
+            } else {
+                img.dataset.src = url;
+                img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.setAttribute('fetchpriority', 'low');
+            }
             img.alt = cat.categoryName || 'Archived Photo';
 
             const handleImageReady = () => {
@@ -912,7 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             attachTiltEffect(wrapper);
             flowContainer.appendChild(wrapper);
-            if (flowViewportObserver) {
+            if (flowViewportObserver && !isPriority) {
                 flowViewportObserver.observe(wrapper);
             }
         });
@@ -968,7 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sortCategories();
 
-        categoriesData.forEach(cat => {
+        categoriesData.forEach((cat, catIdx) => {
             const rowDiv = document.createElement('div');
             rowDiv.className = 'category-row';
 
@@ -1227,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const imagesToShow = cat.urls.slice(0, limit);
             const hasMore = cat.urls.length > 5;
 
-            const createImgElem = (url) => {
+            const createImgElem = (url, isPriority = false) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'img-container';
                 wrapper.setAttribute('draggable', 'false');
@@ -1242,10 +1252,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const img = document.createElement('img');
                 img.className = 'row-img';
-                img.dataset.src = url;
                 img.dataset.fullUrl = url;
-                const svgW = Math.round(1000 * ratio);
-                img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+
+                if (isPriority) {
+                    img.src = url;
+                    img.loading = 'eager';
+                    img.decoding = 'async';
+                    img.setAttribute('fetchpriority', 'high');
+                } else {
+                    img.dataset.src = url;
+                    const svgW = Math.round(1000 * ratio);
+                    img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
+                    img.setAttribute('fetchpriority', 'low');
+                }
                 img.draggable = false;
                 img.setAttribute('draggable', 'false');
                 img.addEventListener('dragstart', (e) => {
@@ -1292,15 +1313,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 attachTiltEffect(wrapper);
                 wrapper.appendChild(img);
 
-                if (archivedViewportObserver) {
+                if (archivedViewportObserver && !isPriority) {
                     archivedViewportObserver.observe(wrapper);
                 }
 
                 return wrapper;
             };
 
-            imagesToShow.forEach((url) => {
-                scrollRow.appendChild(createImgElem(url));
+            imagesToShow.forEach((url, idx) => {
+                const isPriority = (catIdx === 0 && idx < 4);
+                scrollRow.appendChild(createImgElem(url, isPriority));
             });
 
             // Luxury End-Card Tile
