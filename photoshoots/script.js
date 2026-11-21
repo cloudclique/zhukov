@@ -1079,6 +1079,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         img.addEventListener('error', () => {
             if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                if (img.src !== url) {
+                    img.src = url;
+                    return;
+                }
                 wrapper.classList.add('img-loaded');
             }
         });
@@ -1409,7 +1413,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        img.addEventListener('error', markLoaded);
+        img.addEventListener('error', () => {
+            if (img.src && !img.src.startsWith('data:') && img.src !== url) {
+                img.src = url;
+                return;
+            }
+            markLoaded();
+        });
 
         const specificModel = (cat.categoryId === 'single-shots')
             ? (photoModelMap.get(url) || '')
@@ -1572,15 +1582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return false;
         });
 
-        scrollRow.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-            isMouseDown = true;
-            scrollRow._hasDragged = false;
-            startX = e.pageX - scrollRow.offsetLeft;
-            scrollLeftStart = scrollRow.scrollLeft;
-            pauseAutoScroll();
-        });
-
         const onRowMouseMove = (e) => {
             if (!isMouseDown) return;
             const x = e.pageX - scrollRow.offsetLeft;
@@ -1597,6 +1598,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const onRowMouseUp = () => {
+            window.removeEventListener('mousemove', onRowMouseMove);
+            window.removeEventListener('mouseup', onRowMouseUp);
             if (isMouseDown) {
                 isMouseDown = false;
                 scrollRow.classList.remove('is-dragging');
@@ -1609,8 +1612,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        window.addEventListener('mousemove', onRowMouseMove);
-        window.addEventListener('mouseup', onRowMouseUp);
+        scrollRow.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+            isMouseDown = true;
+            scrollRow._hasDragged = false;
+            startX = e.pageX - scrollRow.offsetLeft;
+            scrollLeftStart = scrollRow.scrollLeft;
+            pauseAutoScroll();
+            window.addEventListener('mousemove', onRowMouseMove);
+            window.addEventListener('mouseup', onRowMouseUp);
+        });
 
         // Allow vertical wheel to scroll the page naturally without scrolling the row.
         scrollRow.addEventListener('wheel', (e) => {

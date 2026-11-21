@@ -631,20 +631,38 @@ function initMethodologyStepper() {
         }
     }
 
-    // Event Listeners
+    // Event Listeners (rAF-throttled for smooth 60fps scrolling)
+    let mobileScrollRaf = null;
     if (roadmapGrid) {
         roadmapGrid.addEventListener('scroll', () => {
-            updateMobileCarousel();
+            if (mobileScrollRaf) return;
+            mobileScrollRaf = requestAnimationFrame(() => {
+                mobileScrollRaf = null;
+                updateMobileCarousel();
+            });
         }, { passive: true });
     }
-    window.addEventListener('scroll', updateDesktopScrollSpy, { passive: true });
 
-    window.addEventListener('resize', () => {
-        if (isMobile()) {
-            updateMobileCarousel();
-        } else {
+    let desktopScrollRaf = null;
+    window.addEventListener('scroll', () => {
+        if (desktopScrollRaf) return;
+        desktopScrollRaf = requestAnimationFrame(() => {
+            desktopScrollRaf = null;
             updateDesktopScrollSpy();
-        }
+        });
+    }, { passive: true });
+
+    let aboutResizeRaf = null;
+    window.addEventListener('resize', () => {
+        if (aboutResizeRaf) return;
+        aboutResizeRaf = requestAnimationFrame(() => {
+            aboutResizeRaf = null;
+            if (isMobile()) {
+                updateMobileCarousel();
+            } else {
+                updateDesktopScrollSpy();
+            }
+        });
     }, { passive: true });
 
     // Initial sync

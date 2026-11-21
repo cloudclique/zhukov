@@ -1011,12 +1011,23 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         document.dispatchEvent(new CustomEvent('footerLoaded', { detail: { footerSlot } }));
     }
 
-    // Stale-while-revalidate background fetch with live DOM synchronization
+    // Stale-while-revalidate background fetch with live DOM synchronization (throttled per session)
+    let isFetchingTemplates = false;
     async function fetchFreshTemplates() {
+        if (isFetchingTemplates) return;
         try {
-            // Append version query param to bypass SW cache and ensure fresh network fetch
-            const resH = await fetch('/header.html?v=' + Date.now());
-            if (resH.ok) {
+            const lastFetch = parseInt(sessionStorage.getItem('zhukov_templates_synced_at') || '0', 10);
+            if (Date.now() - lastFetch < 300000 && localStorage.getItem(HEADER_CACHE_KEY) && localStorage.getItem(FOOTER_CACHE_KEY)) {
+                return;
+            }
+        } catch (e) { }
+        isFetchingTemplates = true;
+        try {
+            const [resH, resF] = await Promise.all([
+                fetch('/header.html').catch(() => null),
+                fetch('/footer.html').catch(() => null)
+            ]);
+            if (resH && resH.ok) {
                 const textH = await resH.text();
                 // Validate completeness before updating cache
                 if (textH.includes('data-nav="about"') && textH.includes('data-nav="contact"') && textH.includes('site-banner-container')) {
@@ -1031,11 +1042,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                     }
                 }
             }
-        } catch (e) { }
-
-        try {
-            const resF = await fetch('/footer.html?v=' + Date.now());
-            if (resF.ok) {
+            if (resF && resF.ok) {
                 const textF = await resF.text();
                 if (textF.includes('site-footer') && textF.includes('LOCATED IN') && textF.includes('CONTACT') && textF.includes('SOCIAL') && textF.includes('LEGAL')) {
                     localStorage.setItem(FOOTER_CACHE_KEY, textF);
@@ -1047,7 +1054,10 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                     }
                 }
             }
-        } catch (e) { }
+            try { sessionStorage.setItem('zhukov_templates_synced_at', String(Date.now())); } catch (e) { }
+        } catch (e) { } finally {
+            isFetchingTemplates = false;
+        }
     }
 
     // =========================================================================
@@ -1550,7 +1560,8 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
     }
 
     // Universal Header Banner Handler: Multiple Sets with Horizontal Carousel Scrolling
-    function updateBannerSlots() {
+    let lastBannerRenderSignature = '';
+    function updateBannerSlots(forceRebuild = false) {
         // Exclude banner completely on moodboard & mood-dash pages
         const isExcludedPage = window.location.pathname.toLowerCase().includes('/moodboard') ||
             window.location.pathname.toLowerCase().includes('/mood-dash');
@@ -1563,6 +1574,7 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             document.documentElement.style.setProperty('--site-banner-height', '0px');
             document.body.classList.remove('has-site-banner');
             stopBannerAutoSlider();
+            lastBannerRenderSignature = 'excluded';
             return;
         }
 
@@ -1583,8 +1595,21 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
             document.documentElement.style.setProperty('--site-banner-height', '0px');
             document.body.classList.remove('has-site-banner');
             stopBannerAutoSlider();
+            lastBannerRenderSignature = 'empty';
             return;
         }
+
+        const nextSignature = JSON.stringify({
+            isMobile,
+            speed: getBannerAutoInterval(),
+            sets: activeSets.map(b => [b.id, b.desktopUrl, b.mobileUrl, b.linkEnabled, b.linkUrl, b.openInNewTab, b.altText, b.title])
+        });
+        const allPopulated = Array.from(containers).every(c => c.children.length > 0);
+        if (!forceRebuild && nextSignature === lastBannerRenderSignature && allPopulated) {
+            syncBannerHeight();
+            return;
+        }
+        lastBannerRenderSignature = nextSignature;
 
         containers.forEach(container => {
             container.style.display = 'block';
@@ -1710,14 +1735,26 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
         if (typeof newSpeed === 'number') {
             localStorage.setItem(SITE_BANNERS_SPEED_KEY, String(newSpeed));
         }
+        try { sessionStorage.setItem('zhukov_banners_synced_at', String(Date.now())); } catch (_) { }
         bannerCurrentSlide = 0;
-        updateBannerSlots();
+        updateBannerSlots(true);
     };
 
-    // Stale-while-revalidate background sync with Firestore cloud settings
-    async function syncCloudBanners() {
+    // Stale-while-revalidate background sync with Firestore cloud settings (deduplicated & session-throttled)
+    let isSyncingBanners = false;
+    async function syncCloudBanners(force = false) {
+        if (isSyncingBanners) return;
+        if (!force) {
+            try {
+                const lastSync = parseInt(sessionStorage.getItem('zhukov_banners_synced_at') || '0', 10);
+                if (Date.now() - lastSync < 60000 && localStorage.getItem(SITE_BANNERS_STORAGE_KEY) !== null) {
+                    return;
+                }
+            } catch (_) { }
+        }
+        isSyncingBanners = true;
         try {
-            const res = await fetch('https://firestore.googleapis.com/v1/projects/zhukovphotograpy/databases/(default)/documents/settings/site_banners?t=' + Date.now());
+            const res = await fetch('https://firestore.googleapis.com/v1/projects/zhukovphotograpy/databases/(default)/documents/settings/site_banners');
             if (res.ok) {
                 const docData = await res.json();
                 if (docData && docData.fields) {
@@ -1756,17 +1793,23 @@ const BANNER_DESTINATION_URL = 'https://zhukov.studio/moodboard/?id=qYezpeHSVaOX
                     if (docData.fields.autoScrollInterval && docData.fields.autoScrollInterval.integerValue) {
                         localStorage.setItem(SITE_BANNERS_SPEED_KEY, docData.fields.autoScrollInterval.integerValue);
                     }
+                    try { sessionStorage.setItem('zhukov_banners_synced_at', String(Date.now())); } catch (_) { }
                     updateBannerSlots();
                 }
             }
-        } catch (_) { }
+        } catch (_) { } finally {
+            isSyncingBanners = false;
+        }
     }
     syncCloudBanners();
-    setTimeout(syncCloudBanners, 600);
 
-    window.addEventListener('resize', () => updateBannerSlots());
-    window.addEventListener('orientationchange', () => updateBannerSlots());
-    window.addEventListener('load', () => updateBannerSlots());
+    let bannerResizeTimer = null;
+    window.addEventListener('resize', () => {
+        if (bannerResizeTimer) clearTimeout(bannerResizeTimer);
+        bannerResizeTimer = setTimeout(() => updateBannerSlots(), 100);
+    }, { passive: true });
+    window.addEventListener('orientationchange', () => updateBannerSlots(), { passive: true });
+    window.addEventListener('load', () => updateBannerSlots(), { passive: true });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) updateBannerSlots(); });
     setInterval(() => updateBannerSlots(), 45000); // Periodically check for scheduled banner starts and expirations
 

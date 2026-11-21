@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }).join('').replace(/\n/g, '<br>');
         };
 
-        // 1. Instant Cache Render
+        // 1. Instant Cache Render (0ms delay on repeat visits)
         const cached = getCachedData(cacheKey);
         if (!cached) {
             // Skeleton Loading State on cold load
@@ -319,6 +319,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             const spans = [20, 25, 18, 30, 22, 28, 19, 24, 27, 21, 26, 23];
             spans.forEach(span => {
                 gridContainer.innerHTML += `<div class="masonry-item skeleton" style="grid-row: span ${span}; min-height: ${span * 10}px; border-radius: 12px;"></div>`;
+            });
+        } else if (cached && Array.isArray(cached.urls) && !gridContainer.querySelector('.masonry-item:not(.skeleton)')) {
+            loadingState.style.display = 'none';
+            const cachedDesc = cached.description ? formatDescription(cached.description) : '';
+            headerContainer.innerHTML = `
+                <h2 class="gallery-title">${escapeHtml(cached.categoryName || 'Photoshoot')}</h2>
+                <div class="gallery-meta">${cached.metaInfo || ''}</div>
+                ${cachedDesc ? `<div class="gallery-description">${cachedDesc}</div>` : ''}
+                <div class="gallery-header-bottom">
+                    <div class="gallery-photo-count">${cached.urls.length} Photographs</div>
+                </div>
+            `;
+            gridContainer.innerHTML = '';
+            if (currentRatioMode === '1:1') {
+                gridContainer.classList.add('ratio-1-1');
+            } else {
+                gridContainer.classList.remove('ratio-1-1');
+            }
+            cached.urls.slice(0, 12).forEach((u, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'masonry-item img-container';
+                const img = document.createElement('img');
+                img.className = 'masonry-img';
+                img.dataset.fullUrl = u;
+                const derivedThumb = (typeof u === 'string' && u.endsWith('.webp') && !u.endsWith('_thumb.webp'))
+                    ? u.replace(/\.webp$/i, '_thumb.webp')
+                    : u;
+                img.src = derivedThumb;
+                img.loading = idx < 6 ? 'eager' : 'lazy';
+                img.decoding = 'async';
+                if (idx < 6) img.setAttribute('fetchpriority', 'high');
+                img.addEventListener('load', () => wrapper.classList.add('img-loaded'), { once: true });
+                img.addEventListener('error', () => {
+                    if (img.src !== u) img.src = u;
+                    wrapper.classList.add('img-loaded');
+                }, { once: true });
+                wrapper.addEventListener('click', () => openLightbox(img, cached.categoryName || 'GALLERY', categoryId, ''));
+                wrapper.appendChild(img);
+                gridContainer.appendChild(wrapper);
             });
         }
 
@@ -354,6 +393,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     if (d.url && d.thumbUrl) {
                         photoThumbMap.set(d.url, d.thumbUrl);
+                    } else if (d.url && typeof d.url === 'string' && d.url.endsWith('.webp') && !d.url.endsWith('_thumb.webp')) {
+                        photoThumbMap.set(d.url, d.url.replace(/\.webp$/i, '_thumb.webp'));
                     }
                     if (d.url && typeof d.aspectRatio === 'number') {
                         setRatio(d.url, d.aspectRatio);
@@ -386,19 +427,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else {
                 const setRef = doc(db, 'photo_sets', categoryId);
-                const [setSnap, singleSnap] = await Promise.all([
-                    getDoc(setRef),
-                    getDocs(collection(db, 'single_shots')).catch(() => null)
-                ]);
-
-                if (singleSnap) {
-                    singleSnap.forEach(docSnap => {
-                        const d = docSnap.data();
-                        if (d.url && d.modelName) {
-                            photoModelMap.set(d.url, d.modelName.trim());
-                        }
-                    });
-                }
+                const setSnap = await getDoc(setRef);
 
                 if (setSnap.exists()) {
                     const data = setSnap.data();
@@ -446,6 +475,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (data.thumbUrls && typeof data.thumbUrls === 'object') {
                         Object.entries(data.thumbUrls).forEach(([u, t]) => {
                             if (t) photoThumbMap.set(u, t);
+                        });
+                    }
+                    if (data.urls && Array.isArray(data.urls)) {
+                        data.urls.forEach(u => {
+                            if (!photoThumbMap.has(u) && typeof u === 'string' && u.endsWith('.webp') && !u.endsWith('_thumb.webp')) {
+                                photoThumbMap.set(u, u.replace(/\.webp$/i, '_thumb.webp'));
+                            }
                         });
                     }
 
@@ -1681,6 +1717,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             });
 
+            let galleryMasonryRaf = null;
+            const scheduleMasonryLayout = () => {
+                if (currentRatioMode === '1:1') return;
+                if (galleryMasonryRaf) cancelAnimationFrame(galleryMasonryRaf);
+                galleryMasonryRaf = requestAnimationFrame(() => {
+                    galleryMasonryRaf = null;
+                    layoutMasonry();
+                });
+            };
+
             const layoutMasonry = () => {
                 if (currentRatioMode === '1:1') return;
 
@@ -2017,7 +2063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 if (img.complete && img.naturalWidth > 0) {
                                     wrapper.classList.add('img-loaded');
                                     if (currentRatioMode !== '1:1') {
-                                        layoutMasonry();
+                                        scheduleMasonryLayout();
                                     }
                                 }
                             }
@@ -2069,7 +2115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                         wrapper.classList.add('img-loaded');
                         if (currentRatioMode !== '1:1') {
-                            layoutMasonry();
+                            scheduleMasonryLayout();
                         }
                     };
 
@@ -2085,6 +2131,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     img.addEventListener('error', () => {
                         if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                            if (img.src !== url) {
+                                img.src = url;
+                                return;
+                            }
                             wrapper.classList.add('img-loaded');
                         }
                     });

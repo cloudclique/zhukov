@@ -2,7 +2,7 @@
 // ZHUKOV Studio - Service Worker & Asset Caching Engine
 // ==========================================================
 
-const CACHE_NAME_STATIC = 'zhukov-static-v95';
+const CACHE_NAME_STATIC = 'zhukov-static-v96';
 const CACHE_NAME_IMAGES = 'zhukov-images-v1';
 
 // Core static assets to pre-cache on install
@@ -15,10 +15,14 @@ const PRECACHE_ASSETS = [
     '/styles.css',
     '/script.js',
     '/site-cache.js',
+    '/firebase-config.js',
+    '/cloudflare-storage.js',
     '/photoshoots/',
     '/photoshoots/index.html',
     '/photoshoots/photoshoots.css',
     '/photoshoots/script.js',
+    '/photoshoots/image-ratios.js',
+    '/photoshoots/delete-set-helper.js',
     '/photoshoots/gallery.html',
     '/photoshoots/gallery.css',
     '/photoshoots/gallery.js',
@@ -31,6 +35,11 @@ const PRECACHE_ASSETS = [
     '/contact/',
     '/contact/index.html',
     '/contact/contact.css',
+    '/contact/contact.js',
+    '/promotion/',
+    '/promotion/index.html',
+    '/promotion/promotion.css',
+    '/promotion/promotion.js',
     '/upload/',
     '/upload/index.html',
     '/upload/upload.css',
@@ -42,7 +51,15 @@ const PRECACHE_ASSETS = [
     '/mood-dash/',
     '/mood-dash/index.html',
     '/mood-dash/mood-dash.css',
-    '/mood-dash/mood-dash.js'
+    '/mood-dash/mood-dash.js',
+    '/_images/theme_concept_a.jpg',
+    '/_images/theme_main.jpg',
+    '/_images/theme_concept_b.jpg',
+    '/_images/location_waterfall.jpg',
+    '/_images/location_interior.jpg',
+    '/_images/location_studio.jpg',
+    '/_images/moodboard_preview.jpg',
+    '/_images/editing_preview.jpg'
 ];
 
 // Install Event

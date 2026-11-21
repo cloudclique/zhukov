@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
         
-        lightboxImg.src = imgElement.src;
+        lightboxImg.src = imgElement.dataset.fullUrl || imgElement.src;
         if (lightboxSetName) {
             lightboxSetName.textContent = (setName || 'EDITORIAL ARCHIVE').toUpperCase();
         }
@@ -270,7 +270,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const resolveOriginSetNames = async () => {
+    let hasLoadedOriginSets = false;
+    const resolveOriginSetNames = async (force = false) => {
+        if (!force && hasLoadedOriginSets) return;
+        const needsResolution = force || gallerySlots.length === 0 || gallerySlots.some(s => s && s.url && !s.setName);
+        if (!needsResolution) return;
+        hasLoadedOriginSets = true;
         try {
             const [setsSnap, singleSnap] = await Promise.all([
                 getDocs(collection(db, 'photo_sets')),
@@ -318,85 +323,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Sync Hero, Homepage Profile, and About Hero Images from Firestore settings
-    const syncSiteImagesFromSettings = async () => {
-        try {
-            const settingsDoc = await getDoc(doc(db, 'settings', 'home_gallery'));
-            if (!settingsDoc.exists()) return;
-            const data = settingsDoc.data();
+    // Sync Hero, Homepage Profile, and About Hero Images from a settings snapshot
+    const applySiteImagesFromSettingsData = (data) => {
+        if (!data) return;
 
-            // Sync Homepage Hero Image
-            if (data.heroImage) {
-                const freshHero = data.heroImage;
-                setCachedData('home_hero_image', freshHero);
-                if (heroImg && heroImg.src !== freshHero) {
-                    heroImg.src = freshHero;
-                }
+        // Sync Homepage Hero Image
+        if (data.heroImage) {
+            const freshHero = data.heroImage;
+            setCachedData('home_hero_image', freshHero);
+            if (heroImg && heroImg.src !== freshHero) {
+                heroImg.src = freshHero;
             }
+        }
 
-            // Sync Homepage About Section Profile Image
-            if (data.profileImage) {
-                const freshProfile = data.profileImage;
-                setCachedData('home_profile_image', freshProfile);
-                if (profileImg && profileImg.src !== freshProfile) {
-                    profileImg.src = freshProfile;
-                }
+        // Sync Homepage About Section Profile Image
+        if (data.profileImage) {
+            const freshProfile = data.profileImage;
+            setCachedData('home_profile_image', freshProfile);
+            if (profileImg && profileImg.src !== freshProfile) {
+                profileImg.src = freshProfile;
             }
+        }
 
-            // Sync About Me Page Hero Image (Independent)
-            if (data.aboutHeroImage) {
-                const freshAboutHero = data.aboutHeroImage;
-                setCachedData('about_hero_image', freshAboutHero);
-                if (aboutHeroImg && aboutHeroImg.src !== freshAboutHero) {
-                    aboutHeroImg.src = freshAboutHero;
-                }
-            } else if (data.profileImage && !getCachedData('about_hero_image')) {
-                // If aboutHeroImage was never set, fallback to profileImage initially
-                if (aboutHeroImg && !aboutHeroImg.src) {
-                    aboutHeroImg.src = data.profileImage;
-                }
+        // Sync About Me Page Hero Image (Independent)
+        if (data.aboutHeroImage) {
+            const freshAboutHero = data.aboutHeroImage;
+            setCachedData('about_hero_image', freshAboutHero);
+            if (aboutHeroImg && aboutHeroImg.src !== freshAboutHero) {
+                aboutHeroImg.src = freshAboutHero;
             }
-        } catch (e) {
-            console.warn('Could not sync site images from Firestore:', e);
+        } else if (data.profileImage && !getCachedData('about_hero_image')) {
+            if (aboutHeroImg && !aboutHeroImg.src) {
+                aboutHeroImg.src = data.profileImage;
+            }
         }
     };
 
     const loadGallerySlots = async () => {
-        // Always sync site hero/profile imagery regardless of whether gallery exists on this page
-        syncSiteImagesFromSettings();
-
-        if (!gallery) return;
-
-        // Background resolve origin set names from Firestore sets
-        resolveOriginSetNames();
-
-        // 1. Instant Cache Render (0ms delay)
-        const cachedSlots = getCachedData('home_gallery_slots');
-        if (cachedSlots && Array.isArray(cachedSlots) && cachedSlots.length > 0) {
-            if (cachedSlots[0]) cachedSlots[0].aspectRatio = 'landscape';
-            if (cachedSlots[1]) cachedSlots[1].aspectRatio = 'portrait';
-            if (cachedSlots[2]) cachedSlots[2].aspectRatio = 'landscape';
-            if (cachedSlots[3]) cachedSlots[3].aspectRatio = 'portrait';
-            if (cachedSlots[4]) cachedSlots[4].aspectRatio = 'portrait';
-            if (cachedSlots[5]) cachedSlots[5].aspectRatio = 'landscape';
-            if (cachedSlots[6]) cachedSlots[6].aspectRatio = 'portrait';
-            if (cachedSlots[7]) cachedSlots[7].aspectRatio = 'landscape';
-            gallerySlots = cachedSlots;
-            renderGallerySlots();
-        } else {
-            gallery.innerHTML = '';
-            gallerySlots = [];
+        // 1. Instant Cache Render (0ms delay) if gallery exists on this page
+        let cachedSlots = null;
+        if (gallery) {
+            cachedSlots = getCachedData('home_gallery_slots');
+            if (cachedSlots && Array.isArray(cachedSlots) && cachedSlots.length > 0) {
+                if (cachedSlots[0]) cachedSlots[0].aspectRatio = 'landscape';
+                if (cachedSlots[1]) cachedSlots[1].aspectRatio = 'portrait';
+                if (cachedSlots[2]) cachedSlots[2].aspectRatio = 'landscape';
+                if (cachedSlots[3]) cachedSlots[3].aspectRatio = 'portrait';
+                if (cachedSlots[4]) cachedSlots[4].aspectRatio = 'portrait';
+                if (cachedSlots[5]) cachedSlots[5].aspectRatio = 'landscape';
+                if (cachedSlots[6]) cachedSlots[6].aspectRatio = 'portrait';
+                if (cachedSlots[7]) cachedSlots[7].aspectRatio = 'landscape';
+                gallerySlots = cachedSlots;
+                renderGallerySlots();
+            } else {
+                gallery.innerHTML = '';
+                gallerySlots = [];
+            }
         }
 
-        // 2. Background Revalidation from Firestore
+        // 2. Single Firestore fetch for both site hero/profile images AND home gallery slots
         try {
             const settingsDoc = await getDoc(doc(db, 'settings', 'home_gallery'));
-            let freshSlots = [];
-            if (settingsDoc.exists() && settingsDoc.data().slots) {
-                freshSlots = settingsDoc.data().slots;
-            }
+            const settingsData = settingsDoc.exists() ? settingsDoc.data() : null;
+            applySiteImagesFromSettingsData(settingsData);
+
+            if (!gallery) return;
+
+            let freshSlots = (settingsData && Array.isArray(settingsData.slots)) ? settingsData.slots : [];
 
             // Fill any missing slots with fallbacks and set names
+            let anyMissingSetName = false;
             for (let i = 0; i < SLOT_COUNT; i++) {
                 if (!freshSlots[i] || !freshSlots[i].url) {
                     freshSlots[i] = { 
@@ -405,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setName: fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE'
                     };
                 } else if (!freshSlots[i].setName) {
+                    anyMissingSetName = true;
                     freshSlots[i].setName = urlToSetNameMap.get(freshSlots[i].url) || fallbackSetNames[i % fallbackSetNames.length] || 'EDITORIAL ARCHIVE';
                 }
             }
@@ -426,9 +423,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (!cachedSlots) {
                 setCachedData('home_gallery_slots', freshSlots);
             }
+
+            if (anyMissingSetName) {
+                resolveOriginSetNames(true);
+            }
         } catch (e) {
             console.warn('Could not load home_gallery settings:', e);
-            if (gallerySlots.length === 0) {
+            if (gallery && gallerySlots.length === 0) {
                 for (let i = 0; i < SLOT_COUNT; i++) {
                     gallerySlots[i] = { 
                         url: fallbackImages[i % fallbackImages.length] || '', 
@@ -439,6 +440,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderGallerySlots();
             }
         }
+    };
+
+    const getSlotThumbUrl = (url) => {
+        if (!url || typeof url !== 'string') return url;
+        if (url.includes('workers.dev') && url.endsWith('.webp') && !url.endsWith('_thumb.webp')) {
+            return url.replace(/\.webp$/i, '_thumb.webp');
+        }
+        return url;
     };
 
     const renderGallerySlots = () => {
@@ -463,9 +472,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (slot.url) {
                 const img = document.createElement('img');
-                img.src = slot.url;
+                const thumbSrc = getSlotThumbUrl(slot.url);
+                img.dataset.fullUrl = slot.url;
+                img.src = thumbSrc;
                 img.alt = `Featured Image ${index + 1}`;
                 img.loading = 'lazy';
+                img.decoding = 'async';
+                if (thumbSrc !== slot.url) {
+                    img.addEventListener('error', () => {
+                        if (img.src !== slot.url) img.src = slot.url;
+                    }, { once: true });
+                }
 
                 // Real dimension check to dynamically assign vertical vs horizontal orientation
                 const updateOrientation = () => {

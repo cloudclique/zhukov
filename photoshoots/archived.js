@@ -295,6 +295,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const getThumbnailUrl = (url, cat) => {
+        if (!url) return url;
+        if (cat && cat.thumbUrls && cat.thumbUrls[url]) return cat.thumbUrls[url];
+        if (photoThumbMap.has(url)) return photoThumbMap.get(url);
+        if (typeof url === 'string' && url.endsWith('.webp') && !url.endsWith('_thumb.webp')) {
+            return url.replace(/\.webp$/i, '_thumb.webp');
+        }
+        return url;
+    };
+
     // --- Fetch Archived Photo Sets ---
     const loadArchivedPhotos = async () => {
         const currentReqId = ++loadReqId;
@@ -317,23 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const loaded = [];
-            const [setsSnap, singleSnap] = await Promise.all([
-                getDocs(collection(db, 'photo_sets')),
-                getDocs(collection(db, 'single_shots')).catch(() => null)
-            ]);
-
-            if (singleSnap) {
-                singleSnap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    if (data.url && data.modelName) {
-                        photoModelMap.set(data.url, data.modelName.trim());
-                    }
-                    const thumb = data.thumbUrl || data.thumbnailUrl;
-                    if (data.url && thumb) {
-                        photoThumbMap.set(data.url, thumb);
-                    }
-                });
-            }
+            const setsSnap = await getDocs(collection(db, 'photo_sets'));
 
             setsSnap.forEach(docSnap => {
                 const data = docSnap.data();
@@ -352,12 +346,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                         }
 
+                        if (data.aspectRatios && typeof data.aspectRatios === 'object') {
+                            Object.entries(data.aspectRatios).forEach(([u, r]) => {
+                                if (typeof r === 'number') setRatio(u, r);
+                            });
+                        }
+
                         const setThumbUrls = { ...(data.thumbUrls || {}) };
                         if (data.thumbUrls && typeof data.thumbUrls === 'object') {
                             Object.entries(data.thumbUrls).forEach(([u, t]) => {
                                 if (t) photoThumbMap.set(u, t);
                             });
                         }
+                        data.urls.forEach(u => {
+                            if (!setThumbUrls[u] && typeof u === 'string' && u.endsWith('.webp') && !u.endsWith('_thumb.webp')) {
+                                const derived = u.replace(/\.webp$/i, '_thumb.webp');
+                                setThumbUrls[u] = derived;
+                                photoThumbMap.set(u, derived);
+                            }
+                        });
 
                         loaded.push({
                             categoryId: docSnap.id,
@@ -812,17 +819,18 @@ document.addEventListener('DOMContentLoaded', () => {
             wrapper.className = 'masonry-item img-container';
 
             const isPriority = index < 6;
+            const displaySrc = getThumbnailUrl(url, cat) || url;
             const img = document.createElement('img');
             img.className = 'masonry-img';
             img.dataset.fullUrl = url;
 
             if (isPriority) {
-                img.src = url;
+                img.src = displaySrc;
                 img.loading = 'eager';
                 img.decoding = 'async';
                 img.setAttribute('fetchpriority', 'high');
             } else {
-                img.dataset.src = url;
+                img.dataset.src = displaySrc;
                 img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 4'%3E%3C/svg%3E";
                 img.loading = 'lazy';
                 img.decoding = 'async';
@@ -831,6 +839,9 @@ document.addEventListener('DOMContentLoaded', () => {
             img.alt = cat.categoryName || 'Archived Photo';
 
             const handleImageReady = () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    setRatio(url, img.naturalWidth / img.naturalHeight);
+                }
                 wrapper.classList.add('img-loaded');
                 scheduleMasonryLayout();
             };
@@ -847,6 +858,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             img.addEventListener('error', () => {
                 if (img.src && !img.src.startsWith('data:image/svg+xml')) {
+                    if (img.src !== url) {
+                        img.src = url;
+                        return;
+                    }
                     wrapper.classList.add('img-loaded');
                 }
             });
@@ -1046,15 +1061,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             });
 
-            scrollRow.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
-                isMouseDown = true;
-                hasDragged = false;
-                startX = e.pageX - scrollRow.offsetLeft;
-                scrollLeftStart = scrollRow.scrollLeft;
-                pauseAutoScroll();
-            });
-
             const onRowMouseMove = (e) => {
                 if (!isMouseDown) return;
                 const x = e.pageX - scrollRow.offsetLeft;
@@ -1071,6 +1077,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const onRowMouseUp = () => {
+                window.removeEventListener('mousemove', onRowMouseMove);
+                window.removeEventListener('mouseup', onRowMouseUp);
                 if (isMouseDown) {
                     isMouseDown = false;
                     scrollRow.classList.remove('is-dragging');
@@ -1083,8 +1091,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            window.addEventListener('mousemove', onRowMouseMove);
-            window.addEventListener('mouseup', onRowMouseUp);
+            scrollRow.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.delete-photo-btn') || e.target.closest('.row-nav-arrow')) return;
+                isMouseDown = true;
+                hasDragged = false;
+                startX = e.pageX - scrollRow.offsetLeft;
+                scrollLeftStart = scrollRow.scrollLeft;
+                pauseAutoScroll();
+                window.addEventListener('mousemove', onRowMouseMove);
+                window.addEventListener('mouseup', onRowMouseUp);
+            });
 
             // Allow vertical wheel to scroll the page naturally without scrolling the row.
             // Only pause auto-scroll if user is explicitly scrolling horizontally (e.g. trackpad swipe).
@@ -1250,17 +1266,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 wrapper.style.aspectRatio = `${ratio}`;
                 wrapper.style.width = 'auto';
                 
+                const displaySrc = getThumbnailUrl(url, cat) || url;
                 const img = document.createElement('img');
                 img.className = 'row-img';
                 img.dataset.fullUrl = url;
 
                 if (isPriority) {
-                    img.src = url;
+                    img.src = displaySrc;
                     img.loading = 'eager';
                     img.decoding = 'async';
                     img.setAttribute('fetchpriority', 'high');
                 } else {
-                    img.dataset.src = url;
+                    img.dataset.src = displaySrc;
                     const svgW = Math.round(1000 * ratio);
                     img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${svgW} 1000'%3E%3C/svg%3E`;
                     img.loading = 'lazy';
@@ -1296,7 +1313,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                img.addEventListener('error', markLoaded);
+                img.addEventListener('error', () => {
+                    if (img.src && !img.src.startsWith('data:') && img.src !== url) {
+                        img.src = url;
+                        return;
+                    }
+                    markLoaded();
+                });
 
                 const specificModel = (cat.categoryId === 'single-shots')
                     ? (photoModelMap.get(url) || '')
